@@ -93,6 +93,7 @@ export async function readGoogleSheetColumn(): Promise<string[]> {
  *
  * Esempi:
  * - "Rossi Mario" -> { lastName: "Rossi", firstName: "Mario" }
+ * - "Rizzo Simone" -> { lastName: "Rizzo", firstName: "Simone" }
  * - "De Luca Anna" -> { lastName: "De Luca", firstName: "Anna" }
  * - "Van Der Berg Jan" -> { lastName: "Van Der Berg", firstName: "Jan" }
  *

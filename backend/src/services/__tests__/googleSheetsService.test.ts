@@ -2,10 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { parsePersonName } from '../googleSheetsService';
 
 describe('googleSheetsService - parsePersonName', () => {
-  it('deve parsare correttamente "Cognome Nome"', () => {
+  it('deve parsare correttamente "Cognome Nome" con spazio', () => {
     const result = parsePersonName('Rossi Mario');
     expect(result.lastName).toBe('Rossi');
     expect(result.firstName).toBe('Mario');
+  });
+
+  it('deve parsare correttamente "Cognome-Nome" con trattino', () => {
+    const result = parsePersonName('Rizzo-Simone');
+    expect(result.lastName).toBe('Rizzo');
+    expect(result.firstName).toBe('Simone');
   });
 
   it('deve gestire cognomi composti', () => {
