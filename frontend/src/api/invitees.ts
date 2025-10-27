@@ -99,3 +99,20 @@ export const checkInToken = async (token: string) => {
   const response = await apiClient.post<{ invitee: Invitee; message: string }>("/checkin", { token });
   return response.data;
 };
+
+export interface SyncResult {
+  success: boolean;
+  message: string;
+  data: {
+    totalFromSheet: number;
+    newImported: number;
+    alreadyExists: number;
+    errors: string[];
+    duration: number;
+  };
+}
+
+export const syncGoogleSheets = async () => {
+  const response = await apiClient.post<SyncResult>("/sync/google-sheets");
+  return response.data;
+};

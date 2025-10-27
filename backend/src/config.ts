@@ -31,6 +31,13 @@ export const config = {
     from: process.env.EMAIL_FROM ?? "noreply@example.com",
     transportUrl: process.env.EMAIL_TRANSPORT_URL,
   },
+  googleSheets: {
+    spreadsheetId: process.env.GOOGLE_SHEET_ID ?? "",
+    range: process.env.GOOGLE_SHEET_RANGE ?? "Lista!A2:A",
+    credentials: process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "",
+    autoSyncEnabled: process.env.GOOGLE_SHEETS_AUTO_SYNC === "true",
+    autoSyncIntervalMinutes: Number(process.env.GOOGLE_SHEETS_SYNC_INTERVAL ?? 10),
+  },
 };
 
 export const eventDomain = process.env.EVENT_DOMAIN ?? "https://example.com";

@@ -5,11 +5,13 @@ Applicazione full-stack per gestire l'ingresso a eventi privati tramite QR code 
 ## Funzionalità principali
 - Generazione di QR code firmati e non duplicabili per ogni invitato (PNG nominati `Nome-Cognome`).
 - Verifica in tempo reale via API: ingresso consentito, già utilizzato, codice non valido, evento in pausa o bloccato.
+- **Sincronizzazione automatica con Google Sheets**: importa automaticamente nuove persone dal tuo foglio Google (formato "Cognome Nome" nella colonna A) con controllo duplicati e generazione QR automatica.
 - Dashboard operativa con:
   - statistiche live (totale, entrati, in arrivo, annullati);
   - elenco invitati con filtri, riepiloghi e azioni (reset, invio email, download QR);
   - pianificazione stato evento (attivo/pausa/bloccato);
-  - importazione manuale, da testo, o da file Excel/CSV (Nome, Cognome, Email, Telefono).
+  - importazione manuale, da testo, o da file Excel/CSV (Nome, Cognome, Email, Telefono);
+  - **bottone sincronizzazione Google Sheets** per import immediato.
 - Pagina di scansione protetta (accesso solo dopo login) che utilizza la fotocamera del dispositivo ed esegue la convalida lato server.
 - Supporto a distribuzione dei QR via email tramite SMTP configurabile.
 
@@ -64,6 +66,13 @@ Applicazione full-stack per gestire l'ingresso a eventi privati tramite QR code 
 | `EMAIL_FROM` | Mittente email QR |
 | `EMAIL_TRANSPORT_URL` | URL SMTP compatibile Nodemailer (es. `smtp://user:pass@smtp.mailgun.org:587`) |
 | `EVENT_DOMAIN` | Dominio pubblico dell'evento (opzionale, per link e comunicazioni) |
+| `GOOGLE_SHEET_ID` | ID del foglio Google Sheets (dalla URL: `https://docs.google.com/spreadsheets/d/{ID}/edit`) |
+| `GOOGLE_SHEET_RANGE` | Range da leggere (default: `Lista!A2:A`) |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Credenziali Service Account Google Cloud (JSON completo su una riga) |
+| `GOOGLE_SHEETS_AUTO_SYNC` | Abilita sincronizzazione automatica (`true`/`false`) |
+| `GOOGLE_SHEETS_SYNC_INTERVAL` | Intervallo sincronizzazione in minuti (default: `10`) |
+
+> Per la configurazione completa di Google Sheets, consulta la guida dettagliata in [GOOGLE_SHEETS_SETUP.md](GOOGLE_SHEETS_SETUP.md).
 
 > 💡 Su Windows Prisma 6 richiede una `DATABASE_URL` in formato URI **assoluto** (`file:C:/Percorso/Ingresso_festa/storage/data/dev.db`). Se ottieni l'errore generico “Schema engine error”, riscrivi il percorso in questo modo oppure esporta temporaneamente la variabile prima di lanciare i comandi `prisma migrate`.
 

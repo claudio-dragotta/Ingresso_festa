@@ -8,6 +8,7 @@ import {
   fetchSystemConfig,
   resetInviteeCheckIn,
   sendInviteeQr,
+  syncGoogleSheets,
   updateEventStatus,
   uploadInviteesFile,
 } from "../api/invitees";
@@ -60,6 +61,18 @@ const DashboardPage = () => {
     mutationFn: (status: EventStatus) => updateEventStatus(status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["systemConfig"] });
+    },
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: () => syncGoogleSheets(),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["invitees"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics"] });
+      alert(`✅ ${data.message}\n\nNuovi: ${data.data.newImported}\nGià presenti: ${data.data.alreadyExists}\nTotale dal foglio: ${data.data.totalFromSheet}`);
+    },
+    onError: (error: any) => {
+      alert(`❌ Errore sincronizzazione: ${error.response?.data?.message || error.message}`);
     },
   });
 
@@ -204,6 +217,23 @@ const DashboardPage = () => {
             </label>
           ))}
         </div>
+      </section>
+
+      <section className="card">
+        <h2>📊 Sincronizza Google Sheets</h2>
+        <p>Importa automaticamente nuove persone dal tuo foglio Google configurato (colonna A formato "Cognome Nome").</p>
+        <button
+          onClick={() => syncMutation.mutate()}
+          disabled={syncMutation.isPending}
+          style={{ marginTop: "0.5rem" }}
+        >
+          {syncMutation.isPending ? "Sincronizzazione in corso..." : "🔄 Sincronizza Ora"}
+        </button>
+        {syncMutation.isError && (
+          <p style={{ color: "var(--error)", marginTop: "0.5rem" }}>
+            Errore: verifica che GOOGLE_SHEET_ID e credenziali siano configurate correttamente.
+          </p>
+        )}
       </section>
 
       <section className="card grid" style={{ gap: "1.25rem" }}>
