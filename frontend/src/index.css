@@ -1,0 +1,263 @@
+:root {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: only light;
+  color: #16213e;
+  background-color: #f6f7fb;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, #f6f7fb 0%, #eef2ff 100%);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  font-weight: 500;
+  color: #2f52ce;
+  text-decoration: none;
+}
+
+a.active {
+  color: #16213e;
+}
+
+button {
+  border-radius: 6px;
+  border: 1px solid transparent;
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  background-color: #2f52ce;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(47, 82, 206, 0.25);
+}
+
+button.secondary {
+  background-color: #fff;
+  color: #2f52ce;
+  border-color: #d0d8ff;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d5daf7;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background-color: #fff;
+  transition: border-color 0.2s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #2f52ce;
+  box-shadow: 0 0 0 3px rgba(47, 82, 206, 0.15);
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.app-header nav {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.app-header nav .nav-link {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background-color: transparent;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.app-header nav .nav-link.active {
+  background-color: rgba(47, 82, 206, 0.12);
+  color: #16213e;
+}
+
+.logout-button {
+  background: transparent;
+  color: #ff5f5f;
+  border: 1px solid rgba(255, 95, 95, 0.4);
+  padding: 0.5rem 0.9rem;
+}
+
+.card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 12px 30px rgba(26, 39, 89, 0.08);
+  margin-bottom: 1.5rem;
+}
+
+.card h2 {
+  margin-top: 0;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.metrics-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.metrics-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #eef1ff;
+  text-align: left;
+}
+
+th {
+  font-weight: 600;
+  color: #5c6fb6;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+tr:hover {
+  background-color: rgba(47, 82, 206, 0.05);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-PENDING {
+  background-color: #fff4d6;
+  color: #a96b00;
+}
+
+.status-CHECKED_IN {
+  background-color: #d8f6e4;
+  color: #0b8a4a;
+}
+
+.status-CANCELLED {
+  background-color: #ffe0e0;
+  color: #d92525;
+}
+
+.flex {
+  display: flex;
+  gap: 1rem;
+}
+
+.flex.column {
+  flex-direction: column;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background-color: rgba(47, 82, 206, 0.1);
+  color: #2f52ce;
+}
+
+.upload-area {
+  border: 2px dashed #c8d2ff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  background-color: rgba(47, 82, 206, 0.05);
+}
+
+.scanner-container {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.scanner-video {
+  width: 100%;
+  max-width: 500px;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(26, 39, 89, 0.14);
+}
+
+.result-card {
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background-color: #fff;
+  box-shadow: 0 12px 30px rgba(26, 39, 89, 0.08);
+}
+
+.result-card.success {
+  border-left: 4px solid #0b8a4a;
+}
+
+.result-card.error {
+  border-left: 4px solid #d92525;
+}

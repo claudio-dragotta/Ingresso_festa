@@ -1,0 +1,20 @@
+# Node modules
+backend/node_modules/
+frontend/node_modules/
+
+# Environment files
+backend/.env
+backend/.env.local
+backend/.env.*.local
+frontend/.env
+.env
+
+# Build outputs
+backend/dist/
+frontend/dist/
+
+# Local data storage
+storage/data/
+!storage/data/.gitkeep
+storage/qrcodes/
+!storage/qrcodes/.gitkeep

@@ -1,0 +1,52 @@
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import { config } from "./config";
+import { AppError } from "./utils/errors";
+import { logger } from "./logger";
+import { ensureSystemConfig } from "./services/systemService";
+import router from "./routes";
+
+export const createApp = async () => {
+  await ensureSystemConfig();
+
+  const app = express();
+
+  const allowedOrigin =
+    config.frontendUrl && config.frontendUrl !== "*"
+      ? [config.frontendUrl]
+      : true;
+
+  app.use(
+    cors({
+      origin: allowedOrigin,
+      credentials: true,
+    }),
+  );
+  app.use(helmet());
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ extended: true }));
+  app.use(morgan("tiny"));
+
+  app.use("/api", router);
+
+  app.use((req, res) => {
+    res.status(404).json({ message: "Endpoint non trovato" });
+  });
+
+  app.use(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      if (err instanceof AppError) {
+        logger.warn("Handled error", { message: err.message, status: err.statusCode });
+        return res.status(err.statusCode).json({ message: err.message, context: err.context });
+      }
+
+      logger.error("Unexpected error", { message: err.message });
+      return res.status(500).json({ message: "Errore interno" });
+    },
+  );
+
+  return app;
+};

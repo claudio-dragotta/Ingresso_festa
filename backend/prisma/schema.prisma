@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Invitee {
+  id             String         @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String?        @unique
+  phone          String?
+  token          String         @unique
+  qrFilename     String
+  qrMimeType     String         @default("image/png")
+  status         InviteeStatus  @default(PENDING)
+  checkInCount   Int            @default(0)
+  checkedInAt    DateTime?
+  lastSentAt     DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  checkInLogs    CheckInLog[]
+
+  @@index([lastName, firstName])
+}
+
+model CheckInLog {
+  id         String        @id @default(cuid())
+  token      String
+  outcome    CheckInStatus
+  message    String?
+  inviteeId  String?
+  invitee    Invitee?      @relation(fields: [inviteeId], references: [id])
+  createdAt  DateTime      @default(now())
+}
+
+model SystemConfig {
+  id           Int          @id @default(autoincrement())
+  eventName    String       @default("Ingresso Festa")
+  eventStatus  EventStatus  @default(ACTIVE)
+  updatedAt    DateTime     @updatedAt
+  createdAt    DateTime     @default(now())
+}
+
+enum InviteeStatus {
+  PENDING
+  CHECKED_IN
+  CANCELLED
+}
+
+enum CheckInStatus {
+  SUCCESS
+  DUPLICATE
+  INVALID
+  BLOCKED
+}
+
+enum EventStatus {
+  ACTIVE
+  PAUSED
+  LOCKED
+}
