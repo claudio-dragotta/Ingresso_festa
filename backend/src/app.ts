@@ -6,6 +6,7 @@ import { config } from "./config";
 import { AppError } from "./utils/errors";
 import { logger } from "./logger";
 import { ensureSystemConfig } from "./services/systemService";
+import { sqlInjectionProtection } from "./middleware/sqlInjectionProtection";
 import router from "./routes";
 
 export const createApp = async () => {
@@ -30,6 +31,9 @@ export const createApp = async () => {
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true }));
   app.use(morgan("tiny"));
+
+  // SQL Injection Protection Layer
+  app.use("/api/", sqlInjectionProtection);
 
   app.use("/api", router);
 
