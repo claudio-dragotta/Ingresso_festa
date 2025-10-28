@@ -80,7 +80,7 @@ export async function readGoogleSheetColumns(): Promise<Array<{colA: string, col
       .filter(row => row[0]?.toString().trim()) // Solo righe con colonna A non vuota
       .map(row => ({
         colA: row[0]?.toString().trim(),
-        colB: row[1]?.toString().trim().toLowerCase() || undefined, // Tipologia pagamento (opzionale)
+        colB: row[1] ? row[1].toString().trim().toLowerCase() : undefined, // Tipologia pagamento (opzionale)
       }));
 
     logger.info(`Letti ${data.length} valori dal Google Sheet`);

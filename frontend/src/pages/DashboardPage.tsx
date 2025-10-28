@@ -78,13 +78,24 @@ const DashboardPage = () => {
 
   const invitees = inviteesQuery.data ?? [];
 
-  const pendingInvitees = useMemo(
-    () => invitees.filter((invitee) => invitee.status === "PENDING"),
+  // Ordina invitati alfabeticamente per cognome, poi nome
+  const sortedInvitees = useMemo(
+    () =>
+      [...invitees].sort((a, b) => {
+        const lastNameCompare = a.lastName.localeCompare(b.lastName, 'it');
+        if (lastNameCompare !== 0) return lastNameCompare;
+        return a.firstName.localeCompare(b.firstName, 'it');
+      }),
     [invitees],
   );
+
+  const pendingInvitees = useMemo(
+    () => sortedInvitees.filter((invitee) => invitee.status === "PENDING"),
+    [sortedInvitees],
+  );
   const checkedInInvitees = useMemo(
-    () => invitees.filter((invitee) => invitee.status === "CHECKED_IN"),
-    [invitees],
+    () => sortedInvitees.filter((invitee) => invitee.status === "CHECKED_IN"),
+    [sortedInvitees],
   );
 
   const handleManualSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -331,12 +342,12 @@ const DashboardPage = () => {
               </tr>
             </thead>
             <tbody>
-              {invitees.length === 0 && (
+              {sortedInvitees.length === 0 && (
                 <tr>
                   <td colSpan={6}>Nessun invitato disponibile. Aggiungi il primo tramite i moduli sopra.</td>
                 </tr>
               )}
-              {invitees.map((invitee) => (
+              {sortedInvitees.map((invitee) => (
                 <tr key={invitee.id}>
                   <td>
                     <strong>

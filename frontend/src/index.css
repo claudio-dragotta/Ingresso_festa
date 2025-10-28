@@ -36,27 +36,68 @@ a.active {
 }
 
 button {
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid transparent;
-  padding: 0.6rem 1rem;
+  padding: 0.7rem 1.4rem;
   font-size: 0.95rem;
   font-weight: 600;
   font-family: inherit;
-  background-color: #2f52ce;
+  background: linear-gradient(135deg, #2f52ce 0%, #4a69e6 100%);
   color: #fff;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(47, 82, 206, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+}
+
+button:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
 button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(47, 82, 206, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(47, 82, 206, 0.3);
+  background: linear-gradient(135deg, #4a69e6 0%, #2f52ce 100%);
+}
+
+button:active {
+  transform: translateY(0px);
+  box-shadow: 0 4px 12px rgba(47, 82, 206, 0.15);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 button.secondary {
-  background-color: #fff;
+  background: #fff;
   color: #2f52ce;
-  border-color: #d0d8ff;
+  border: 2px solid #e0e6ff;
+  box-shadow: 0 2px 8px rgba(47, 82, 206, 0.08);
+}
+
+button.secondary:hover {
+  background: #f8f9ff;
+  border-color: #2f52ce;
+  box-shadow: 0 4px 12px rgba(47, 82, 206, 0.15);
 }
 
 input,
