@@ -12,7 +12,12 @@
       "Bash(npm install:*)",
       "Bash(npx tsc:*)",
       "Bash(npm test:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(git push:*)",
+      "Read(//c/Users/ludov/Desktop/Festa_8_novembre/**)",
+      "Bash(curl:*)",
+      "Bash(dir:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

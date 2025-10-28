@@ -118,6 +118,14 @@ backend/prisma/migrations/*.sql
 # pnpm-lock.yaml
 
 # ===========================
+# Google Cloud Credentials
+# ===========================
+*service-account*.json
+*-credentials.json
+backend/*-service-account*.json
+backend/*-credentials.json
+
+# ===========================
 # Miscellaneous
 # ===========================
 *.bak

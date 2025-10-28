@@ -83,24 +83,83 @@ Applicazione full-stack per gestire l'ingresso a eventi privati tramite QR code 
 - `npm run prisma:deploy`: applica migrazioni in produzione.
 - `npm run hash-password -- <password>`: stampa un hash bcrypt da copiare in `ADMIN_PASSWORD` (consigliato per Render).
 
-## Deploy su Render
-### Struttura del file `render.yaml`
-È incluso un `render.yaml` di esempio che definisce:
-- un servizio **Web Service** Node per il backend (`npm install`, `npm run build`, `npx prisma migrate deploy`, `node dist/server.js`) con disco persistente montato su `/var/data` (contiene DB SQLite e QR generati);
-- un servizio **Static Site** per il frontend (`npm install`, `npm run build`, publish `frontend/dist`).
+## 🚀 Deploy su Render (PRODUZIONE)
 
-### Passaggi consigliati
-1. **Backend Web Service**:
-   - Build Command: `cd backend && npm install && npx prisma generate && npm run build`
-   - Start Command: `cd backend && npx prisma migrate deploy && node dist/server.js`
-   - Configura le env var dal pannello Render (vedi tabella sopra). `DATABASE_URL` è già impostata a `file:/var/data/ingresso.db`.
-   - Il disco `ingresso-festa-storage` (1 GB) mantiene database e QR tra i deploy.
-2. **Frontend Static Site**:
-   - Build Command: `cd frontend && npm install && npm run build`
-   - Publish Directory: `frontend/dist`
-   - Imposta l'env `VITE_API_BASE_URL` al dominio pubblico del backend (es. `https://ingresso-api.onrender.com/api`).
-3. **Email**: se desideri l'invio automatico dei QR, fornisci un `EMAIL_TRANSPORT_URL` valido (SMTP, SendGrid, Mailgun…).
-4. **Testing**: prima dell'evento, genera un set di invitati, verifica l'invio dei QR, prova la scansione e monitora la dashboard.
+### Sistema Live
+- 🌐 **Frontend**: https://ingresso-festa-web.onrender.com
+- 🔧 **Backend API**: https://ingresso-festa-api.onrender.com
+- 💾 **Database**: SQLite su disco persistente Render (1GB)
+- 📊 **Google Sheets**: Sincronizzazione automatica ogni 10 minuti
+
+### Credenziali di Accesso
+- **Username**: `admin`
+- **Password**: Configurata in `ADMIN_PASSWORD` su Render
+- **Login URL**: https://ingresso-festa-web.onrender.com/login
+
+### Configurazione Render
+Il progetto usa un `render.yaml` Blueprint che crea automaticamente 2 servizi:
+
+#### 1️⃣ Backend API (ingresso-festa-api)
+- **Tipo**: Web Service (Node.js)
+- **Piano**: Starter ($7/mese) - sempre attivo
+- **Build**: `npm install && npx prisma generate && npm run build`
+- **Start**: `npx prisma migrate deploy && node dist/server.js`
+- **Disco**: 1GB persistente su `/var/data` (database + QR codes)
+
+**Variabili ambiente richieste:**
+```bash
+JWT_SECRET=<stringa-casuale-sicura>
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=<password-sicura>
+FRONTEND_URL=https://ingresso-festa-web.onrender.com
+GOOGLE_SHEET_ID=<id-foglio-google>
+GOOGLE_SERVICE_ACCOUNT_JSON=<json-service-account>
+```
+
+#### 2️⃣ Frontend Web (ingresso-festa-web)
+- **Tipo**: Web Service con env static
+- **Build**: `npm install && npm run build`
+- **Publish**: `./dist`
+- **Piano**: Gratuito
+
+**Variabili ambiente richieste:**
+```bash
+VITE_API_BASE_URL=https://ingresso-festa-api.onrender.com/api
+```
+
+### Setup Deploy da Zero
+
+1. **Push codice su GitHub**
+   ```bash
+   git push origin main
+   ```
+
+2. **Crea Blueprint su Render**
+   - Vai su https://render.com
+   - New → Blueprint
+   - Connetti repository GitHub
+   - Render legge `render.yaml` automaticamente
+
+3. **Configura Variabili Ambiente**
+   - Backend: aggiungi tutte le variabili (vedi tabella sopra)
+   - Frontend: aggiungi `VITE_API_BASE_URL`
+   - ⚠️ **IMPORTANTE**: `FRONTEND_URL` deve corrispondere all'URL del frontend!
+
+4. **Deploy**
+   - Clicca "Manual Deploy" su entrambi i servizi
+   - Aspetta completamento build (~3-5 minuti)
+
+5. **Verifica**
+   - Backend: https://ingresso-festa-api.onrender.com/api/health
+   - Frontend: https://ingresso-festa-web.onrender.com/login
+   - Google Sheets: controlla logs per "✅ Sincronizzazione completata"
+
+### Monitoraggio e Logs
+
+- **Logs Backend**: Render Dashboard → ingresso-festa-api → Logs
+- **Metriche**: Dashboard → ingresso-festa-api → Metrics
+- **Database**: Salvato in `/var/data/ingresso.db` (persistente tra deploy)
+- **QR Codes**: Salvati in `/var/data/qrcodes/` (persistenti)
 
 ## Sicurezza
 - I token nei QR hanno firma HMAC e vengono invalidati al primo utilizzo.
