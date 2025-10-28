@@ -94,19 +94,29 @@ const DashboardPage = () => {
     const lastName = String(formData.get("lastName") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
     const phone = String(formData.get("phone") ?? "").trim();
+    const paymentType = String(formData.get("paymentType") ?? "").trim();
 
     if (!firstName || !lastName) {
       return;
     }
 
-    await createInviteeMutation.mutateAsync({
-      firstName,
-      lastName,
-      email: email || undefined,
-      phone: phone || undefined,
-    });
-
-    event.currentTarget.reset();
+    try {
+      await createInviteeMutation.mutateAsync({
+        firstName,
+        lastName,
+        email: email || undefined,
+        phone: phone || undefined,
+        paymentType: paymentType || undefined,
+      });
+      event.currentTarget.reset();
+    } catch (error: any) {
+      // Gestisci errore duplicati
+      if (error.response?.status === 409) {
+        alert(`❌ ${error.response.data.message}`);
+      } else {
+        alert(`❌ Errore: ${error.response?.data?.message || error.message}`);
+      }
+    }
   };
 
   const handleBulkSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -259,6 +269,16 @@ const DashboardPage = () => {
               <input name="phone" placeholder="3331234567" />
             </label>
           </div>
+          <label className="flex column">
+            <span>Tipologia Pagamento</span>
+            <select name="paymentType">
+              <option value="">-- Seleziona --</option>
+              <option value="paypal">PayPal</option>
+              <option value="bonifico">Bonifico</option>
+              <option value="contanti">Contanti</option>
+              <option value="p2p">P2P</option>
+            </select>
+          </label>
           <button type="submit" disabled={createInviteeMutation.isPending}>
             Aggiungi invitato
           </button>
@@ -304,6 +324,7 @@ const DashboardPage = () => {
               <tr>
                 <th>Nome</th>
                 <th>Email</th>
+                <th>Pagamento</th>
                 <th>Stato</th>
                 <th>Ingresso</th>
                 <th>Azioni</th>
@@ -312,7 +333,7 @@ const DashboardPage = () => {
             <tbody>
               {invitees.length === 0 && (
                 <tr>
-                  <td colSpan={5}>Nessun invitato disponibile. Aggiungi il primo tramite i moduli sopra.</td>
+                  <td colSpan={6}>Nessun invitato disponibile. Aggiungi il primo tramite i moduli sopra.</td>
                 </tr>
               )}
               {invitees.map((invitee) => (
@@ -328,6 +349,13 @@ const DashboardPage = () => {
                     {invitee.email ?? <em>—</em>}
                     <br />
                     {invitee.phone && <small>{invitee.phone}</small>}
+                  </td>
+                  <td>
+                    {invitee.paymentType ? (
+                      <span style={{ textTransform: "capitalize" }}>{invitee.paymentType}</span>
+                    ) : (
+                      <em>—</em>
+                    )}
                   </td>
                   <td>{renderStatus(invitee.status)}</td>
                   <td>

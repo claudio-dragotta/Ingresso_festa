@@ -6,6 +6,7 @@ import { logger } from "../logger";
 import { generateToken, verifyTokenSignature } from "./tokenService";
 import { generateQrCode, QrGenerationResult, readQrFile } from "./qrService";
 import { sendQrEmail } from "./emailService";
+import { writeToGoogleSheet } from "./googleSheetsService";
 import { config } from "../config";
 
 export interface InviteeInput {
@@ -13,6 +14,7 @@ export interface InviteeInput {
   lastName: string;
   email?: string;
   phone?: string;
+  paymentType?: string; // bonifico, paypal, contanti, p2p
 }
 
 export interface InviteeWithQr {
@@ -30,6 +32,28 @@ const buildFullName = (firstName: string, lastName: string) =>
   `${normalize(firstName)} ${normalize(lastName)}`.trim();
 
 export const createInvitee = async (input: InviteeInput): Promise<InviteeWithQr> => {
+  // Controllo duplicati PRIMA di creare
+  const allInvitees = await prisma.invitee.findMany({
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+    },
+  });
+
+  const existing = allInvitees.find(
+    (inv) =>
+      inv.firstName.toLowerCase() === normalize(input.firstName).toLowerCase() &&
+      inv.lastName.toLowerCase() === normalize(input.lastName).toLowerCase()
+  );
+
+  if (existing) {
+    throw new AppError(
+      `Invitato già presente: ${normalize(input.lastName)} ${normalize(input.firstName)}`,
+      409 // Conflict
+    );
+  }
+
   const token = generateToken();
   const fullName = buildFullName(input.firstName, input.lastName);
   const qr = await generateQrCode({ fullName, token });
@@ -40,11 +64,21 @@ export const createInvitee = async (input: InviteeInput): Promise<InviteeWithQr>
       lastName: normalize(input.lastName),
       email: input.email?.trim().toLowerCase(),
       phone: input.phone?.trim(),
+      paymentType: input.paymentType?.trim().toLowerCase(),
       token,
       qrFilename: qr.filename,
       qrMimeType: qr.mimeType,
     },
   });
+
+  // Sincronizzazione bidirezionale: scrivi su Google Sheets
+  try {
+    await writeToGoogleSheet(fullName, input.paymentType);
+    logger.info(`Invitato sincronizzato su Google Sheets: ${fullName}`);
+  } catch (error: any) {
+    // Non bloccare la creazione se Google Sheets fallisce, solo logga
+    logger.error(`Errore sincronizzazione Google Sheets: ${error.message}`);
+  }
 
   return { invitee, qr };
 };

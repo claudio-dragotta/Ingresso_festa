@@ -38,7 +38,7 @@ export const config = {
   },
   googleSheets: {
     spreadsheetId: process.env.GOOGLE_SHEET_ID ?? "",
-    range: process.env.GOOGLE_SHEET_RANGE ?? "Lista!A2:A",
+    range: process.env.GOOGLE_SHEET_RANGE ?? "Lista!A2:B", // Colonna A (nome) + B (tipologia pagamento)
     credentials: process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "",
     autoSyncEnabled: process.env.GOOGLE_SHEETS_AUTO_SYNC === "true",
     autoSyncIntervalMinutes: Number(process.env.GOOGLE_SHEETS_SYNC_INTERVAL ?? 10),

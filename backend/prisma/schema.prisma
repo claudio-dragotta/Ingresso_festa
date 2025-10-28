@@ -16,6 +16,7 @@ model Invitee {
   lastName       String
   email          String?        @unique
   phone          String?
+  paymentType    String?        // Tipologia pagamento: bonifico, paypal, contanti, p2p
   token          String         @unique
   qrFilename     String
   qrMimeType     String         @default("image/png")

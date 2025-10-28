@@ -8,6 +8,7 @@ export interface Invitee {
   lastName: string;
   email?: string | null;
   phone?: string | null;
+  paymentType?: string | null; // bonifico, paypal, contanti, p2p
   token: string;
   qrFilename: string;
   qrMimeType?: string | null;
@@ -24,6 +25,7 @@ export interface InviteeInput {
   lastName: string;
   email?: string;
   phone?: string;
+  paymentType?: string; // bonifico, paypal, contanti, p2p
 }
 
 export interface DashboardMetrics {

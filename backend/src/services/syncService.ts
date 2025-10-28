@@ -128,6 +128,7 @@ async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
     lastName,
     email: undefined,
     phone: undefined,
+    paymentType: person.paymentType, // Includi tipologia pagamento
   });
 
   return true; // Importato

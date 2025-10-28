@@ -20,6 +20,7 @@ const isValidInvitee = (value: unknown): value is {
   lastName: string;
   email?: string;
   phone?: string;
+  paymentType?: string;
 } => {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;

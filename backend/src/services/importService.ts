@@ -6,6 +6,7 @@ export interface ImportInvitee {
   lastName: string;
   email?: string;
   phone?: string;
+  paymentType?: string;
 }
 
 const normalizeString = (value: unknown): string | undefined => {
@@ -30,6 +31,7 @@ export const parseFileBuffer = (buffer: Buffer): ImportInvitee[] => {
     const lastName = normalizeString(row["Cognome"] ?? row["LastName"] ?? row["Last Name"]);
     const email = normalizeString(row["Email"]);
     const phone = normalizeString(row["Telefono"] ?? row["Phone"]);
+    const paymentType = normalizeString(row["Tipologia Pagamento"] ?? row["PaymentType"] ?? row["Pagamento"]);
 
     if (!firstName || !lastName) {
       continue;
@@ -40,6 +42,7 @@ export const parseFileBuffer = (buffer: Buffer): ImportInvitee[] => {
       lastName,
       email,
       phone,
+      paymentType,
     });
   }
 

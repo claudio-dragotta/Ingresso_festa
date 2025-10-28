@@ -11,13 +11,14 @@ import { config } from '../config';
 
 interface GoogleSheetsConfig {
   spreadsheetId: string;
-  range: string; // es: "Lista!A2:A" (legge dalla riga 2 in poi)
+  range: string; // es: "Lista!A2:B" (legge dalla riga 2 in poi, colonne A e B)
   credentials: string; // JSON Service Account
 }
 
 export interface ParsedPerson {
   firstName: string;
   lastName: string;
+  paymentType?: string; // Tipologia pagamento dalla colonna B
   originalValue: string; // Valore originale dalla cella
 }
 
@@ -40,17 +41,17 @@ function getGoogleSheetsClient() {
 
   const auth = new google.auth.GoogleAuth({
     credentials,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'], // Read + Write access
   });
 
   return google.sheets({ version: 'v4', auth });
 }
 
 /**
- * Legge i dati dalla colonna A del foglio Google
- * @returns Array di valori dalla colonna A (rimuove celle vuote)
+ * Legge i dati dalle colonne A e B del foglio Google
+ * @returns Array di righe: [nome, tipologia pagamento]
  */
-export async function readGoogleSheetColumn(): Promise<string[]> {
+export async function readGoogleSheetColumns(): Promise<Array<{colA: string, colB?: string}>> {
   const { spreadsheetId, range } = config.googleSheets;
 
   if (!spreadsheetId) {
@@ -74,13 +75,16 @@ export async function readGoogleSheetColumn(): Promise<string[]> {
       return [];
     }
 
-    // Estrai solo la prima colonna e rimuovi celle vuote
-    const columnAValues = rows
-      .map(row => row[0]?.toString().trim())
-      .filter(value => value && value.length > 0);
+    // Estrai colonna A (nome) e colonna B (tipologia pagamento)
+    const data = rows
+      .filter(row => row[0]?.toString().trim()) // Solo righe con colonna A non vuota
+      .map(row => ({
+        colA: row[0]?.toString().trim(),
+        colB: row[1]?.toString().trim().toLowerCase() || undefined, // Tipologia pagamento (opzionale)
+      }));
 
-    logger.info(`Letti ${columnAValues.length} valori dalla colonna A`);
-    return columnAValues;
+    logger.info(`Letti ${data.length} valori dal Google Sheet`);
+    return data;
 
   } catch (error: any) {
     logger.error('Errore lettura Google Sheet:', error.message);
@@ -89,20 +93,21 @@ export async function readGoogleSheetColumn(): Promise<string[]> {
 }
 
 /**
- * Parser per formato "Cognome Nome" -> { firstName, lastName }
+ * Parser per formato "Cognome Nome" + tipologia pagamento
  *
  * Esempi:
- * - "Rossi Mario" -> { lastName: "Rossi", firstName: "Mario" }
- * - "Rizzo Simone" -> { lastName: "Rizzo", firstName: "Simone" }
- * - "De Luca Anna" -> { lastName: "De Luca", firstName: "Anna" }
- * - "Van Der Berg Jan" -> { lastName: "Van Der Berg", firstName: "Jan" }
+ * - "Rossi Mario" + "paypal" -> { lastName: "Rossi", firstName: "Mario", paymentType: "paypal" }
+ * - "Rizzo Simone" + "contanti" -> { lastName: "Rizzo", firstName: "Simone", paymentType: "contanti" }
+ * - "De Luca Anna" + "bonifico" -> { lastName: "De Luca", firstName: "Anna", paymentType: "bonifico" }
+ * - "Van Der Berg Jan" + "p2p" -> { lastName: "Van Der Berg", firstName: "Jan", paymentType: "p2p" }
  *
  * Strategia:
  * - Splitta per spazi
  * - L'ultima parola è il nome (firstName)
  * - Tutto il resto è il cognome (lastName)
+ * - Aggiungi tipologia pagamento se presente
  */
-export function parsePersonName(fullName: string): ParsedPerson {
+export function parsePersonName(fullName: string, paymentType?: string): ParsedPerson {
   const trimmed = fullName.trim();
 
   if (!trimmed) {
@@ -116,6 +121,7 @@ export function parsePersonName(fullName: string): ParsedPerson {
     return {
       lastName: parts[0],
       firstName: '',
+      paymentType,
       originalValue: fullName,
     };
   }
@@ -127,33 +133,34 @@ export function parsePersonName(fullName: string): ParsedPerson {
   return {
     firstName,
     lastName,
+    paymentType,
     originalValue: fullName,
   };
 }
 
 /**
  * Legge e parsa tutte le persone dal Google Sheet
- * @returns Array di persone parsate
+ * @returns Array di persone parsate con tipologia pagamento
  */
 export async function fetchAndParseGoogleSheet(): Promise<ParsedPerson[]> {
-  const rawValues = await readGoogleSheetColumn();
+  const rawData = await readGoogleSheetColumns();
 
   const parsedPersons: ParsedPerson[] = [];
   const errors: string[] = [];
 
-  for (const value of rawValues) {
+  for (const row of rawData) {
     try {
-      const person = parsePersonName(value);
+      const person = parsePersonName(row.colA, row.colB);
 
       // Validazione: almeno cognome deve essere presente
       if (!person.lastName) {
-        errors.push(`Ignorato: "${value}" (cognome mancante)`);
+        errors.push(`Ignorato: "${row.colA}" (cognome mancante)`);
         continue;
       }
 
       parsedPersons.push(person);
     } catch (error: any) {
-      errors.push(`Errore parsing "${value}": ${error.message}`);
+      errors.push(`Errore parsing "${row.colA}": ${error.message}`);
     }
   }
 
@@ -170,11 +177,43 @@ export async function fetchAndParseGoogleSheet(): Promise<ParsedPerson[]> {
  */
 export async function testGoogleSheetsConnection(): Promise<boolean> {
   try {
-    await readGoogleSheetColumn();
+    await readGoogleSheetColumns();
     logger.info('Connessione Google Sheets OK');
     return true;
   } catch (error: any) {
     logger.error('Test connessione Google Sheets fallito:', error.message);
     return false;
+  }
+}
+
+/**
+ * Scrive una nuova riga nel Google Sheet (per sincronizzazione bidirezionale)
+ * @param fullName Nome completo formato "Cognome Nome"
+ * @param paymentType Tipologia pagamento
+ */
+export async function writeToGoogleSheet(fullName: string, paymentType?: string): Promise<void> {
+  const { spreadsheetId } = config.googleSheets;
+
+  if (!spreadsheetId) {
+    throw new Error('GOOGLE_SHEET_ID non configurato');
+  }
+
+  const sheets = getGoogleSheetsClient();
+
+  try {
+    // Aggiungi nuova riga alla fine
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: 'Lista!A:B', // Scrivi su colonne A e B
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[fullName, paymentType || '']], // [Cognome Nome, tipologia pagamento]
+      },
+    });
+
+    logger.info(`Scritto su Google Sheet: ${fullName} | ${paymentType || 'N/D'}`);
+  } catch (error: any) {
+    logger.error('Errore scrittura Google Sheet:', error.message);
+    throw new Error(`Impossibile scrivere su Google Sheet: ${error.message}`);
   }
 }
