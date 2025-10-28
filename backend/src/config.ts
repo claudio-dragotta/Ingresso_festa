@@ -21,7 +21,12 @@ export const config = {
   isProduction: process.env.NODE_ENV === "production",
   port: Number(process.env.PORT ?? 8000),
   host: process.env.HOST ?? "0.0.0.0",
+  // Single or comma-separated list of allowed frontend origins for CORS.
+  // Example: "https://ingressofesta.com,https://www.ingressofesta.com"
   frontendUrl: process.env.FRONTEND_URL,
+  frontendOrigins: process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(",").map((s) => s.trim()).filter(Boolean)
+    : undefined,
   databaseUrl: required(process.env.DATABASE_URL, "DATABASE_URL"),
   jwtSecret: required(process.env.JWT_SECRET, "JWT_SECRET"),
   adminUsername: required(process.env.ADMIN_USERNAME, "ADMIN_USERNAME"),

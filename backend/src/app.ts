@@ -14,8 +14,10 @@ export const createApp = async () => {
   const app = express();
 
   const allowedOrigin =
-    config.frontendUrl && config.frontendUrl !== "*"
-      ? [config.frontendUrl]
+    Array.isArray(config.frontendOrigins) &&
+    config.frontendOrigins.length > 0 &&
+    !config.frontendOrigins.includes("*")
+      ? config.frontendOrigins
       : true;
 
   app.use(
