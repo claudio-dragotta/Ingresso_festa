@@ -42,7 +42,13 @@ const LoginPage = () => {
       <div className="login-container">
         <div className="login-card">
           <div className="login-header">
-            <div className="login-icon">🎉</div>
+                        <div className="login-icon" aria-hidden>
+              <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 20l-3-3h6l-3 3z"/>
+                <path d="M8 9a4 4 0 118 0c0 2.5-2 5-4 7-2-2-4-4.5-4-7z"/>
+                <circle cx="12" cy="5" r="2"/>
+              </svg>
+            </div>
             <h1>Festa 8 Novembre</h1>
             <p>Sistema di Gestione Ingressi</p>
           </div>
@@ -123,5 +129,6 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
 
 

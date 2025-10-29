@@ -159,14 +159,26 @@ export default function AdminDashboard() {
           className={`tab ${activeTab === "paganti" ? "active" : ""}`}
           onClick={() => setActiveTab("paganti")}
         >
-          <span className="tab-icon">💰</span>
+          <span className="tab-icon" aria-hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <line x1="2" y1="8" x2="22" y2="8"/>
+              <circle cx="8" cy="14" r="2"/>
+              <path d="M20 14h-6"/>
+            </svg>
+          </span>
           Paganti ({pagantiList.length})
         </button>
         <button
           className={`tab ${activeTab === "green" ? "active" : ""}`}
           onClick={() => setActiveTab("green")}
         >
-          <span className="tab-icon">🎉</span>
+          <span className="tab-icon" aria-hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 22s8-4 8-10a8 8 0 10-16 0c0 6 8 10 8 10z"/>
+              <path d="M12 12a4 4 0 110-8 4 4 0 010 8z"/>
+            </svg>
+          </span>
           Green ({greenList.length})
         </button>
       </div>

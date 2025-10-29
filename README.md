@@ -203,6 +203,7 @@ Ingresso_festa/
 - `username`: Username login
 - `password`: Password hashed (bcrypt)
 - `role`: ADMIN | ENTRANCE
+- `active`: Boolean (true = può accedere; false = disattivato)
 
 #### SystemConfig
 - `eventName`: Nome evento
@@ -217,6 +218,8 @@ npm run build        # Build production
 npm run start        # Avvia production build
 npm run prisma:generate   # Genera Prisma Client
 npm run prisma:deploy     # Applica migrations
+npm run users:import      # Importa/aggiorna utenti da users.json (idempotente)
+npm run users:export      # Esporta utenti dal DB in JSON (con hash)
 ```
 
 ### Frontend
@@ -232,6 +235,7 @@ npm run preview      # Preview build
 - `POST /api/auth/login` - Login
 - `POST /api/auth/users` - Crea utente (admin only)
 - `GET /api/auth/users` - Lista utenti (admin only)
+- `PATCH /api/auth/users/:id` - Attiva/Disattiva utente (admin only)
 - `DELETE /api/auth/users/:id` - Elimina utente (admin only)
 
 ### Invitees
@@ -244,6 +248,37 @@ npm run preview      # Preview build
 
 ### Sync
 - `POST /api/sync/google-sheets` - Sincronizza (admin only)
+
+Gli endpoint riservati agli admin rispondono 404 ai non‑admin (invisibili).
+
+## 🚀 Deploy su Render (aggiornato)
+
+### Backend (Web Service)
+- Root: `Ingresso_festa/backend`
+- Build Command: `npm ci && npm run build`
+- Start Command (consigliato):
+  - `npx prisma migrate deploy && npm run users:import -- users.json && node dist/server.js`
+  - Fallback (se mancano migration): `npx prisma migrate deploy || npx prisma db push && node dist/server.js`
+- Environment (minimo):
+  - `DATABASE_URL` → es. SQLite con Persistent Disk: `file:/var/data/ingresso.db`
+  - `JWT_SECRET` → segreto robusto
+  - `FRONTEND_URL` → URL frontend per CORS
+  - `GOOGLE_SHEET_ID`, `GOOGLE_SHEET_RANGE=Lista!A2:B`, `GOOGLE_SHEET_GREEN_RANGE=GREEN!A:A`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_SHEETS_AUTO_SYNC=true`, `GOOGLE_SHEETS_SYNC_INTERVAL=10`
+  - Facoltative:
+    - `DISABLE_ENV_ADMIN_FALLBACK=true` (usa solo utenti DB)
+    - `NPM_CONFIG_PRODUCTION=false` (permette `ts-node` negli script npm)
+- Secret Files:
+  - Aggiungi `users.json` (vedi `backend/users.example.json`). Password meglio hashate (`npm run hash-password -- <pwd>`), altrimenti verranno hashate all’import.
+
+### Frontend (Static Site o Web Service)
+- Root: `Ingresso_festa/frontend`
+- Build Command: `npm ci && npm run build`
+- Env: `VITE_API_BASE_URL` → URL backend (es. `https://<tuo-backend>.onrender.com/api`)
+
+### Migrazioni DB in produzione
+- Le migration sono in `backend/prisma/migrations/`.
+- Lo Start esegue `prisma migrate deploy` ad ogni avvio: ridistribuisci dopo modifiche schema (es. aggiunta `User.active`).
+- Se vedi errori tipo "column ... does not exist": ridistribuisci per applicare la nuova migration o usa il fallback con `prisma db push`.
 
 ## 🎯 Features Tecniche
 

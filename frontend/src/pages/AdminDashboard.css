@@ -170,6 +170,11 @@
   font-size: 1.5rem;
 }
 
+.tab-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
 /* Actions Bar */
 .actions-bar {
   display: flex;
