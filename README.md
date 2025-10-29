@@ -1,184 +1,309 @@
-# Ingresso Festa – Sistema di accesso con QR code
+# 🎉 Festa 8 Novembre - Sistema di Gestione Ingressi
 
-Applicazione full-stack per gestire l'ingresso a eventi privati tramite QR code univoci, con dashboard di controllo, pagina di scansione dedicata e importazione massiva degli invitati.
+Sistema moderno per la gestione degli ingressi alla festa, con ricerca in tempo reale, sincronizzazione Google Sheets e interfacce separate per Admin e operatori all'ingresso.
 
-## Funzionalità principali
-- Generazione di QR code firmati e non duplicabili per ogni invitato (PNG nominati `Nome-Cognome`).
-- Verifica in tempo reale via API: ingresso consentito, già utilizzato, codice non valido, evento in pausa o bloccato.
-- **Sincronizzazione automatica con Google Sheets**: importa automaticamente nuove persone dal tuo foglio Google (formato "Cognome Nome" nella colonna A) con controllo duplicati e generazione QR automatica.
-- Dashboard operativa con:
-  - statistiche live (totale, entrati, in arrivo, annullati);
-  - elenco invitati con filtri, riepiloghi e azioni (reset, invio email, download QR);
-  - pianificazione stato evento (attivo/pausa/bloccato);
-  - importazione manuale, da testo, o da file Excel/CSV (Nome, Cognome, Email, Telefono);
-  - **bottone sincronizzazione Google Sheets** per import immediato.
-- Pagina di scansione protetta (accesso solo dopo login) che utilizza la fotocamera del dispositivo ed esegue la convalida lato server.
-- Supporto a distribuzione dei QR via email tramite SMTP configurabile.
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![Node](https://img.shields.io/badge/node-%3E%3D20-green)
+![TypeScript](https://img.shields.io/badge/typescript-5.6-blue)
+![React](https://img.shields.io/badge/react-19-blue)
 
-## Architettura
-- **Backend** (`backend/`): Node.js + Express + Prisma (SQLite in locale e su Render tramite disco persistente). Genera QR, gestisce check-in, invia email.
-- **Frontend** (`frontend/`): React + Vite + React Query. Fornisce dashboard e scanner.
-- **Storage locale** (`storage/`): contiene immagini dei QR e database SQLite di sviluppo (ignorati da Git).
+## ✨ Caratteristiche Principali
 
-## Requisiti
+### 🎯 Per gli Utenti Ingresso
+- **Ricerca Istantanea**: Trova persone digitando nome o cognome
+- **Check-in Veloce**: Bottone verde/rosso per marcare gli ingressi
+- **Contatori Live**: Visualizza in tempo reale quante persone devono ancora entrare
+- **Interface Moderna**: Design intuitivo e responsive
+
+### 👑 Per gli Admin
+- **Dashboard Completa**: Gestione totale di entrambe le liste (Paganti e Green)
+- **Aggiungi Persone**: Form semplice per inserire nuovi ospiti
+- **Sincronizzazione Google Sheets**: Importa automaticamente da due tabelle
+- **Controllo Totale**: Elimina, modifica e resetta gli stati di ingresso
+- **Statistiche Real-time**: Monitora l'andamento della festa
+
+### 🔄 Integrazione Google Sheets
+- **Due Liste Separate**:
+  - **Lista** (Paganti): Cognome Nome + Tipologia Pagamento
+  - **GREEN**: Cognome Nome (ospiti non paganti)
+- **Sincronizzazione Automatica**: Ogni 10 minuti (configurabile)
+- **Sincronizzazione Manuale**: Bottone nella dashboard admin
+
+## 🚀 Quick Start
+
+### Prerequisiti
 - Node.js >= 20
-- npm >= 10
-- (Dev) SQLite incorporato via Prisma
-- (Prod) SQLite su disco persistente (Render Disk)
+- npm o yarn
+- Account Google Cloud con Service Account (per Google Sheets)
 
-## Setup locale
-1. Clona il repository e installa le dipendenze:
-   ```bash
-   cd backend
-   npm install
-   npm run prisma:generate
-   # imposta la variabile DATABASE_URL, es. "file:../storage/data/dev.db"
-   npm run prisma:migrate -- --name init   # genera il database di sviluppo
-   cd ../frontend
-   npm install
-   ```
-2. Configura gli environment:
-   - copia `backend/.env.example` in `backend/.env` e personalizza i valori (vedi tabella sotto);
-   - copia `frontend/.env.example` in `frontend/.env` e imposta `VITE_API_BASE_URL` (es. `http://localhost:8000/api`).
-3. Avvia i servizi in due terminali:
-   ```bash
-   # Terminale 1
-   cd backend
-   npm run dev
+### Installazione
 
-   # Terminale 2
-   cd frontend
-   npm run dev
-   ```
-   La dashboard sarà disponibile su `http://localhost:5173`, il backend su `http://localhost:8000`.
-
-### Ambiente backend
-| Variabile | Descrizione |
-|-----------|-------------|
-| `NODE_ENV` | `development` o `production` |
-| `HOST` / `PORT` | Binding del server (default `0.0.0.0:8000`) |
-| `DATABASE_URL` | Connessione Prisma (es. `file:../storage/data/dev.db` in locale, `file:/var/data/ingresso.db` su Render) |
-| `JWT_SECRET` | Secret per firmare i token di sessione |
-| `ADMIN_USERNAME` | Username login amministratore |
-| `ADMIN_PASSWORD` | Password (plain solo in dev). Usa `npm run hash-password -- <password>` per generare un hash bcrypt da usare in produzione |
-| `FRONTEND_URL` | Origine consentita per le richieste (es. `http://localhost:5173`) |
-| `QR_OUTPUT_DIR` | Cartella per salvare i QR (`../storage/qrcodes` di default) |
-| `EMAIL_FROM` | Mittente email QR |
-| `EMAIL_TRANSPORT_URL` | URL SMTP compatibile Nodemailer (es. `smtp://user:pass@smtp.mailgun.org:587`) |
-| `EVENT_DOMAIN` | Dominio pubblico dell'evento (opzionale, per link e comunicazioni) |
-| `GOOGLE_SHEET_ID` | ID del foglio Google Sheets (dalla URL: `https://docs.google.com/spreadsheets/d/{ID}/edit`) |
-| `GOOGLE_SHEET_RANGE` | Range da leggere (default: `Lista!A2:A`) |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Credenziali Service Account Google Cloud (JSON completo su una riga) |
-| `GOOGLE_SHEETS_AUTO_SYNC` | Abilita sincronizzazione automatica (`true`/`false`) |
-| `GOOGLE_SHEETS_SYNC_INTERVAL` | Intervallo sincronizzazione in minuti (default: `10`) |
-
-> Per la configurazione completa di Google Sheets, consulta la guida dettagliata in [GOOGLE_SHEETS_SETUP.md](GOOGLE_SHEETS_SETUP.md).
-
-> 💡 Su Windows Prisma 6 richiede una `DATABASE_URL` in formato URI **assoluto** (`file:C:/Percorso/Ingresso_festa/storage/data/dev.db`). Se ottieni l'errore generico “Schema engine error”, riscrivi il percorso in questo modo oppure esporta temporaneamente la variabile prima di lanciare i comandi `prisma migrate`.
-
-### Script utili backend
-- `npm run dev`: avvio con ts-node e nodemon.
-- `npm run build` / `npm start`: build TypeScript → `dist/` e avvio della versione compilata.
-- `npm run prisma:migrate`: applica migrazioni in sviluppo (`DATABASE_URL` deve puntare al file SQLite corretto).
-- `npm run prisma:deploy`: applica migrazioni in produzione.
-- `npm run hash-password -- <password>`: stampa un hash bcrypt da copiare in `ADMIN_PASSWORD` (consigliato per Render).
-
-## 🚀 Deploy su Render (PRODUZIONE)
-
-### Sistema Live
-- 🌐 **Frontend**: https://ingresso-festa-web.onrender.com
-- 🔧 **Backend API**: https://ingresso-festa-api.onrender.com
-- 💾 **Database**: SQLite su disco persistente Render (1GB)
-- 📊 **Google Sheets**: Sincronizzazione automatica ogni 10 minuti
-
-### Credenziali di Accesso
-- **Username**: `admin`
-- **Password**: Configurata in `ADMIN_PASSWORD` su Render
-- **Login URL**: https://ingresso-festa-web.onrender.com/login
-
-### Configurazione Render
-Il progetto usa un `render.yaml` Blueprint che crea automaticamente 2 servizi:
-
-#### 1️⃣ Backend API (ingresso-festa-api)
-- **Tipo**: Web Service (Node.js)
-- **Piano**: Starter ($7/mese) - sempre attivo
-- **Build**: `npm install && npx prisma generate && npm run build`
-- **Start**: `npx prisma migrate deploy && node dist/server.js`
-- **Disco**: 1GB persistente su `/var/data` (database + QR codes)
-
-**Variabili ambiente richieste:**
+#### 1. Backend Setup
 ```bash
-JWT_SECRET=<stringa-casuale-sicura>
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=<password-sicura>
-FRONTEND_URL=https://ingresso-festa-web.onrender.com
-GOOGLE_SHEET_ID=<id-foglio-google>
-GOOGLE_SERVICE_ACCOUNT_JSON=<json-service-account>
+cd backend
+
+# Installa dipendenze
+npm install
+
+# Copia e configura environment variables
+# Il file .env.local è già configurato, copialo in .env se necessario
+
+# Genera Prisma Client
+npm run prisma:generate
+
+# Applica migrations (già applicate)
+npm run prisma:deploy
+
+# Inizializza utenti (GIÀ FATTO - admin e ingresso1 esistono)
+# npx ts-node scripts/init-users.ts
+
+# Avvia server
+npm run dev
 ```
 
-#### 2️⃣ Frontend Web (ingresso-festa-web)
-- **Tipo**: Web Service con env static
-- **Build**: `npm install && npm run build`
-- **Publish**: `./dist`
-- **Piano**: Gratuito
-
-**Variabili ambiente richieste:**
+#### 2. Frontend Setup
 ```bash
-VITE_API_BASE_URL=https://ingresso-festa-api.onrender.com/api
+cd frontend
+
+# Installa dipendenze
+npm install
+
+# Avvia development server
+npm run dev
 ```
 
-### Setup Deploy da Zero
+#### 3. Accedi
+Apri il browser: `http://localhost:5173`
 
-1. **Push codice su GitHub**
-   ```bash
-   git push origin main
-   ```
+**Credenziali di default:**
+- **Admin**: `admin` / `admin123`
+- **Ingresso**: `ingresso1` / `ingresso123`
 
-2. **Crea Blueprint su Render**
-   - Vai su https://render.com
-   - New → Blueprint
-   - Connetti repository GitHub
-   - Render legge `render.yaml` automaticamente
+⚠️ **IMPORTANTE**: Cambia queste password in produzione!
 
-3. **Configura Variabili Ambiente**
-   - Backend: aggiungi tutte le variabili (vedi tabella sopra)
-   - Frontend: aggiungi `VITE_API_BASE_URL`
-   - ⚠️ **IMPORTANTE**: `FRONTEND_URL` deve corrispondere all'URL del frontend!
+## 📋 Configurazione Google Sheets
 
-4. **Deploy**
-   - Clicca "Manual Deploy" su entrambi i servizi
-   - Aspetta completamento build (~3-5 minuti)
+### Struttura Foglio "Festa 8 Novembre"
 
-5. **Verifica**
-   - Backend: https://ingresso-festa-api.onrender.com/api/health
-   - Frontend: https://ingresso-festa-web.onrender.com/login
-   - Google Sheets: controlla logs per "✅ Sincronizzazione completata"
+#### Tabella "Lista" (Paganti)
+| A: Cognome Nome | B: Tipologia Pagamento |
+|----------------|------------------------|
+| Rossi Mario    | bonifico               |
+| Verdi Luigi    | paypal                 |
 
-### Monitoraggio e Logs
+#### Tabella "GREEN" (Non Paganti)
+| A: Cognome Nome  |
+|-----------------|
+| Bianchi Anna    |
+| Neri Paolo      |
 
-- **Logs Backend**: Render Dashboard → ingresso-festa-api → Logs
-- **Metriche**: Dashboard → ingresso-festa-api → Metrics
-- **Database**: Salvato in `/var/data/ingresso.db` (persistente tra deploy)
-- **QR Codes**: Salvati in `/var/data/qrcodes/` (persistenti)
-
-## Sicurezza
-- I token nei QR hanno firma HMAC e vengono invalidati al primo utilizzo.
-- La pagina di scansione richiede login (nessun check-in senza sessione valida).
-- I QR funzionano solo tramite questa web app: scanner esterni vedranno solo il payload cifrato.
-- Imposta password hashate e usa HTTPS in produzione.
-
-## Struttura repository
-```
-backend/      API Express + Prisma, servizi QR/email
-frontend/     Dashboard React + pagina Scanner
-storage/      Cartelle per QR e database locali (ignorate da Git)
-render.yaml   Configurazione opzionale per Render
-README.md     Questo file
+### Environment Variables (già configurato in .env.local)
+```env
+GOOGLE_SHEET_ID=1ufEQZd1bvjfyEgvBXzNvg_L-oBjVXPDZmynGE8Sfxug
+GOOGLE_SHEET_RANGE=Lista!A2:B
+GOOGLE_SHEET_GREEN_RANGE=GREEN!A:A
+GOOGLE_SHEETS_AUTO_SYNC=true
+GOOGLE_SHEETS_SYNC_INTERVAL=10
 ```
 
-## Note finali
-- In sviluppo e produzione viene usato SQLite; su Render il file risiede nel disco persistente montato (`/var/data/ingresso.db`).
-- I QR vengono salvati su disco; su Render valuta l'uso di uno storage esterno (AWS S3, Render Disk) se vuoi conservarli nel tempo.
-- Per reset massivo degli ingressi puoi usare l'endpoint `PATCH /api/invitees/:id/reset` dalla dashboard (azione per singolo invitato).
+## 🎨 Interfacce
 
-Buon evento! 🎉
+### Login Page
+- Background animato con orb fluttuanti
+- Form moderno con validazione
+- Redirect automatico basato sul ruolo
+
+### Search Page (per tutti)
+- Barra di ricerca con debounce
+- 3 contatori in tempo reale:
+  - Paganti da entrare
+  - Green da entrare
+  - Totale entrati
+- Risultati con badge tipo lista
+- Bottone verde/rosso per check-in
+
+### Admin Dashboard
+- Tab separati per Paganti e Green
+- Form per aggiungere persone
+- Bottone sincronizzazione Google Sheets
+- Tabella completa con azioni:
+  - Toggle stato entrato/non entrato
+  - Elimina persona
+
+## 🔐 Ruoli e Permessi
+
+### ADMIN
+- ✅ Accesso a Dashboard e Ricerca
+- ✅ Aggiungere/Eliminare persone
+- ✅ Marcare come entrato
+- ✅ **Rimettere come non entrato** (unico ruolo che può farlo)
+- ✅ Sincronizzare Google Sheets
+
+### ENTRANCE
+- ✅ Accesso solo a Ricerca
+- ✅ Cercare persone
+- ✅ Marcare come entrato (verde → rosso)
+- ❌ Non può rimettere come non entrato
+- ❌ Non può eliminare/aggiungere
+- ❌ Non può accedere alla dashboard
+
+## 📁 Struttura Progetto
+
+```
+Ingresso_festa/
+├── backend/
+│   ├── src/
+│   │   ├── routes/          # API endpoints
+│   │   ├── services/        # Business logic
+│   │   ├── middleware/      # Auth, validation
+│   │   ├── lib/             # Prisma client
+│   │   └── server.ts        # Entry point
+│   ├── prisma/
+│   │   ├── schema.prisma    # Database schema
+│   │   └── migrations/      # Database migrations
+│   └── scripts/
+│       └── init-users.ts    # User initialization
+│
+├── frontend/
+│   ├── src/
+│   │   ├── api/             # API client
+│   │   ├── components/      # React components
+│   │   ├── context/         # Auth context
+│   │   ├── pages/
+│   │   │   ├── AdminDashboard.tsx  # Dashboard admin
+│   │   │   ├── SearchPage.tsx      # Pagina ricerca
+│   │   │   └── LoginPage.tsx       # Login
+│   │   └── App.tsx
+│   └── package.json
+│
+├── storage/
+│   └── data/
+│       └── dev.db           # SQLite database
+│
+├── README.md                # Questo file
+├── NUOVO_SISTEMA.md         # Documentazione backend
+└── FRONTEND_COMPLETO.md     # Documentazione frontend
+```
+
+## 🗄️ Database
+
+### Tables
+
+#### Invitee
+- `id`: Unique identifier
+- `firstName`: Nome
+- `lastName`: Cognome
+- `listType`: PAGANTE | GREEN
+- `paymentType`: Tipologia pagamento (solo PAGANTE)
+- `hasEntered`: Boolean (true = entrato, false = non entrato)
+- `checkedInAt`: Timestamp ingresso
+
+#### User
+- `id`: Unique identifier
+- `username`: Username login
+- `password`: Password hashed (bcrypt)
+- `role`: ADMIN | ENTRANCE
+
+#### SystemConfig
+- `eventName`: Nome evento
+- `eventStatus`: ACTIVE | PAUSED | LOCKED
+
+## 🔧 Scripts Disponibili
+
+### Backend
+```bash
+npm run dev          # Development server con hot reload
+npm run build        # Build production
+npm run start        # Avvia production build
+npm run prisma:generate   # Genera Prisma Client
+npm run prisma:deploy     # Applica migrations
+```
+
+### Frontend
+```bash
+npm run dev          # Development server
+npm run build        # Build production
+npm run preview      # Preview build
+```
+
+## 🌐 API Endpoints
+
+### Authentication
+- `POST /api/auth/login` - Login
+- `POST /api/auth/users` - Crea utente (admin only)
+- `GET /api/auth/users` - Lista utenti (admin only)
+- `DELETE /api/auth/users/:id` - Elimina utente (admin only)
+
+### Invitees
+- `GET /api/invitees` - Lista tutti
+- `GET /api/invitees/search?q=query` - Ricerca
+- `GET /api/invitees/stats` - Statistiche
+- `POST /api/invitees` - Crea
+- `POST /api/invitees/:id/checkin` - Check-in
+- `DELETE /api/invitees/:id` - Elimina (admin only)
+
+### Sync
+- `POST /api/sync/google-sheets` - Sincronizza (admin only)
+
+## 🎯 Features Tecniche
+
+### Frontend
+- **React 19** con Hooks
+- **TypeScript** per type safety
+- **React Query** per state management
+- **React Router 7** per routing
+- **Axios** per HTTP requests
+- **Vite** come build tool
+
+### Backend
+- **Node.js 20+** con TypeScript
+- **Express 5** per API
+- **Prisma** ORM con SQLite
+- **JWT** per autenticazione
+- **bcrypt** per password hashing
+- **Google Sheets API** per sincronizzazione
+
+## 🔒 Sicurezza
+
+- ✅ Password hashed con bcrypt
+- ✅ JWT token con scadenza 12h
+- ✅ Role-based access control
+- ✅ Protected routes
+- ✅ SQL injection protection (Prisma)
+- ✅ CORS configurato
+- ✅ Helmet.js headers
+
+## 🐛 Troubleshooting
+
+### Backend non si avvia
+```bash
+# Verifica variabili environment
+cat backend/.env.local
+
+# Rigenera Prisma Client
+cd backend && npm run prisma:generate
+```
+
+### Frontend non connette al backend
+Verifica che il backend sia in ascolto su porta 8000
+
+### Google Sheets non sincronizza
+- Verifica che il foglio sia condiviso con il Service Account
+- Controlla GOOGLE_SHEET_ID in .env.local
+- Verifica i range (Lista!A2:B e GREEN!A:A)
+
+## 📄 Licenza
+
+MIT License
+
+## 🙏 Credits
+
+Sviluppato con ❤️ per la Festa 8 Novembre
+
+---
+
+**Ready to party! 🎊**
+
+Per documentazione dettagliata:
+- [NUOVO_SISTEMA.md](./NUOVO_SISTEMA.md) - Backend details
+- [FRONTEND_COMPLETO.md](./FRONTEND_COMPLETO.md) - Frontend details

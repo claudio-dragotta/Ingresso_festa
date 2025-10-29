@@ -1,29 +1,15 @@
-import path from "path";
-import { Prisma } from "@prisma/client";
+import { Prisma, ListType } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 import { logger } from "../logger";
-import { generateToken, verifyTokenSignature } from "./tokenService";
-import { generateQrCode, QrGenerationResult, readQrFile } from "./qrService";
-import { sendQrEmail } from "./emailService";
-import { writeToGoogleSheet } from "./googleSheetsService";
-import { config } from "../config";
 
 export interface InviteeInput {
   firstName: string;
   lastName: string;
   email?: string;
   phone?: string;
-  paymentType?: string; // bonifico, paypal, contanti, p2p
-}
-
-export interface InviteeWithQr {
-  invitee: Prisma.InviteeGetPayload<{
-    include: {
-      checkInLogs: false;
-    };
-  }>;
-  qr: QrGenerationResult;
+  listType: ListType; // PAGANTE o GREEN
+  paymentType?: string; // Solo per PAGANTE: bonifico, paypal, contanti, p2p
 }
 
 const normalize = (value: string) => value.trim();
@@ -31,7 +17,7 @@ const normalize = (value: string) => value.trim();
 const buildFullName = (firstName: string, lastName: string) =>
   `${normalize(firstName)} ${normalize(lastName)}`.trim();
 
-export const createInvitee = async (input: InviteeInput): Promise<InviteeWithQr> => {
+export const createInvitee = async (input: InviteeInput) => {
   // Controllo duplicati PRIMA di creare
   const allInvitees = await prisma.invitee.findMany({
     select: {
@@ -54,37 +40,23 @@ export const createInvitee = async (input: InviteeInput): Promise<InviteeWithQr>
     );
   }
 
-  const token = generateToken();
-  const fullName = buildFullName(input.firstName, input.lastName);
-  const qr = await generateQrCode({ fullName, token });
-
   const invitee = await prisma.invitee.create({
     data: {
       firstName: normalize(input.firstName),
       lastName: normalize(input.lastName),
       email: input.email?.trim().toLowerCase(),
       phone: input.phone?.trim(),
-      paymentType: input.paymentType?.trim().toLowerCase(),
-      token,
-      qrFilename: qr.filename,
-      qrMimeType: qr.mimeType,
+      listType: input.listType,
+      paymentType: input.listType === 'PAGANTE' ? input.paymentType?.trim().toLowerCase() : null,
+      hasEntered: false,
     },
   });
 
-  // Sincronizzazione bidirezionale: scrivi su Google Sheets
-  try {
-    await writeToGoogleSheet(fullName, input.paymentType);
-    logger.info(`Invitato sincronizzato su Google Sheets: ${fullName}`);
-  } catch (error: any) {
-    // Non bloccare la creazione se Google Sheets fallisce, solo logga
-    logger.error(`Errore sincronizzazione Google Sheets: ${error.message}`);
-  }
-
-  return { invitee, qr };
+  return invitee;
 };
 
 export const createInviteesBulk = async (inputs: InviteeInput[]) => {
-  const results: InviteeWithQr[] = [];
+  const results = [];
   for (const input of inputs) {
     const existing = await prisma.invitee.findFirst({
       where: {
@@ -115,30 +87,32 @@ export const listInvitees = async () => {
   return invitees;
 };
 
-export const getInviteeByToken = async (token: string) => {
-  const invitee = await prisma.invitee.findUnique({ where: { token } });
-  return invitee;
+export const searchInvitees = async (query: string) => {
+  const invitees = await prisma.invitee.findMany({
+    orderBy: [
+      { lastName: "asc" },
+      { firstName: "asc" },
+    ],
+  });
+
+  // Filtra i risultati in memoria per ricerca case-insensitive
+  const searchTerm = query.toLowerCase();
+  return invitees.filter(inv =>
+    inv.firstName.toLowerCase().includes(searchTerm) ||
+    inv.lastName.toLowerCase().includes(searchTerm) ||
+    `${inv.firstName} ${inv.lastName}`.toLowerCase().includes(searchTerm) ||
+    `${inv.lastName} ${inv.firstName}`.toLowerCase().includes(searchTerm)
+  );
 };
 
-export const markCheckIn = async (token: string) => {
-  if (!verifyTokenSignature(token)) {
-    await prisma.checkInLog.create({
-      data: {
-        token,
-        outcome: "INVALID",
-        message: "Firma token non valida",
-      },
-    });
-    throw new AppError("Codice non valido", 400);
-  }
-
+export const markCheckIn = async (inviteeId: string, adminOverride: boolean = false) => {
   const systemConfig = await prisma.systemConfig.findFirst();
   if (!systemConfig || systemConfig.eventStatus === "LOCKED") {
     await prisma.checkInLog.create({
       data: {
-        token,
         outcome: "BLOCKED",
         message: "Sistema bloccato",
+        inviteeId,
       },
     });
     throw new AppError("Sistema bloccato", 423, { status: systemConfig?.eventStatus ?? "LOCKED" });
@@ -148,62 +122,47 @@ export const markCheckIn = async (token: string) => {
     throw new AppError("Registrazioni momentaneamente sospese", 423, { status: systemConfig.eventStatus });
   }
 
-  const invitee = await prisma.invitee.findUnique({ where: { token } });
+  const invitee = await prisma.invitee.findUnique({ where: { id: inviteeId } });
   if (!invitee) {
     await prisma.checkInLog.create({
       data: {
-        token,
-        outcome: "INVALID",
-        message: "Token inesistente",
+        outcome: "BLOCKED",
+        message: "Invitato non trovato",
       },
     });
-    throw new AppError("Codice non valido", 404);
+    throw new AppError("Invitato non trovato", 404);
   }
 
-  if (invitee.status === "CANCELLED") {
+  // Solo admin può rimettere come "non entrato"
+  if (invitee.hasEntered && !adminOverride) {
     await prisma.checkInLog.create({
       data: {
         invitee: { connect: { id: invitee.id } },
-        token,
-        outcome: "INVALID",
-        message: "Invitato annullato",
-      },
-    });
-    throw new AppError("Codice annullato", 403, {
-      invitee,
-    });
-  }
-
-  if (invitee.status === "CHECKED_IN") {
-    await prisma.checkInLog.create({
-      data: {
-        invitee: { connect: { id: invitee.id } },
-        token,
         outcome: "DUPLICATE",
-        message: "Già registrato",
+        message: "Già entrato",
       },
     });
-    throw new AppError("Codice già utilizzato", 409, {
+    throw new AppError("Persona già entrata", 409, {
       checkedInAt: invitee.checkedInAt,
       invitee,
     });
   }
 
+  // Toggle dello stato
+  const newState = !invitee.hasEntered;
   const updated = await prisma.invitee.update({
     where: { id: invitee.id },
     data: {
-      status: "CHECKED_IN",
-      checkedInAt: new Date(),
-      checkInCount: { increment: 1 },
+      hasEntered: newState,
+      checkedInAt: newState ? new Date() : null,
     },
   });
 
   await prisma.checkInLog.create({
     data: {
       invitee: { connect: { id: invitee.id } },
-      token,
       outcome: "SUCCESS",
-      message: "Ingresso autorizzato",
+      message: newState ? "Ingresso autorizzato" : "Reimpostato come non entrato",
     },
   });
 
@@ -214,7 +173,7 @@ export const resetCheckIn = async (inviteeId: string) => {
   const invitee = await prisma.invitee.update({
     where: { id: inviteeId },
     data: {
-      status: "PENDING",
+      hasEntered: false,
       checkedInAt: null,
     },
   });
@@ -225,46 +184,30 @@ export const deleteInvitee = async (inviteeId: string) => {
   await prisma.invitee.delete({ where: { id: inviteeId } });
 };
 
-export const sendInviteeQr = async (inviteeId: string) => {
-  const invitee = await prisma.invitee.findUnique({ where: { id: inviteeId } });
-  if (!invitee?.email) {
-    throw new AppError("Nessuna email associata all'invitato", 400);
-  }
-
-  const qrPath = path.join(config.qrOutputDir, invitee.qrFilename);
-
-  const buffer = await readQrFile(qrPath);
-  await sendQrEmail({
-    to: invitee.email,
-    attachments: [
-      {
-        filename: invitee.qrFilename,
-        content: buffer,
-        contentType: invitee.qrMimeType ?? "image/png",
-      },
-    ],
-  });
-
-  await prisma.invitee.update({
-    where: { id: invitee.id },
-    data: {
-      lastSentAt: new Date(),
-    },
-  });
-};
-
-export const getInviteeQr = async (inviteeId: string) => {
-  const invitee = await prisma.invitee.findUnique({ where: { id: inviteeId } });
-  if (!invitee) {
-    throw new AppError("Invitato non trovato", 404);
-  }
-
-  const qrPath = path.join(config.qrOutputDir, invitee.qrFilename);
-  const buffer = await readQrFile(qrPath);
+// Statistiche per i contatori
+export const getStats = async () => {
+  const [pagantiTotal, pagantiEntered, greenTotal, greenEntered] = await Promise.all([
+    prisma.invitee.count({ where: { listType: 'PAGANTE' } }),
+    prisma.invitee.count({ where: { listType: 'PAGANTE', hasEntered: true } }),
+    prisma.invitee.count({ where: { listType: 'GREEN' } }),
+    prisma.invitee.count({ where: { listType: 'GREEN', hasEntered: true } }),
+  ]);
 
   return {
-    filename: invitee.qrFilename,
-    mimeType: invitee.qrMimeType ?? "image/png",
-    buffer,
+    paganti: {
+      total: pagantiTotal,
+      entered: pagantiEntered,
+      remaining: pagantiTotal - pagantiEntered,
+    },
+    green: {
+      total: greenTotal,
+      entered: greenEntered,
+      remaining: greenTotal - greenEntered,
+    },
+    total: {
+      total: pagantiTotal + greenTotal,
+      entered: pagantiEntered + greenEntered,
+      remaining: (pagantiTotal + greenTotal) - (pagantiEntered + greenEntered),
+    },
   };
 };

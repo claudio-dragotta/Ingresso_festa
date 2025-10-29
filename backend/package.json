@@ -1,7 +1,7 @@
 {
   "name": "ingresso-festa-backend",
   "version": "0.1.0",
-  "description": "Backend service for the Ingresso Festa QR access control system",
+  "description": "Backend service for the Festa 8 Novembre - Sistema di Gestione Ingressi",
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec \"ts-node src/server.ts\"",
@@ -15,9 +15,10 @@
     "test": "vitest"
   },
   "keywords": [
-    "qr",
+    "festa",
     "check-in",
-    "render"
+    "gestione-ingressi",
+    "google-sheets"
   ],
   "author": "",
   "license": "MIT",
@@ -35,8 +36,6 @@
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "nanoid": "^5.1.6",
-    "nodemailer": "^7.0.10",
-    "qrcode": "^1.5.4",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
@@ -47,8 +46,6 @@
     "@types/morgan": "^1.9.10",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.10.1",
-    "@types/nodemailer": "^6.4.15",
-    "@types/qrcode": "^1.5.6",
     "nodemon": "^3.1.9",
     "prisma": "^6.2.1",
     "ts-node": "^10.9.2",

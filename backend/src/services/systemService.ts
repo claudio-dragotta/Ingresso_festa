@@ -33,19 +33,22 @@ export const updateSystemStatus = async (status: EventStatus) => {
 };
 
 export const getDashboardMetrics = async () => {
-  const [total, checkedIn, pending] = await Promise.all([
+  const [total, entered, notEntered, pagantiTotal, greenTotal] = await Promise.all([
     prisma.invitee.count(),
-    prisma.invitee.count({ where: { status: "CHECKED_IN" } }),
-    prisma.invitee.count({ where: { status: "PENDING" } }),
+    prisma.invitee.count({ where: { hasEntered: true } }),
+    prisma.invitee.count({ where: { hasEntered: false } }),
+    prisma.invitee.count({ where: { listType: 'PAGANTE' } }),
+    prisma.invitee.count({ where: { listType: 'GREEN' } }),
   ]);
 
   const capacity = await prisma.systemConfig.findFirst();
 
   return {
     total,
-    checkedIn,
-    pending,
-    cancelled: total - checkedIn - pending,
+    entered,
+    notEntered,
+    pagantiTotal,
+    greenTotal,
     eventStatus: capacity?.eventStatus ?? "ACTIVE",
   };
 };

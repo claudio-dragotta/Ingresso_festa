@@ -1,8 +1,9 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import "./AppLayout.css";
 
 const AppLayout = () => {
-  const { logout } = useAuth();
+  const { logout, isAdmin, role } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -16,20 +17,46 @@ const AppLayout = () => {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <h1>Ingresso Festa</h1>
-        <nav>
-          <NavLink to="/dashboard" className={navLinkClass}>
-            Dashboard
-          </NavLink>
-          <NavLink to="/scanner" className={navLinkClass}>
-            Scanner
-          </NavLink>
-          <button type="button" onClick={handleLogout} className="logout-button">
-            Esci
-          </button>
-        </nav>
+        <div className="header-content">
+          <div className="header-left">
+            <h1>🎉 Festa 8 Novembre</h1>
+            <span className="role-badge">{role === "ADMIN" ? "Admin" : "Ingresso"}</span>
+          </div>
+
+          <nav className="header-nav">
+            {isAdmin && (
+              <NavLink to="/dashboard" className={navLinkClass}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7"/>
+                  <rect x="14" y="3" width="7" height="7"/>
+                  <rect x="14" y="14" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+                Dashboard
+              </NavLink>
+            )}
+
+            <NavLink to="/search" className={navLinkClass}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="M21 21l-4.35-4.35"/>
+              </svg>
+              Ricerca
+            </NavLink>
+
+            <button type="button" onClick={handleLogout} className="logout-button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Esci
+            </button>
+          </nav>
+        </div>
       </header>
-      <main>
+
+      <main className="app-main">
         <Outlet />
       </main>
     </div>

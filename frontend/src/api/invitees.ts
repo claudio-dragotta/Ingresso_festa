@@ -1,6 +1,7 @@
 import apiClient from "./client";
 
-export type InviteeStatus = "PENDING" | "CHECKED_IN" | "CANCELLED";
+export type ListType = "PAGANTE" | "GREEN";
+export type EventStatus = "ACTIVE" | "PAUSED" | "LOCKED";
 
 export interface Invitee {
   id: string;
@@ -8,14 +9,10 @@ export interface Invitee {
   lastName: string;
   email?: string | null;
   phone?: string | null;
-  paymentType?: string | null; // bonifico, paypal, contanti, p2p
-  token: string;
-  qrFilename: string;
-  qrMimeType?: string | null;
-  status: InviteeStatus;
-  checkInCount: number;
+  listType: ListType;
+  paymentType?: string | null; // Solo per PAGANTE: bonifico, paypal, contanti, p2p
+  hasEntered: boolean; // true = entrato (rosso), false = non entrato (verde)
   checkedInAt?: string | null;
-  lastSentAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,18 +22,36 @@ export interface InviteeInput {
   lastName: string;
   email?: string;
   phone?: string;
-  paymentType?: string; // bonifico, paypal, contanti, p2p
+  listType: ListType;
+  paymentType?: string;
+}
+
+export interface Stats {
+  paganti: {
+    total: number;
+    entered: number;
+    remaining: number;
+  };
+  green: {
+    total: number;
+    entered: number;
+    remaining: number;
+  };
+  total: {
+    total: number;
+    entered: number;
+    remaining: number;
+  };
 }
 
 export interface DashboardMetrics {
   total: number;
-  checkedIn: number;
-  pending: number;
-  cancelled: number;
+  entered: number;
+  notEntered: number;
+  pagantiTotal: number;
+  greenTotal: number;
   eventStatus: EventStatus;
 }
-
-export type EventStatus = "ACTIVE" | "PAUSED" | "LOCKED";
 
 export interface SystemConfig {
   id: number;
@@ -46,16 +61,44 @@ export interface SystemConfig {
   createdAt: string;
 }
 
+export interface SyncResult {
+  success: boolean;
+  totalFromSheet: number;
+  newImported: number;
+  alreadyExists: number;
+  errors: string[];
+  duration: number;
+  breakdown: {
+    paganti: { imported: number; exists: number };
+    green: { imported: number; exists: number };
+  };
+}
+
+// GET /invitees - Lista tutti gli invitati
 export const fetchInvitees = async () => {
   const response = await apiClient.get<Invitee[]>("/invitees");
   return response.data;
 };
 
+// GET /invitees/search?q=query - Ricerca invitati
+export const searchInvitees = async (query: string) => {
+  const response = await apiClient.get<Invitee[]>(`/invitees/search?q=${encodeURIComponent(query)}`);
+  return response.data;
+};
+
+// GET /invitees/stats - Statistiche per i contatori
+export const fetchStats = async () => {
+  const response = await apiClient.get<Stats>("/invitees/stats");
+  return response.data;
+};
+
+// POST /invitees - Crea nuovo invitato (o array di invitati)
 export const createInvitee = async (payload: InviteeInput | InviteeInput[]) => {
   const response = await apiClient.post<Invitee | Invitee[]>("/invitees", payload);
   return response.data;
 };
 
+// POST /invitees/upload - Upload file (Excel/CSV)
 export const uploadInviteesFile = async (file: File) => {
   const formData = new FormData();
   formData.append("file", file);
@@ -65,55 +108,42 @@ export const uploadInviteesFile = async (file: File) => {
   return response.data as { imported: number; skipped: number; total: number };
 };
 
+// POST /invitees/:id/checkin - Marca come entrato/non entrato
+export const checkInPerson = async (inviteeId: string, adminOverride: boolean = false) => {
+  const response = await apiClient.post<Invitee>(`/invitees/${inviteeId}/checkin`, { adminOverride });
+  return response.data;
+};
+
+// PATCH /invitees/:id/reset - Reset check-in (solo admin)
 export const resetInviteeCheckIn = async (inviteeId: string) => {
   const response = await apiClient.patch<Invitee>(`/invitees/${inviteeId}/reset`);
   return response.data;
 };
 
-export const sendInviteeQr = async (inviteeId: string) => {
-  const response = await apiClient.post(`/invitees/${inviteeId}/send`);
-  return response.data;
+// DELETE /invitees/:id - Elimina invitato (solo admin)
+export const deleteInvitee = async (inviteeId: string) => {
+  await apiClient.delete(`/invitees/${inviteeId}`);
 };
 
-export const downloadInviteeQr = async (inviteeId: string) => {
-  const response = await apiClient.get(`/invitees/${inviteeId}/qr`, {
-    responseType: "blob",
-  });
-  return response.data as Blob;
-};
-
+// GET /dashboard/metrics - Metriche dashboard
 export const fetchMetrics = async () => {
   const response = await apiClient.get<DashboardMetrics>("/dashboard/metrics");
   return response.data;
 };
 
+// GET /settings/state - Configurazione sistema
 export const fetchSystemConfig = async () => {
   const response = await apiClient.get<SystemConfig | null>("/settings/state");
   return response.data;
 };
 
+// PATCH /settings/state - Aggiorna stato evento
 export const updateEventStatus = async (status: EventStatus) => {
   const response = await apiClient.patch<SystemConfig>("/settings/state", { status });
   return response.data;
 };
 
-export const checkInToken = async (token: string) => {
-  const response = await apiClient.post<{ invitee: Invitee; message: string }>("/checkin", { token });
-  return response.data;
-};
-
-export interface SyncResult {
-  success: boolean;
-  message: string;
-  data: {
-    totalFromSheet: number;
-    newImported: number;
-    alreadyExists: number;
-    errors: string[];
-    duration: number;
-  };
-}
-
+// POST /sync/google-sheets - Sincronizza con Google Sheets
 export const syncGoogleSheets = async () => {
   const response = await apiClient.post<SyncResult>("/sync/google-sheets");
   return response.data;

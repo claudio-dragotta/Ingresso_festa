@@ -1,5 +1,5 @@
 import { logger } from '../logger';
-import { fetchAndParseGoogleSheet, ParsedPerson } from './googleSheetsService';
+import { fetchAndParseGoogleSheets, ParsedPerson } from './googleSheetsService';
 import { createInvitee } from './inviteeService';
 import { prisma } from '../lib/prisma';
 
@@ -7,7 +7,7 @@ import { prisma } from '../lib/prisma';
  * Sync Service
  *
  * Gestisce la sincronizzazione automatica tra Google Sheets e database locale.
- * Importa nuove persone e crea automaticamente QR codes.
+ * Supporta due liste: PAGANTI (con tipologia pagamento) e GREEN.
  */
 
 export interface SyncResult {
@@ -17,20 +17,24 @@ export interface SyncResult {
   alreadyExists: number;
   errors: string[];
   duration: number; // millisecondi
+  breakdown: {
+    paganti: { imported: number; exists: number };
+    green: { imported: number; exists: number };
+  };
 }
 
 /**
- * Sincronizza Google Sheet con il database
- * - Legge tutte le persone dal foglio
+ * Sincronizza entrambi i Google Sheets (PAGANTI e GREEN) con il database
+ * - Legge tutte le persone dai fogli
  * - Controlla se esistono già nel database (per nome+cognome)
- * - Crea nuovi invitati con QR code per chi non esiste
+ * - Crea nuovi invitati per chi non esiste
  *
  * @returns Risultato dettagliato della sincronizzazione
  */
 export async function syncGoogleSheetToDatabase(): Promise<SyncResult> {
   const startTime = Date.now();
 
-  logger.info('🔄 Avvio sincronizzazione Google Sheets...');
+  logger.info('🔄 Avvio sincronizzazione Google Sheets (PAGANTI + GREEN)...');
 
   const result: SyncResult = {
     success: false,
@@ -39,21 +43,27 @@ export async function syncGoogleSheetToDatabase(): Promise<SyncResult> {
     alreadyExists: 0,
     errors: [],
     duration: 0,
+    breakdown: {
+      paganti: { imported: 0, exists: 0 },
+      green: { imported: 0, exists: 0 },
+    },
   };
 
   try {
-    // 1. Leggi e parsa il foglio Google
-    const persons = await fetchAndParseGoogleSheet();
+    // 1. Leggi e parsa entrambi i fogli Google
+    const persons = await fetchAndParseGoogleSheets();
     result.totalFromSheet = persons.length;
 
     if (persons.length === 0) {
-      logger.warn('Nessuna persona trovata nel Google Sheet');
+      logger.warn('Nessuna persona trovata nei Google Sheets');
       result.success = true;
       result.duration = Date.now() - startTime;
       return result;
     }
 
-    logger.info(`📋 Trovate ${persons.length} persone nel foglio Google`);
+    const pagantiCount = persons.filter(p => p.listType === 'PAGANTE').length;
+    const greenCount = persons.filter(p => p.listType === 'GREEN').length;
+    logger.info(`📋 Trovate ${persons.length} persone (${pagantiCount} PAGANTI, ${greenCount} GREEN)`);
 
     // 2. Per ogni persona, verifica se esiste già e importa se nuova
     for (const person of persons) {
@@ -62,10 +72,20 @@ export async function syncGoogleSheetToDatabase(): Promise<SyncResult> {
 
         if (imported) {
           result.newImported++;
-          logger.info(`✅ Importato: ${person.lastName} ${person.firstName}`);
+          if (person.listType === 'PAGANTE') {
+            result.breakdown.paganti.imported++;
+          } else {
+            result.breakdown.green.imported++;
+          }
+          logger.info(`✅ Importato ${person.listType}: ${person.lastName} ${person.firstName}`);
         } else {
           result.alreadyExists++;
-          logger.debug(`⏭️  Già presente: ${person.lastName} ${person.firstName}`);
+          if (person.listType === 'PAGANTE') {
+            result.breakdown.paganti.exists++;
+          } else {
+            result.breakdown.green.exists++;
+          }
+          logger.debug(`⏭️  Già presente ${person.listType}: ${person.lastName} ${person.firstName}`);
         }
       } catch (error: any) {
         const errorMsg = `Errore importando "${person.originalValue}": ${error.message}`;
@@ -78,7 +98,8 @@ export async function syncGoogleSheetToDatabase(): Promise<SyncResult> {
     result.duration = Date.now() - startTime;
 
     logger.info(
-      `✅ Sincronizzazione completata: ${result.newImported} nuovi, ` +
+      `✅ Sincronizzazione completata: ${result.newImported} nuovi ` +
+      `(${result.breakdown.paganti.imported} PAGANTI, ${result.breakdown.green.imported} GREEN), ` +
       `${result.alreadyExists} già presenti, ${result.errors.length} errori ` +
       `(${result.duration}ms)`
     );
@@ -100,7 +121,7 @@ export async function syncGoogleSheetToDatabase(): Promise<SyncResult> {
  * @returns true se importato, false se già esistente
  */
 async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
-  const { firstName, lastName } = person;
+  const { firstName, lastName, listType, paymentType } = person;
 
   // Cerca se esiste già (controllo case-insensitive manuale)
   // SQLite non supporta mode: 'insensitive', quindi recuperiamo tutti e filtriamo in memoria
@@ -122,13 +143,14 @@ async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
     return false; // Già presente
   }
 
-  // Non esiste -> crea nuovo invitato con QR code
+  // Non esiste -> crea nuovo invitato
   await createInvitee({
     firstName: firstName || 'Nome', // Fallback se firstName vuoto
     lastName,
     email: undefined,
     phone: undefined,
-    paymentType: person.paymentType, // Includi tipologia pagamento
+    listType,
+    paymentType: listType === 'PAGANTE' ? paymentType : undefined,
   });
 
   return true; // Importato
