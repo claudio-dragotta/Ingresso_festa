@@ -29,8 +29,14 @@ export const config = {
     : undefined,
   databaseUrl: required(process.env.DATABASE_URL, "DATABASE_URL"),
   jwtSecret: required(process.env.JWT_SECRET, "JWT_SECRET"),
-  adminUsername: required(process.env.ADMIN_USERNAME, "ADMIN_USERNAME"),
-  adminPassword: required(process.env.ADMIN_PASSWORD, "ADMIN_PASSWORD"),
+  disableEnvAdminFallback: process.env.DISABLE_ENV_ADMIN_FALLBACK === "true",
+  // Se il fallback ENV admin è disabilitato, non richiedere queste variabili
+  adminUsername: process.env.DISABLE_ENV_ADMIN_FALLBACK === "true"
+    ? undefined
+    : required(process.env.ADMIN_USERNAME, "ADMIN_USERNAME"),
+  adminPassword: process.env.DISABLE_ENV_ADMIN_FALLBACK === "true"
+    ? undefined
+    : required(process.env.ADMIN_PASSWORD, "ADMIN_PASSWORD"),
   qrOutputDir: process.env.QR_OUTPUT_DIR ?? path.resolve(process.cwd(), "../storage/qrcodes"),
   email: {
     from: process.env.EMAIL_FROM ?? "noreply@example.com",

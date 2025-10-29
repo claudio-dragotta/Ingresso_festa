@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { login, createUser, listUsers, deleteUser } from "../services/authService";
+import { login, createUser, listUsers, deleteUser, setUserActive } from "../services/authService";
 import { authenticate } from "../middleware/auth";
+import { adminOnly } from "../middleware/adminOnly";
 import { UserRole } from "@prisma/client";
 
 const router = Router();
@@ -20,7 +21,7 @@ router.post("/login", async (req, res, next) => {
 });
 
 // Solo admin può creare utenti
-router.post("/users", authenticate, async (req, res, next) => {
+router.post("/users", authenticate, adminOnly, async (req, res, next) => {
   try {
     const userRole = (req as any).user?.role;
     if (userRole !== 'ADMIN') {
@@ -37,6 +38,7 @@ router.post("/users", authenticate, async (req, res, next) => {
       id: user.id,
       username: user.username,
       role: user.role,
+      active: true,
     });
   } catch (error) {
     return next(error);
@@ -44,7 +46,7 @@ router.post("/users", authenticate, async (req, res, next) => {
 });
 
 // Solo admin può vedere la lista utenti
-router.get("/users", authenticate, async (req, res, next) => {
+router.get("/users", authenticate, adminOnly, async (req, res, next) => {
   try {
     const userRole = (req as any).user?.role;
     if (userRole !== 'ADMIN') {
@@ -59,7 +61,7 @@ router.get("/users", authenticate, async (req, res, next) => {
 });
 
 // Solo admin può eliminare utenti
-router.delete("/users/:id", authenticate, async (req, res, next) => {
+router.delete("/users/:id", authenticate, adminOnly, async (req, res, next) => {
   try {
     const userRole = (req as any).user?.role;
     if (userRole !== 'ADMIN') {
@@ -74,3 +76,23 @@ router.delete("/users/:id", authenticate, async (req, res, next) => {
 });
 
 export default router;
+ 
+// Attiva/Disattiva utente
+router.patch("/users/:id", authenticate, adminOnly, async (req, res, next) => {
+  try {
+    const userRole = (req as any).user?.role;
+    if (userRole !== 'ADMIN') {
+      return res.status(403).json({ message: "Solo admin può aggiornare utenti" });
+    }
+
+    const { active } = req.body as { active?: boolean };
+    if (typeof active !== 'boolean') {
+      return res.status(400).json({ message: "Campo 'active' booleano richiesto" });
+    }
+
+    const user = await setUserActive(req.params.id, active);
+    return res.json(user);
+  } catch (error) {
+    return next(error);
+  }
+});

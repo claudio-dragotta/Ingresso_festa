@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { syncGoogleSheetToDatabase, isAutoSyncActive } from '../services/syncService';
 import { testGoogleSheetsConnection } from '../services/googleSheetsService';
 import { authenticate } from '../middleware/auth';
+import { adminOnly } from '../middleware/adminOnly';
 import { logger } from '../logger';
 
 const router = Router();
@@ -15,6 +16,7 @@ const router = Router();
 router.post(
   '/google-sheets',
   authenticate,
+  adminOnly,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       logger.info('🔄 Richiesta sincronizzazione manuale Google Sheets');
@@ -48,6 +50,7 @@ router.post(
 router.get(
   '/status',
   authenticate,
+  adminOnly,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const autoSyncActive = isAutoSyncActive();
@@ -72,6 +75,7 @@ router.get(
 router.get(
   '/test-connection',
   authenticate,
+  adminOnly,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       logger.info('🧪 Test connessione Google Sheets');

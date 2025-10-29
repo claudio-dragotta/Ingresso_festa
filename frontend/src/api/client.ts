@@ -15,3 +15,24 @@ export const setAuthToken = (token: string | null) => {
 };
 
 export default apiClient;
+
+// Auto-logout interceptor su 401/403
+const TOKEN_STORAGE_KEY = "ingresso-festa-token";
+const ROLE_STORAGE_KEY = "ingresso-festa-role";
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    if (status === 401 || (status === 403 && error?.response?.data?.message?.includes?.("disattivato"))) {
+      try {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        localStorage.removeItem(ROLE_STORAGE_KEY);
+      } catch {}
+      if (typeof window !== "undefined") {
+        window.location.assign("/login");
+      }
+    }
+    return Promise.reject(error);
+  },
+);

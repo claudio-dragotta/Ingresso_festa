@@ -101,6 +101,12 @@
   animation: bounce 2s ease-in-out infinite;
 }
 
+.login-icon svg {
+  width: 56px;
+  height: 56px;
+  color: var(--primary);
+}
+
 @keyframes bounce {
   0%, 100% {
     transform: translateY(0);

@@ -25,6 +25,9 @@ export const login = async (username: string, password: string) => {
   });
 
   if (user) {
+    if (!user.active) {
+      throw new AppError("Utente disattivato", 403);
+    }
     const valid = await verifyPassword(password, user.password);
     if (!valid) {
       throw new AppError("Credenziali non valide", 401);
@@ -42,9 +45,9 @@ export const login = async (username: string, password: string) => {
     return { token, role: user.role };
   }
 
-  // Fallback: utente admin legacy da environment variables
-  if (username === config.adminUsername) {
-    const valid = await verifyPassword(password, config.adminPassword);
+  // Fallback: utente admin legacy da environment variables (opzionale)
+  if (!config.disableEnvAdminFallback && config.adminUsername && username === config.adminUsername) {
+    const valid = await verifyPassword(password, config.adminPassword!);
     if (!valid) {
       throw new AppError("Credenziali non valide", 401);
     }
@@ -95,6 +98,7 @@ export const listUsers = async () => {
       id: true,
       username: true,
       role: true,
+      active: true,
       createdAt: true,
     },
   });
@@ -104,4 +108,13 @@ export const deleteUser = async (userId: string) => {
   await prisma.user.delete({
     where: { id: userId },
   });
+};
+
+export const setUserActive = async (userId: string, active: boolean) => {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { active },
+    select: { id: true, username: true, role: true, active: true },
+  });
+  return user;
 };

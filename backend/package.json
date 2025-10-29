@@ -10,9 +10,11 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
+    "prisma:push": "prisma db push",
     "lint": "tsc --noEmit",
     "hash-password": "ts-node scripts/hash-password.ts",
     "users:import": "ts-node scripts/import-users.ts",
+    "users:export": "ts-node scripts/export-users.ts",
     "test": "vitest"
   },
   "keywords": [

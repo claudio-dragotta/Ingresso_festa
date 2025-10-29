@@ -16,6 +16,7 @@ export interface User {
   id: string;
   username: string;
   role: UserRole;
+  active: boolean;
   createdAt: string;
 }
 
@@ -40,4 +41,10 @@ export const fetchUsers = async () => {
 // DELETE /auth/users/:id - Elimina utente (solo admin)
 export const deleteUser = async (userId: string) => {
   await apiClient.delete(`/auth/users/${userId}`);
+};
+
+// PATCH /auth/users/:id - Aggiorna stato attivo
+export const setUserActive = async (userId: string, active: boolean) => {
+  const response = await apiClient.patch<User>(`/auth/users/${userId}`, { active });
+  return response.data;
 };

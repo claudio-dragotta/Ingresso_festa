@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth";
+import { adminOnly } from "../middleware/adminOnly";
 import { getSystemConfig, updateSystemStatus } from "../services/systemService";
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authenticate, adminOnly);
 
 router.get("/state", async (_req, res, next) => {
   try {
