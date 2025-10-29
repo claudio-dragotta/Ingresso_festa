@@ -116,14 +116,6 @@ const LoginPage = () => {
               )}
             </button>
           </form>
-
-          <div className="login-footer">
-            <p>Credenziali di default:</p>
-            <div className="credentials-hint">
-              <div><strong>Admin:</strong> admin / admin123</div>
-              <div><strong>Ingresso:</strong> ingresso1 / ingresso123</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

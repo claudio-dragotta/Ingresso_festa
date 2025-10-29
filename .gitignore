@@ -110,6 +110,9 @@ temp/
 backend/prisma/migrations/*.sql
 !backend/prisma/migrations/migration_lock.toml
 
+# Local users file for import script (contains secrets)
+backend/users.json
+
 # ===========================
 # Package manager locks (optional)
 # ===========================

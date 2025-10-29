@@ -12,6 +12,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "lint": "tsc --noEmit",
     "hash-password": "ts-node scripts/hash-password.ts",
+    "users:import": "ts-node scripts/import-users.ts",
     "test": "vitest"
   },
   "keywords": [

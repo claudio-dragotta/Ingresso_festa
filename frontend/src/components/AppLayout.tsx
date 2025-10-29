@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "./AppLayout.css";
+import ThemeToggle from "./ThemeToggle";
 
 const AppLayout = () => {
   const { logout, isAdmin, role } = useAuth();
@@ -24,6 +25,7 @@ const AppLayout = () => {
           </div>
 
           <nav className="header-nav">
+            <ThemeToggle />
             {isAdmin && (
               <NavLink to="/dashboard" className={navLinkClass}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

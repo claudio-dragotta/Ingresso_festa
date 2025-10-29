@@ -3,12 +3,49 @@
   font-size: 16px;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: only light;
-  color: #16213e;
-  background-color: #f6f7fb;
+  color-scheme: light dark;
+  /* Theme tokens */
+  --bg: #f6f7fb;
+  --bg-gradient-start: #f6f7fb;
+  --bg-gradient-end: #eef2ff;
+  --text: #16213e;
+  --surface: #ffffff;
+  --surface-alpha: rgba(255, 255, 255, 0.95);
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --link: #2f52ce;
+  --primary: #667eea;
+  --primary-2: #764ba2;
+  --danger: #ef4444;
+  --shadow-strong: 0 20px 60px rgba(0, 0, 0, 0.3);
+  --error-bg: #fee2e2;
+  --error-border: #fecaca;
+  --error-text: #991b1b;
+
+  color: var(--text);
+  background-color: var(--bg);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+[data-theme="dark"] {
+  --bg: #0b1220;
+  --bg-gradient-start: #0b1220;
+  --bg-gradient-end: #101827;
+  --text: #e5e7eb;
+  --surface: #0f172a;
+  --surface-alpha: rgba(15, 23, 42, 0.92);
+  --muted: #9ca3af;
+  --border: #1f2937;
+  --link: #93c5fd;
+  --primary: #8b9df2;
+  --primary-2: #a98edb;
+  --danger: #f87171;
+  --shadow-strong: 0 20px 60px rgba(0, 0, 0, 0.6);
+  --error-bg: #2b1b1b;
+  --error-border: #3f1f1f;
+  --error-text: #fecaca;
 }
 
 * {
@@ -17,7 +54,7 @@
 
 body {
   margin: 0;
-  background: linear-gradient(180deg, #f6f7fb 0%, #eef2ff 100%);
+  background: linear-gradient(180deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
   min-height: 100vh;
 }
 
@@ -27,12 +64,12 @@ body {
 
 a {
   font-weight: 500;
-  color: #2f52ce;
+  color: var(--link);
   text-decoration: none;
 }
 
 a.active {
-  color: #16213e;
+  color: var(--text);
 }
 
 button {
@@ -42,7 +79,7 @@ button {
   font-size: 0.95rem;
   font-weight: 600;
   font-family: inherit;
-  background: linear-gradient(135deg, #2f52ce 0%, #4a69e6 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
   color: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -72,7 +109,7 @@ button:hover::before {
 button:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(47, 82, 206, 0.3);
-  background: linear-gradient(135deg, #4a69e6 0%, #2f52ce 100%);
+  background: linear-gradient(135deg, var(--primary-2) 0%, var(--primary) 100%);
 }
 
 button:active {
