@@ -58,35 +58,33 @@ export default function SearchPage() {
 
   return (
     <div className="search-page">
-      {/* Affix desktop: stats + search */}
-      <div className="search-affix">
-        {/* Header con statistiche */}
-        <div className="stats-header">
-          <div className="stat-card paganti">
-            <div className="stat-label">Paganti da entrare</div>
-            <div className="stat-value">{stats?.paganti.remaining ?? 0}</div>
-          </div>
-          <div className="stat-card green">
-            <div className="stat-label">Green da entrare</div>
-            <div className="stat-value">{stats?.green.remaining ?? 0}</div>
-          </div>
-          <div className="stat-card total">
-            <div className="stat-label">Totale entrati</div>
-            <div className="stat-value">{stats?.total.entered ?? 0}</div>
-          </div>
+      {/* Header con statistiche - sempre visibile */}
+      <div className="stats-header">
+        <div className="stat-card paganti">
+          <div className="stat-label">Paganti</div>
+          <div className="stat-value">{stats?.paganti.remaining ?? 0}</div>
         </div>
+        <div className="stat-card green">
+          <div className="stat-label">Green</div>
+          <div className="stat-value">{stats?.green.remaining ?? 0}</div>
+        </div>
+        <div className="stat-card total">
+          <div className="stat-label">Entrati</div>
+          <div className="stat-value">{stats?.total.entered ?? 0}</div>
+        </div>
+      </div>
 
-        {/* Barra di ricerca */}
-        <div className="search-container">
-          <div className="search-box">
-            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <circle cx="11" cy="11" r="8" strokeWidth="2"/>
-              <path d="M21 21l-4.35-4.35" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
+      {/* Barra di ricerca - sempre visibile */}
+      <div className="search-container">
+        <div className="search-box">
+          <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="8" strokeWidth="2"/>
+            <path d="M21 21l-4.35-4.35" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
           <input
             type="text"
             className="search-input"
-            placeholder="Cerca per nome o cognome..."
+            placeholder="Cerca persona..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             autoFocus
@@ -104,10 +102,9 @@ export default function SearchPage() {
           )}
         </div>
 
-          {searchQuery && searchQuery.length < 2 && (
-            <div className="search-hint">Digita almeno 2 caratteri per cercare...</div>
-          )}
-        </div>
+        {searchQuery && searchQuery.length < 2 && (
+          <div className="search-hint">Digita almeno 2 caratteri...</div>
+        )}
       </div>
 
       {/* Risultati */}
@@ -160,21 +157,14 @@ export default function SearchPage() {
                     onClick={() => canClick(person) && handleCheckIn(person)}
                     disabled={checkInMutation.isPending || !canClick(person)}
                   >
-                    {person.hasEntered ? (
-                      <>
-                        <svg className="status-icon" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                        </svg>
-                        <span>Entrato</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="10"/>
-                        </svg>
-                        <span>Non entrato</span>
-                      </>
-                    )}
+                    <svg className="status-icon" viewBox="0 0 24 24" fill="currentColor">
+                      {person.hasEntered ? (
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                      ) : (
+                        <circle cx="12" cy="12" r="10"/>
+                      )}
+                    </svg>
+                    <span>{person.hasEntered ? "Entrato" : "Entra"}</span>
                   </button>
                 </div>
               ))}
@@ -184,11 +174,11 @@ export default function SearchPage() {
 
         {!searchQuery && (
           <div className="welcome-state">
-            <svg className="welcome-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeWidth="2" strokeLinecap="round"/>
+            <svg className="welcome-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             <h2>Cerca Persona</h2>
-            <p>Usa la barra di ricerca per trovare le persone nella lista</p>
+            <p>Digita nome o cognome per iniziare</p>
           </div>
         )}
       </div>
