@@ -30,6 +30,11 @@
   min-width: 240px;
 }
 
+.search-box input::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
 .users-actions {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -38,7 +43,7 @@
   margin-bottom: 1rem;
 }
 
-.new-user-form h3 { margin: 0 0 0.75rem 0; }
+.new-user-form h3 { margin: 0 0 0.75rem 0; color: var(--text); }
 .new-user-form .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .new-user-form input, .new-user-form select {
   padding: 0.6rem 0.8rem;
@@ -46,6 +51,11 @@
   background: var(--surface);
   color: var(--text);
   border-radius: 8px;
+}
+
+.new-user-form input::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
 }
 
 .users-table {

@@ -105,7 +105,7 @@
 }
 
 .clear-button {
-  background: #f3f4f6;
+  background: var(--border);
   border: none;
   border-radius: 50%;
   width: 32px;
@@ -119,14 +119,14 @@
 }
 
 .clear-button:hover {
-  background: #e5e7eb;
+  background: var(--muted);
   transform: scale(1.1);
 }
 
 .clear-button svg {
   width: 16px;
   height: 16px;
-  color: #6b7280;
+  color: var(--text);
 }
 
 .search-hint {
@@ -248,7 +248,7 @@
 
 .status-button.not-entered {
   background: #10b981;
-  color: var(--text);
+  color: #ffffff;
 }
 
 .status-button.not-entered:hover:not(:disabled) {
@@ -259,7 +259,7 @@
 
 .status-button.entered {
   background: #ef4444;
-  color: var(--text);
+  color: #ffffff;
 }
 
 .status-button.entered:not(.disabled):hover {
