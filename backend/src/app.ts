@@ -6,11 +6,13 @@ import { config } from "./config";
 import { AppError } from "./utils/errors";
 import { logger } from "./logger";
 import { ensureSystemConfig } from "./services/systemService";
+import { ensureDefaultAdmin } from "./services/authService";
 import { sqlInjectionProtection } from "./middleware/sqlInjectionProtection";
 import router from "./routes";
 
 export const createApp = async () => {
   await ensureSystemConfig();
+  await ensureDefaultAdmin();
 
   const app = express();
 

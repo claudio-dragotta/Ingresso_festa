@@ -49,6 +49,28 @@ export const config = {
     autoSyncEnabled: process.env.GOOGLE_SHEETS_AUTO_SYNC === "true",
     autoSyncIntervalMinutes: Number(process.env.GOOGLE_SHEETS_SYNC_INTERVAL ?? 10),
   },
+  // Opzionale: elenco utenti definiti via ENV in JSON
+  // Formato accettato: array oppure { users: [...] }
+  // Ogni utente: { username: string, password: string(bcrypt o plain), role: 'ADMIN'|'ENTRANCE', active?: boolean }
+  envUsers: (() => {
+    const raw = process.env.USERS_JSON || process.env.AUTH_USERS_JSON;
+    if (!raw) return undefined;
+    try {
+      const parsed = JSON.parse(raw);
+      const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.users) ? parsed.users : [];
+      return (list as Array<any>)
+        .filter((u) => u && typeof u.username === 'string' && typeof u.password === 'string')
+        .map((u) => ({
+          username: String(u.username),
+          password: String(u.password),
+          role: u.role === 'ADMIN' ? 'ADMIN' : 'ENTRANCE',
+          active: typeof u.active === 'boolean' ? u.active : true,
+        }));
+    } catch {
+      // Se JSON non valido, ignora
+      return undefined;
+    }
+  })(),
 };
 
 export const eventDomain = process.env.EVENT_DOMAIN ?? "https://example.com";

@@ -107,8 +107,7 @@ temp/
 # ===========================
 # Prisma
 # ===========================
-backend/prisma/migrations/*.sql
-!backend/prisma/migrations/migration_lock.toml
+# Commit migrations to ensure production schema updates
 
 # Local users file for import script (contains secrets)
 backend/users.json

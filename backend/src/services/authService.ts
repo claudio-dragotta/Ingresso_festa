@@ -63,6 +63,27 @@ export const login = async (username: string, password: string) => {
     return { token, role: 'ADMIN' as UserRole };
   }
 
+  // Fallback: utenti definiti via ENV (USERS_JSON / AUTH_USERS_JSON)
+  const envUser = config.envUsers?.find((u) => u.username === username);
+  if (envUser) {
+    if (!envUser.active) {
+      throw new AppError("Utente disattivato", 403);
+    }
+    const valid = await verifyPassword(password, envUser.password);
+    if (!valid) {
+      throw new AppError("Credenziali non valide", 401);
+    }
+    const token = jwt.sign(
+      {
+        username: envUser.username,
+        role: envUser.role,
+      },
+      config.jwtSecret,
+      { expiresIn: "12h" }
+    );
+    return { token, role: envUser.role as UserRole };
+  }
+
   throw new AppError("Credenziali non valide", 401);
 };
 
@@ -117,4 +138,47 @@ export const setUserActive = async (userId: string, active: boolean) => {
     select: { id: true, username: true, role: true, active: true },
   });
   return user;
+};
+
+export const ensureDefaultAdmin = async () => {
+  const admins = await prisma.user.count({ where: { role: 'ADMIN' } });
+  if (admins > 0) return;
+
+  // Prefer admin from USERS_JSON if present
+  const envAdmin = config.envUsers?.find((u) => u.role === 'ADMIN' && u.active !== false);
+  if (envAdmin) {
+    const hashed = isHashed(envAdmin.password) ? envAdmin.password : await hashPassword(envAdmin.password);
+    const existing = await prisma.user.findUnique({ where: { username: envAdmin.username } });
+    if (existing) {
+      await prisma.user.update({ where: { id: existing.id }, data: { role: 'ADMIN', password: hashed, active: true } });
+    } else {
+      await prisma.user.create({
+        data: {
+          username: envAdmin.username,
+          password: hashed,
+          role: 'ADMIN',
+          active: true,
+        },
+      });
+    }
+    return;
+  }
+
+  // Fallback to legacy ADMIN env vars if available
+  if (config.adminUsername && config.adminPassword) {
+    const hashed = isHashed(config.adminPassword) ? config.adminPassword : await hashPassword(config.adminPassword);
+    const existing = await prisma.user.findUnique({ where: { username: config.adminUsername } });
+    if (existing) {
+      await prisma.user.update({ where: { id: existing.id }, data: { role: 'ADMIN', password: hashed, active: true } });
+    } else {
+      await prisma.user.create({
+        data: {
+          username: config.adminUsername,
+          password: hashed,
+          role: 'ADMIN',
+          active: true,
+        },
+      });
+    }
+  }
 };

@@ -29,6 +29,13 @@ export const authenticate = async (req: Request, _res: Response, next: NextFunct
       if (!user || !user.active) {
         return next(new AppError("Account disattivato", 401));
       }
+    } else {
+      // Token da utente ENV: verifica se esiste e se è attivo (se definito in USERS_JSON)
+      const envUser = config.envUsers?.find((u) => u.username === payload.username);
+      if (envUser && envUser.active === false) {
+        return next(new AppError("Account disattivato", 401));
+      }
+      // Per admin fallback ENV (senza envUsers), non applichiamo controllo attivo
     }
     (req as Request & { user?: AuthPayload }).user = payload;
     return next();
