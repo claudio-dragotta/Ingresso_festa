@@ -10,6 +10,7 @@ import {
   fetchDuplicateInvitees,
   promoteDuplicateGroup,
   keepOneDuplicate,
+  resetAndReimport,
   fetchStats,
   type Stats,
   type DuplicateGroup,
@@ -89,6 +90,15 @@ export default function AdminDashboard() {
   // Mutation per sync Google Sheets
   const syncMutation = useMutation({
     mutationFn: syncGoogleSheets,
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: resetAndReimport,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invitees"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates"] });
+    },
   });
 
   // Duplicates actions
@@ -224,6 +234,17 @@ export default function AdminDashboard() {
             </>
           )}
         </button>
+        <button
+          className="cancel-button"
+          onClick={() => {
+            if (confirm('Confermi il reset degli invitati e il reimport da Google Sheets?')) {
+              resetMutation.mutate();
+            }
+          }}
+          disabled={resetMutation.isPending}
+        >
+          {resetMutation.isPending ? 'Reset/Reimport...' : 'Reset + Reimport'}
+        </button>
       </div>
 
       {/* Sync Result */}
@@ -245,6 +266,19 @@ export default function AdminDashboard() {
               {syncMutation.data.breakdown && (
                 <> ({syncMutation.data.breakdown.paganti.imported} paganti, {syncMutation.data.breakdown.green.imported} green)</>
               )}
+            </p>
+          </div>
+        </div>
+      )}
+      {resetMutation.data && (
+        <div className="sync-result success">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+          </svg>
+          <div>
+            <strong>Reset + Reimport completato!</strong>
+            <p>
+              Eliminati: {resetMutation.data.reset.deletedInvitees} invitati, {resetMutation.data.reset.deletedLogs} log. Importati: {resetMutation.data.import.newImported} nuovi ({resetMutation.data.import.breakdown.paganti.imported} paganti, {resetMutation.data.import.breakdown.green.imported} green), {resetMutation.data.import.alreadyExists} già presenti.
             </p>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { testGoogleSheetsConnection } from '../services/googleSheetsService';
 import { authenticate } from '../middleware/auth';
 import { adminOnly } from '../middleware/adminOnly';
 import { logger } from '../logger';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
@@ -95,3 +96,24 @@ router.get(
 );
 
 export default router;
+
+// POST /api/sync/reset-and-reimport - Admin only
+router.post(
+  '/reset-and-reimport',
+  authenticate,
+  adminOnly,
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      logger.warn('⚠️ Reset invitati + log e reimport da Google Sheets');
+      const deletedLogs = await prisma.checkInLog.deleteMany({});
+      const deletedInvitees = await prisma.invitee.deleteMany({});
+      const result = await syncGoogleSheetToDatabase();
+      return res.json({
+        reset: { deletedInvitees: deletedInvitees.count, deletedLogs: deletedLogs.count },
+        import: result,
+      });
+    } catch (error) {
+      return next(error);
+    }
+  }
+);

@@ -27,6 +27,11 @@
 .dup-group { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .dup-title { font-weight: 700; }
 .dup-count { color: #b45309; font-weight: 700; }
+.dup-count::before { content: '×'; margin-right: 4px; }
+/* Nasconde un secondo blocco duplicati immediatamente consecutivo (cleanup UI) */
+.duplicates-alert + .duplicates-alert { display: none; }
+/* Nascondi l'eventuale primo carattere corrotto nella count */
+.dup-count::first-letter { color: transparent; }
 .dup-items { display: inline-flex; gap: 0.25rem; }
 .dup-badge { border: 1px solid var(--border); padding: 0.1rem 0.4rem; border-radius: 6px; font-size: 0.75rem; color: var(--text); }
 

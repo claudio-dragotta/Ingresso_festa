@@ -151,6 +151,14 @@ export const syncGoogleSheets = async () => {
   return response.data;
 };
 
+// POST /sync/reset-and-reimport - Reset DB invitati + reimport da Google Sheets (admin)
+export const resetAndReimport = async () => {
+  const response = await apiClient.post<{ reset: { deletedInvitees: number; deletedLogs: number }; import: SyncResult }>(
+    "/sync/reset-and-reimport",
+  );
+  return response.data;
+};
+
 // GET /invitees/duplicates - Gruppi di duplicati (solo admin)
 export const fetchDuplicateInvitees = async () => {
   const response = await apiClient.get<DuplicateGroup[]>("/invitees/duplicates");
