@@ -89,7 +89,7 @@ export default function AdminDashboard() {
 
   // Mutation per sync Google Sheets
   const syncMutation = useMutation({
-    mutationFn: syncGoogleSheets,
+    mutationFn: (opts?: { pruneMissing?: boolean }) => syncGoogleSheets(opts),
   });
 
   const resetMutation = useMutation({
@@ -129,8 +129,8 @@ export default function AdminDashboard() {
     createMutation.mutate(dataToSubmit);
   };
 
-  const handleSync = () => {
-    syncMutation.mutate();
+  const handleSync = (pruneMissing = false) => {
+    syncMutation.mutate(pruneMissing ? { pruneMissing: true } : undefined);
   };
 
   const handleCheckIn = (person: Invitee) => {
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
 
         <button
           className="sync-button"
-          onClick={handleSync}
+          onClick={() => handleSync(false)}
           disabled={syncMutation.isPending}
         >
           {syncMutation.isPending ? (
@@ -233,6 +233,18 @@ export default function AdminDashboard() {
               Sincronizza Google Sheets
             </>
           )}
+        </button>
+        <button
+          className="sync-button"
+          onClick={() => {
+            if (confirm('Allineare al foglio eliminando chi non è più presente?')) {
+              handleSync(true);
+            }
+          }}
+          disabled={syncMutation.isPending}
+          title="Sincronizza e rimuovi mancanti"
+        >
+          Allinea (rimuovi mancanti)
         </button>
         <button
           className="cancel-button"

@@ -22,7 +22,8 @@ router.post(
     try {
       logger.info('🔄 Richiesta sincronizzazione manuale Google Sheets');
 
-      const result = await syncGoogleSheetToDatabase();
+      const pruneMissing = Boolean((req.body as any)?.pruneMissing);
+      const result = await syncGoogleSheetToDatabase({ pruneMissing });
 
       res.json({
         success: result.success,

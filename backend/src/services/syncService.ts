@@ -32,7 +32,7 @@ export interface SyncResult {
  *
  * @returns Risultato dettagliato della sincronizzazione
  */
-export async function syncGoogleSheetToDatabase(): Promise<SyncResult> {
+export async function syncGoogleSheetToDatabase(options?: { pruneMissing?: boolean }): Promise<SyncResult> {
   const startTime = Date.now();
 
   logger.info('🔄 Avvio sincronizzazione Google Sheets (PAGANTI + GREEN)...');
@@ -67,8 +67,12 @@ export async function syncGoogleSheetToDatabase(): Promise<SyncResult> {
     logger.info(`📋 Trovate ${persons.length} persone (${pagantiCount} PAGANTI, ${greenCount} GREEN)`);
 
     // 2. Per ogni persona, verifica se esiste già e importa se nuova
+    const sheetKeys = new Set<string>();
+    const makeKey = (fn: string, ln: string) => `${ln.trim().toLowerCase()}|${fn.trim().toLowerCase()}`;
+
     for (const person of persons) {
       try {
+        sheetKeys.add(makeKey(person.firstName, person.lastName));
         const imported = await importPersonIfNotExists(person);
 
         if (imported) {
@@ -93,6 +97,18 @@ export async function syncGoogleSheetToDatabase(): Promise<SyncResult> {
         result.errors.push(errorMsg);
         logger.error(errorMsg);
       }
+    }
+
+    // 3. Opzionale: elimina dal DB gli invitati non più presenti nei fogli (prune)
+    if (options?.pruneMissing) {
+      const all = await prisma.invitee.findMany({ select: { id: true, firstName: true, lastName: true } });
+      const toDelete = all.filter(inv => !sheetKeys.has(makeKey(inv.firstName, inv.lastName)));
+      if (toDelete.length > 0) {
+        // elimina in batch
+        await prisma.invitee.deleteMany({ where: { id: { in: toDelete.map(t => t.id) } } });
+        logger.warn(`🗑️  Pruned ${toDelete.length} invitees non presenti nei Google Sheets`);
+      }
+      // Nota: i log di check-in associati rimangono; potremmo ripulirli se necessario.
     }
 
     result.success = result.errors.length === 0 || result.newImported > 0;

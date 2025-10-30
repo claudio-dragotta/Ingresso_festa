@@ -146,8 +146,8 @@ export const updateEventStatus = async (status: EventStatus) => {
 };
 
 // POST /sync/google-sheets - Sincronizza con Google Sheets
-export const syncGoogleSheets = async () => {
-  const response = await apiClient.post<SyncResult>("/sync/google-sheets");
+export const syncGoogleSheets = async (opts?: { pruneMissing?: boolean }) => {
+  const response = await apiClient.post<SyncResult>("/sync/google-sheets", opts ?? {});
   return response.data;
 };
 
