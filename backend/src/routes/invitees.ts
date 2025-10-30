@@ -9,9 +9,12 @@ import {
   resetCheckIn,
   markCheckIn,
   getStats,
+  getDuplicateInviteeGroups,
 } from "../services/inviteeService";
 import { authenticate } from "../middleware/auth";
+import { adminOnly } from "../middleware/adminOnly";
 import { parseFileBuffer } from "../services/importService";
+import { keepOneAndDeleteOthersInGroup, promoteDuplicateGroupToPagante } from "../services/inviteeService";
 import { ListType } from "@prisma/client";
 
 const upload = multer();
@@ -155,3 +158,36 @@ router.delete("/:id", async (req, res, next) => {
 });
 
 export default router;
+// GET /invitees/duplicates - Gruppi di duplicati per nome+cognome (solo admin)
+router.get("/duplicates", adminOnly, async (_req, res, next) => {
+  try {
+    const groups = await getDuplicateInviteeGroups();
+    return res.json(groups);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// POST /invitees/duplicates/promote - Promuovi tutti i record del gruppo a PAGANTE
+router.post("/duplicates/promote", adminOnly, async (req, res, next) => {
+  try {
+    const { key, paymentType } = req.body as { key?: string; paymentType?: string };
+    if (!key) return res.status(400).json({ message: "Parametro 'key' mancante" });
+    const result = await promoteDuplicateGroupToPagante(key, paymentType);
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// POST /invitees/duplicates/keep-one - Tieni un record e elimina gli altri del gruppo
+router.post("/duplicates/keep-one", adminOnly, async (req, res, next) => {
+  try {
+    const { key, keepId } = req.body as { key?: string; keepId?: string };
+    if (!key || !keepId) return res.status(400).json({ message: "Parametri 'key' e 'keepId' richiesti" });
+    const result = await keepOneAndDeleteOthersInGroup(key, keepId);
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+});

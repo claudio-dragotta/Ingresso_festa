@@ -7,8 +7,13 @@ import {
   deleteInvitee,
   checkInPerson,
   syncGoogleSheets,
+  fetchDuplicateInvitees,
+  promoteDuplicateGroup,
+  keepOneDuplicate,
+  fetchStats,
+  type Stats,
+  type DuplicateGroup,
 } from "../api/invitees";
-import { fetchStats, type Stats } from "../api/invitees";
 import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
@@ -34,6 +39,13 @@ export default function AdminDashboard() {
     queryKey: ["stats"],
     queryFn: fetchStats,
     refetchInterval: 5000,
+  });
+
+  // Duplicati
+  const { data: duplicates = [] } = useQuery<DuplicateGroup[]>({
+    queryKey: ["invitees", "duplicates"],
+    queryFn: fetchDuplicateInvitees,
+    refetchInterval: 10000,
   });
 
   // Filtra per tipo
@@ -79,6 +91,24 @@ export default function AdminDashboard() {
     mutationFn: syncGoogleSheets,
   });
 
+  // Duplicates actions
+  const promoteMut = useMutation({
+    mutationFn: (key: string) => promoteDuplicateGroup(key),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates"] });
+      queryClient.invalidateQueries({ queryKey: ["invitees"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+  const keepOneMut = useMutation({
+    mutationFn: ({ key, keepId }: { key: string; keepId: string }) => keepOneDuplicate(key, keepId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates"] });
+      queryClient.invalidateQueries({ queryKey: ["invitees"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const dataToSubmit = {
@@ -105,6 +135,69 @@ export default function AdminDashboard() {
 
   return (
     <div className="admin-dashboard">
+      {duplicates.length > 0 && (
+        <div className="duplicates-alert">
+          <svg viewBox="0 0 24 24" fill="currentColor" className="dup-icon">
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+          </svg>
+          <div className="dup-content">
+            <strong>Trovati duplicati</strong>
+            <div className="dup-list">
+              {duplicates.map((g) => (
+                <div key={g.key} className="dup-group">
+                  <span className="dup-title">{g.items[0]?.lastName} {g.items[0]?.firstName}</span>
+                  <span className="dup-count">×{g.count}</span>
+                  <button
+                    type="button"
+                    className="add-button"
+                    onClick={() => promoteMut.mutate(g.key)}
+                    disabled={promoteMut.isPending}
+                  >
+                    Promuovi tutti a PAGANTE
+                  </button>
+                  <div className="dup-items">
+                    {g.items.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className="cancel-button"
+                        title="Tieni questo, elimina gli altri"
+                        onClick={() => keepOneMut.mutate({ key: g.key, keepId: p.id })}
+                        disabled={keepOneMut.isPending}
+                      >
+                        Conserva {p.listType}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {duplicates.length > 0 && (
+        <div className="duplicates-alert">
+          <svg viewBox="0 0 24 24" fill="currentColor" className="dup-icon">
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+          </svg>
+          <div className="dup-content">
+            <strong>Trovati duplicati</strong>
+            <div className="dup-list">
+              {duplicates.map((g) => (
+                <div key={g.key} className="dup-group">
+                  <span className="dup-title">{g.items[0]?.lastName} {g.items[0]?.firstName}</span>
+                  <span className="dup-count">×{g.count}</span>
+                  <div className="dup-items">
+                    {g.items.map((p) => (
+                      <span key={p.id} className="dup-badge">{p.listType}{p.paymentType ? ` • ${p.paymentType}` : ""}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="dashboard-header">
         <div>

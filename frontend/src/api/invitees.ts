@@ -22,6 +22,12 @@ export interface InviteeInput {
   paymentType?: string;
 }
 
+export interface DuplicateGroup {
+  key: string;
+  count: number;
+  items: Invitee[];
+}
+
 export interface Stats {
   paganti: {
     total: number;
@@ -142,5 +148,21 @@ export const updateEventStatus = async (status: EventStatus) => {
 // POST /sync/google-sheets - Sincronizza con Google Sheets
 export const syncGoogleSheets = async () => {
   const response = await apiClient.post<SyncResult>("/sync/google-sheets");
+  return response.data;
+};
+
+// GET /invitees/duplicates - Gruppi di duplicati (solo admin)
+export const fetchDuplicateInvitees = async () => {
+  const response = await apiClient.get<DuplicateGroup[]>("/invitees/duplicates");
+  return response.data;
+};
+
+export const promoteDuplicateGroup = async (key: string, paymentType?: string) => {
+  const response = await apiClient.post<{ updated: number }>("/invitees/duplicates/promote", { key, paymentType });
+  return response.data;
+};
+
+export const keepOneDuplicate = async (key: string, keepId: string) => {
+  const response = await apiClient.post<{ deleted: number }>("/invitees/duplicates/keep-one", { key, keepId });
   return response.data;
 };

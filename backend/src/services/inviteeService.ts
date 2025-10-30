@@ -12,6 +12,14 @@ export interface InviteeInput {
 }
 
 const normalize = (value: string) => value.trim();
+// Normalizzazione SOLO per confronto (case-insensitive, spazi compattati),
+// senza rimuovere accenti: gli accenti restano parte del nome/cognome.
+const normalizeText = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+const normalizedKey = (firstName: string, lastName: string) => `${normalizeText(firstName)}|${normalizeText(lastName)}`;
 
 const buildFullName = (firstName: string, lastName: string) =>
   `${normalize(firstName)} ${normalize(lastName)}`.trim();
@@ -26,11 +34,8 @@ export const createInvitee = async (input: InviteeInput) => {
     },
   });
 
-  const existing = allInvitees.find(
-    (inv) =>
-      inv.firstName.toLowerCase() === normalize(input.firstName).toLowerCase() &&
-      inv.lastName.toLowerCase() === normalize(input.lastName).toLowerCase()
-  );
+  const targetKey = normalizedKey(input.firstName, input.lastName);
+  const existing = allInvitees.find((inv) => normalizedKey(inv.firstName, inv.lastName) === targetKey);
 
   if (existing) {
     throw new AppError(
@@ -71,12 +76,9 @@ export const createInvitee = async (input: InviteeInput) => {
 export const createInviteesBulk = async (inputs: InviteeInput[]) => {
   const results = [];
   for (const input of inputs) {
-    const existing = await prisma.invitee.findFirst({
-      where: {
-        firstName: normalize(input.firstName),
-        lastName: normalize(input.lastName),
-      },
-    });
+    const allInvitees = await prisma.invitee.findMany({ select: { id: true, firstName: true, lastName: true } });
+    const targetKey = normalizedKey(input.firstName, input.lastName);
+    const existing = allInvitees.find((inv) => normalizedKey(inv.firstName, inv.lastName) === targetKey);
 
     if (existing) {
       logger.warn("Invitee already exists, skipping", { inviteeId: existing.id });
@@ -223,4 +225,58 @@ export const getStats = async () => {
       remaining: (pagantiTotal + greenTotal) - (pagantiEntered + greenEntered),
     },
   };
+};
+
+export const getDuplicateInviteeGroups = async () => {
+  const invitees = await prisma.invitee.findMany({
+    orderBy: [
+      { lastName: "asc" },
+      { firstName: "asc" },
+    ],
+  });
+
+  const groups = new Map<string, typeof invitees>();
+  for (const inv of invitees) {
+    const key = normalizedKey(inv.firstName, inv.lastName);
+    const list = groups.get(key) ?? [];
+    list.push(inv);
+    groups.set(key, list);
+  }
+
+  const duplicates = Array.from(groups.entries())
+    .filter(([, items]) => items.length > 1)
+    .map(([key, items]) => ({ key, count: items.length, items }));
+
+  return duplicates;
+};
+
+export const promoteDuplicateGroupToPagante = async (key: string, paymentType?: string) => {
+  const invitees = await prisma.invitee.findMany();
+  const target = invitees.filter((inv) => normalizedKey(inv.firstName, inv.lastName) === key);
+  if (target.length === 0) return { updated: 0 };
+  let updated = 0;
+  for (const inv of target) {
+    if (inv.listType !== 'PAGANTE' || (paymentType && inv.paymentType !== paymentType)) {
+      await prisma.invitee.update({
+        where: { id: inv.id },
+        data: {
+          listType: 'PAGANTE',
+          paymentType: paymentType ? paymentType.trim().toLowerCase() : inv.paymentType,
+        },
+      });
+      updated++;
+    }
+  }
+  return { updated };
+};
+
+export const keepOneAndDeleteOthersInGroup = async (key: string, keepId: string) => {
+  const invitees = await prisma.invitee.findMany();
+  const group = invitees.filter((inv) => normalizedKey(inv.firstName, inv.lastName) === key);
+  if (group.length <= 1) return { deleted: 0 };
+  const toDelete = group.filter((inv) => inv.id !== keepId);
+  for (const inv of toDelete) {
+    await prisma.invitee.delete({ where: { id: inv.id } });
+  }
+  return { deleted: toDelete.length };
 };

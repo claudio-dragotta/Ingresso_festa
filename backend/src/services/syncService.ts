@@ -1,6 +1,7 @@
 import { logger } from '../logger';
 import { fetchAndParseGoogleSheets, ParsedPerson } from './googleSheetsService';
 import { createInvitee } from './inviteeService';
+import { ListType } from "@prisma/client";
 import { prisma } from '../lib/prisma';
 
 /**
@@ -130,6 +131,8 @@ async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
       id: true,
       firstName: true,
       lastName: true,
+      listType: true,
+      paymentType: true,
     },
   });
 
@@ -140,14 +143,24 @@ async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
   );
 
   if (existing) {
-    return false; // Già presente
+    // Se esiste e la sorgente attuale è PAGANTE ma in DB è GREEN, promuovi a PAGANTE
+    if (listType === 'PAGANTE' && existing.listType === 'GREEN') {
+      await prisma.invitee.update({
+        where: { id: existing.id },
+        data: {
+          listType: 'PAGANTE',
+          paymentType: paymentType ?? existing.paymentType ?? null,
+        },
+      });
+    }
+    return false; // Già presente (eventualmente aggiornato)
   }
 
   // Non esiste -> crea nuovo invitato
   await createInvitee({
     firstName: firstName || '', // Permetti firstName vuoto per nomi con una sola parola (es. "Momo")
     lastName,
-    listType,
+    listType: listType as ListType,
     paymentType: listType === 'PAGANTE' ? paymentType : undefined,
   });
 
