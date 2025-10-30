@@ -145,10 +145,8 @@ async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
 
   // Non esiste -> crea nuovo invitato
   await createInvitee({
-    firstName: firstName || 'Nome', // Fallback se firstName vuoto
+    firstName: firstName || '', // Permetti firstName vuoto per nomi con una sola parola (es. "Momo")
     lastName,
-    email: undefined,
-    phone: undefined,
     listType,
     paymentType: listType === 'PAGANTE' ? paymentType : undefined,
   });

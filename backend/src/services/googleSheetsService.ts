@@ -264,6 +264,21 @@ export async function testGoogleSheetsConnection(): Promise<boolean> {
 }
 
 /**
+ * Capitalizza la prima lettera di ogni parola
+ * Esempio: "mario rossi" -> "Mario Rossi"
+ */
+function capitalizeWords(text: string): string {
+  return text
+    .toLowerCase()
+    .split(' ')
+    .map(word => {
+      if (word.length === 0) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+}
+
+/**
  * Scrive una nuova riga nel Google Sheet appropriato
  * @param fullName Nome completo formato "Cognome Nome"
  * @param listType Tipo lista (PAGANTE o GREEN)
@@ -276,32 +291,38 @@ export async function writeToGoogleSheet(fullName: string, listType: 'PAGANTE' |
     throw new Error('GOOGLE_SHEET_ID non configurato');
   }
 
+  // Formatta il nome con iniziali maiuscole
+  const formattedName = capitalizeWords(fullName.trim());
+
+  // Formatta il tipo di pagamento in minuscolo (se presente)
+  const formattedPaymentType = paymentType ? paymentType.trim().toLowerCase() : '';
+
   const sheets = getGoogleSheetsClient();
 
   try {
     if (listType === 'PAGANTE') {
-      // Scrivi su foglio Lista
+      // Scrivi su foglio Lista: Colonna A = Cognome Nome, Colonna B = Tipo Pagamento
       await sheets.spreadsheets.values.append({
         spreadsheetId,
         range: 'Lista!A:B',
         valueInputOption: 'RAW',
         requestBody: {
-          values: [[fullName, paymentType || '']],
+          values: [[formattedName, formattedPaymentType]],
         },
       });
-      logger.info(`Scritto su Google Sheet PAGANTI: ${fullName} | ${paymentType || 'N/D'}`);
+      logger.info(`Scritto su Google Sheet PAGANTI: ${formattedName} | ${formattedPaymentType || 'N/D'}`);
     } else {
-      // Scrivi su foglio GREEN
+      // Scrivi su foglio GREEN: Solo Colonna A = Cognome Nome
       const greenRange = process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A:A';
       await sheets.spreadsheets.values.append({
         spreadsheetId,
         range: greenRange,
         valueInputOption: 'RAW',
         requestBody: {
-          values: [[fullName]],
+          values: [[formattedName]],
         },
       });
-      logger.info(`Scritto su Google Sheet GREEN: ${fullName}`);
+      logger.info(`Scritto su Google Sheet GREEN: ${formattedName}`);
     }
   } catch (error: any) {
     logger.error('Errore scrittura Google Sheet:', error.message);

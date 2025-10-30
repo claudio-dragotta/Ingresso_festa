@@ -2,12 +2,11 @@ import { Prisma, ListType } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 import { logger } from "../logger";
+import { writeToGoogleSheet } from "./googleSheetsService";
 
 export interface InviteeInput {
   firstName: string;
   lastName: string;
-  email?: string;
-  phone?: string;
   listType: ListType; // PAGANTE o GREEN
   paymentType?: string; // Solo per PAGANTE: bonifico, paypal, contanti, p2p
 }
@@ -44,13 +43,27 @@ export const createInvitee = async (input: InviteeInput) => {
     data: {
       firstName: normalize(input.firstName),
       lastName: normalize(input.lastName),
-      email: input.email?.trim().toLowerCase(),
-      phone: input.phone?.trim(),
       listType: input.listType,
       paymentType: input.listType === 'PAGANTE' ? input.paymentType?.trim().toLowerCase() : null,
       hasEntered: false,
     },
   });
+
+  // Sincronizza con Google Sheets (scrittura bidirezionale)
+  try {
+    const fullName = `${normalize(input.lastName)} ${normalize(input.firstName)}`;
+    await writeToGoogleSheet(
+      fullName,
+      input.listType,
+      input.listType === 'PAGANTE' ? input.paymentType : undefined
+    );
+    logger.info(`✅ Scritto su Google Sheets: ${fullName} (${input.listType})`);
+  } catch (error: any) {
+    // Non blocchiamo l'operazione se la scrittura su Google Sheets fallisce
+    // L'invitato è già stato creato nel DB
+    logger.error(`⚠️  Errore scrittura Google Sheets per ${normalize(input.lastName)} ${normalize(input.firstName)}:`, error.message);
+    logger.warn('L\'invitato è stato creato nel DB ma non sincronizzato su Google Sheets');
+  }
 
   return invitee;
 };

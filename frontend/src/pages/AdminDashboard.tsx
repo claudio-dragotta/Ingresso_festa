@@ -17,8 +17,6 @@ export default function AdminDashboard() {
   const [formData, setFormData] = useState<InviteeInput>({
     firstName: "",
     lastName: "",
-    email: "",
-    phone: "",
     listType: "PAGANTE",
     paymentType: "",
   });
@@ -53,8 +51,6 @@ export default function AdminDashboard() {
       setFormData({
         firstName: "",
         lastName: "",
-        email: "",
-        phone: "",
         listType: activeTab === "paganti" ? "PAGANTE" : "GREEN",
         paymentType: "",
       });
@@ -255,26 +251,6 @@ export default function AdminDashboard() {
                 </select>
               </div>
             )}
-
-            <div className="form-row">
-              <div className="form-field">
-                <label>Email</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-
-              <div className="form-field">
-                <label>Telefono</label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-              </div>
-            </div>
 
             <div className="form-actions">
               <button

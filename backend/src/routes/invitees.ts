@@ -20,8 +20,6 @@ const router = Router();
 const isValidInvitee = (value: unknown): value is {
   firstName: string;
   lastName: string;
-  email?: string;
-  phone?: string;
   listType: ListType;
   paymentType?: string;
 } => {

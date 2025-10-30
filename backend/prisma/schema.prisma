@@ -14,8 +14,6 @@ model Invitee {
   id             String         @id @default(cuid())
   firstName      String
   lastName       String
-  email          String?        @unique
-  phone          String?
   listType       ListType       @default(PAGANTE) // PAGANTE o GREEN
   paymentType    String?        // Solo per PAGANTE: bonifico, paypal, contanti, p2p
   hasEntered     Boolean        @default(false) // true = entrato (rosso), false = non entrato (verde)

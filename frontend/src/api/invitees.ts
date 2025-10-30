@@ -7,8 +7,6 @@ export interface Invitee {
   id: string;
   firstName: string;
   lastName: string;
-  email?: string | null;
-  phone?: string | null;
   listType: ListType;
   paymentType?: string | null; // Solo per PAGANTE: bonifico, paypal, contanti, p2p
   hasEntered: boolean; // true = entrato (rosso), false = non entrato (verde)
@@ -20,8 +18,6 @@ export interface Invitee {
 export interface InviteeInput {
   firstName: string;
   lastName: string;
-  email?: string;
-  phone?: string;
   listType: ListType;
   paymentType?: string;
 }
