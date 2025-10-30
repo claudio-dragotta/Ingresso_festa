@@ -183,12 +183,15 @@ async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
     return false; // Già presente (eventualmente aggiornato)
   }
 
-  // Non esiste -> crea nuovo invitato
-  await createInvitee({
-    firstName: firstName || '', // Permetti firstName vuoto per nomi con una sola parola (es. "Momo")
-    lastName,
-    listType: listType as ListType,
-    paymentType: listType === 'PAGANTE' ? paymentType : undefined,
+  // Non esiste -> crea nuovo invitato (senza scrivere su Google Sheets)
+  await prisma.invitee.create({
+    data: {
+      firstName: (firstName || '').trim().replace(/\s+/g, ' '),
+      lastName: lastName.trim().replace(/\s+/g, ' '),
+      listType: listType as ListType,
+      paymentType: listType === 'PAGANTE' ? (paymentType ?? null) : null,
+      hasEntered: false,
+    },
   });
 
   return true; // Importato
