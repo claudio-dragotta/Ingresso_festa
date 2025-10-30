@@ -11,6 +11,10 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [remember, setRemember] = useState(false);
+
+  const REMEMBER_ENABLED_KEY = "ingresso-remember-enabled";
+  const REMEMBER_USERNAME_KEY = "ingresso-remember-username";
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -18,18 +22,64 @@ const LoginPage = () => {
     }
   }, [isAuthenticated, isAdmin, navigate]);
 
+  // Prefill username if user asked to remember it
+  useEffect(() => {
+    try {
+      const enabled = localStorage.getItem(REMEMBER_ENABLED_KEY) === "true";
+      if (enabled) {
+        setRemember(true);
+        const saved = localStorage.getItem(REMEMBER_USERNAME_KEY);
+        if (saved) setUsername(saved);
+      }
+    } catch {
+      // ignore storage errors
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     try {
       setLoading(true);
       await login(username, password);
+      // Persist username preference after successful login
+      try {
+        if (remember) {
+          localStorage.setItem(REMEMBER_ENABLED_KEY, "true");
+          localStorage.setItem(REMEMBER_USERNAME_KEY, username.trim());
+        } else {
+          localStorage.removeItem(REMEMBER_ENABLED_KEY);
+          localStorage.removeItem(REMEMBER_USERNAME_KEY);
+        }
+      } catch {
+        // ignore storage errors
+      }
     } catch (err) {
       setError("Credenziali non valide. Riprova.");
     } finally {
       setLoading(false);
     }
   };
+
+  const handleRememberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = e.target.checked;
+    setRemember(next);
+    try {
+      if (next) {
+        localStorage.setItem(REMEMBER_ENABLED_KEY, "true");
+        if (username.trim()) {
+          localStorage.setItem(REMEMBER_USERNAME_KEY, username.trim());
+        }
+      } else {
+        localStorage.removeItem(REMEMBER_ENABLED_KEY);
+        localStorage.removeItem(REMEMBER_USERNAME_KEY);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
 
   return (
     <div className="login-page">
@@ -93,6 +143,13 @@ const LoginPage = () => {
                   required
                 />
               </div>
+            </div>
+
+            <div className="form-options">
+              <label className="remember-toggle">
+                <input type="checkbox" checked={remember} onChange={handleRememberChange} />
+                <span>Ricorda username</span>
+              </label>
             </div>
 
             {error && (

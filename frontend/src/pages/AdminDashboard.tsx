@@ -8,6 +8,7 @@ import {
   checkInPerson,
   syncGoogleSheets,
 } from "../api/invitees";
+import { fetchStats, type Stats } from "../api/invitees";
 import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
@@ -28,6 +29,13 @@ export default function AdminDashboard() {
   const { data: invitees = [], isLoading } = useQuery<Invitee[]>({
     queryKey: ["invitees"],
     queryFn: fetchInvitees,
+  });
+
+  // Stats per contatore affidabile (evita discrepanze client)
+  const { data: stats } = useQuery<Stats>({
+    queryKey: ["stats"],
+    queryFn: fetchStats,
+    refetchInterval: 5000,
   });
 
   // Filtra per tipo
@@ -193,7 +201,12 @@ export default function AdminDashboard() {
         </button>
 
         <div className="list-stats">
-          Entrati: {currentList.filter(p => p.hasEntered).length} / {currentList.length}
+          {activeTab === "paganti"
+            ? (
+              <>Entrati: {stats?.paganti.entered ?? 0} / {stats?.paganti.total ?? pagantiList.length}</>
+            ) : (
+              <>Entrati: {stats?.green.entered ?? 0} / {stats?.green.total ?? greenList.length}</>
+            )}
         </div>
       </div>
 

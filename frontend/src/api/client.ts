@@ -36,3 +36,9 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+// Inizializza subito l'Authorization dalle credenziali persistite
+try {
+  const existing = typeof window !== "undefined" ? localStorage.getItem(TOKEN_STORAGE_KEY) : null;
+  if (existing) setAuthToken(existing);
+} catch {}

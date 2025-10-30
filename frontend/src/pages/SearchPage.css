@@ -1,8 +1,8 @@
 .search-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 2rem;
-  animation: fadeIn 0.3s ease;
+  background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+  padding: 1.25rem;
+  animation: fadeIn 0.2s ease;
 }
 
 @keyframes fadeIn {
@@ -13,74 +13,69 @@
 /* Stats Header */
 .stats-header {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-  max-width: 1200px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  max-width: 1000px;
   margin-left: auto;
   margin-right: auto;
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s, box-shadow 0.2s;
-  border: 2px solid transparent;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 0.8rem 1rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s, box-shadow 0.15s;
+  border: 1px solid var(--border);
 }
 
 .stat-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
 }
 
-.stat-card.paganti {
-  border-color: #3b82f6;
-}
+.stat-card.paganti { border-color: #3b82f6; }
 
-.stat-card.green {
-  border-color: #10b981;
-}
+.stat-card.green { border-color: #10b981; }
 
-.stat-card.total {
-  border-color: #8b5cf6;
-}
+.stat-card.total { border-color: #8b5cf6; }
 
 .stat-label {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #6b7280;
-  margin-bottom: 0.5rem;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
 }
 
 .stat-value {
-  font-size: 3rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 1.75rem;
+  line-height: 1;
+  font-weight: 900;
+  color: var(--text);
 }
 
 /* Search Container */
 .search-container {
   max-width: 800px;
-  margin: 0 auto 2rem;
+  margin: 0 auto 1rem;
+  position: sticky;
+  top: 0.5rem;
+  z-index: 20;
 }
 
 .search-box {
   position: relative;
   display: flex;
   align-items: center;
-  background: white;
-  border-radius: 50px;
-  padding: 1rem 1.5rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  transition: box-shadow 0.3s, transform 0.2s;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  transition: box-shadow 0.2s, transform 0.15s;
 }
 
 .search-box:focus-within {
@@ -91,7 +86,7 @@
 .search-icon {
   width: 24px;
   height: 24px;
-  color: #9ca3af;
+  color: var(--muted);
   margin-right: 1rem;
   flex-shrink: 0;
 }
@@ -100,8 +95,8 @@
   flex: 1;
   border: none;
   outline: none;
-  font-size: 1.125rem;
-  color: #1f2937;
+  font-size: 1rem;
+  color: var(--text);
   background: transparent;
 }
 
@@ -147,6 +142,20 @@
   margin: 0 auto;
 }
 
+/* Desktop: affix stats + search insieme */
+@media (min-width: 1024px) {
+  .search-affix {
+    position: sticky;
+    top: 0.5rem;
+    z-index: 20;
+  }
+  /* Evita doppio sticky: search resta dentro l'affix */
+  .search-container {
+    position: static;
+    margin-bottom: 0.75rem;
+  }
+}
+
 .results-count {
   color: rgba(255, 255, 255, 0.9);
   font-size: 0.875rem;
@@ -161,7 +170,7 @@
 }
 
 .result-card {
-  background: white;
+  background: var(--surface);
   border-radius: 16px;
   padding: 1.5rem;
   display: flex;
@@ -195,7 +204,7 @@
 .result-name {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--text);
   margin-bottom: 0.5rem;
 }
 
@@ -214,19 +223,12 @@
   letter-spacing: 0.5px;
 }
 
-.badge.pagante {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.badge.green {
-  background: #d1fae5;
-  color: #065f46;
-}
+.badge.pagante { border: 1px solid #3b82f6; color: #2563eb; background: transparent; }
+.badge.green { border: 1px solid #10b981; color: #059669; background: transparent; }
 
 .payment-type {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--muted);
   font-style: italic;
 }
 

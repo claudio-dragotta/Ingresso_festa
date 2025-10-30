@@ -138,6 +138,27 @@
   gap: 1.5rem;
 }
 
+.form-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.remember-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+  user-select: none;
+}
+
+.remember-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
 .form-group {
   display: flex;
   flex-direction: column;

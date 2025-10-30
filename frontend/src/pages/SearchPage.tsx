@@ -58,29 +58,31 @@ export default function SearchPage() {
 
   return (
     <div className="search-page">
-      {/* Header con statistiche */}
-      <div className="stats-header">
-        <div className="stat-card paganti">
-          <div className="stat-label">Paganti da entrare</div>
-          <div className="stat-value">{stats?.paganti.remaining ?? 0}</div>
+      {/* Affix desktop: stats + search */}
+      <div className="search-affix">
+        {/* Header con statistiche */}
+        <div className="stats-header">
+          <div className="stat-card paganti">
+            <div className="stat-label">Paganti da entrare</div>
+            <div className="stat-value">{stats?.paganti.remaining ?? 0}</div>
+          </div>
+          <div className="stat-card green">
+            <div className="stat-label">Green da entrare</div>
+            <div className="stat-value">{stats?.green.remaining ?? 0}</div>
+          </div>
+          <div className="stat-card total">
+            <div className="stat-label">Totale entrati</div>
+            <div className="stat-value">{stats?.total.entered ?? 0}</div>
+          </div>
         </div>
-        <div className="stat-card green">
-          <div className="stat-label">Green da entrare</div>
-          <div className="stat-value">{stats?.green.remaining ?? 0}</div>
-        </div>
-        <div className="stat-card total">
-          <div className="stat-label">Totale entrati</div>
-          <div className="stat-value">{stats?.total.entered ?? 0}</div>
-        </div>
-      </div>
 
-      {/* Barra di ricerca */}
-      <div className="search-container">
-        <div className="search-box">
-          <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="11" cy="11" r="8" strokeWidth="2"/>
-            <path d="M21 21l-4.35-4.35" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
+        {/* Barra di ricerca */}
+        <div className="search-container">
+          <div className="search-box">
+            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="11" cy="11" r="8" strokeWidth="2"/>
+              <path d="M21 21l-4.35-4.35" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
           <input
             type="text"
             className="search-input"
@@ -102,9 +104,10 @@ export default function SearchPage() {
           )}
         </div>
 
-        {searchQuery && searchQuery.length < 2 && (
-          <div className="search-hint">Digita almeno 2 caratteri per cercare...</div>
-        )}
+          {searchQuery && searchQuery.length < 2 && (
+            <div className="search-hint">Digita almeno 2 caratteri per cercare...</div>
+          )}
+        </div>
       </div>
 
       {/* Risultati */}
