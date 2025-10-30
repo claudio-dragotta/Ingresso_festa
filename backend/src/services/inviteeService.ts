@@ -11,7 +11,7 @@ export interface InviteeInput {
   paymentType?: string; // Solo per PAGANTE: bonifico, paypal, contanti, p2p
 }
 
-const normalize = (value: string) => value.trim();
+const normalize = (value: string) => value.trim().replace(/\s+/g, " ");
 // Normalizzazione SOLO per confronto (case-insensitive, spazi compattati),
 // senza rimuovere accenti: gli accenti restano parte del nome/cognome.
 const normalizeText = (value: string) =>

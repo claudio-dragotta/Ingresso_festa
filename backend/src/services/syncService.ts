@@ -68,7 +68,13 @@ export async function syncGoogleSheetToDatabase(options?: { pruneMissing?: boole
 
     // 2. Per ogni persona, verifica se esiste già e importa se nuova
     const sheetKeys = new Set<string>();
-    const makeKey = (fn: string, ln: string) => `${ln.trim().toLowerCase()}|${fn.trim().toLowerCase()}`;
+    const norm = (s: string) => s
+      .normalize('NFC')
+      .replace(/\u00A0/g, ' ') // NBSP -> space
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+    const makeKey = (fn: string, ln: string) => `${norm(ln)}|${norm(fn)}`;
 
     for (const person of persons) {
       try {
@@ -152,10 +158,15 @@ async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
     },
   });
 
+  const norm = (s: string) => s
+    .normalize('NFC')
+    .replace(/\u00A0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
   const existing = allInvitees.find(
-    (inv) =>
-      inv.firstName.toLowerCase() === firstName.trim().toLowerCase() &&
-      inv.lastName.toLowerCase() === lastName.trim().toLowerCase()
+    (inv) => norm(inv.firstName) === norm(firstName) && norm(inv.lastName) === norm(lastName)
   );
 
   if (existing) {
