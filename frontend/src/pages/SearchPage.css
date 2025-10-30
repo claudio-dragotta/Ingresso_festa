@@ -131,7 +131,7 @@
 
 .search-hint {
   text-align: center;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--muted);
   margin-top: 1rem;
   font-size: 0.875rem;
 }
@@ -157,7 +157,7 @@
 }
 
 .results-count {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--muted);
   font-size: 0.875rem;
   margin-bottom: 1rem;
   font-weight: 600;
@@ -248,7 +248,7 @@
 
 .status-button.not-entered {
   background: #10b981;
-  color: white;
+  color: var(--text);
 }
 
 .status-button.not-entered:hover:not(:disabled) {
@@ -259,7 +259,7 @@
 
 .status-button.entered {
   background: #ef4444;
-  color: white;
+  color: var(--text);
 }
 
 .status-button.entered:not(.disabled):hover {
@@ -289,14 +289,14 @@
 .welcome-state {
   text-align: center;
   padding: 4rem 2rem;
-  color: white;
+  color: var(--text);
 }
 
 .spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border: 4px solid rgba(0, 0, 0, 0.08);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 1rem;
@@ -309,7 +309,7 @@
 .loading-state p,
 .empty-state p,
 .welcome-state p {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--muted);
   margin-top: 1rem;
 }
 
@@ -326,7 +326,7 @@
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  color: white;
+  color: var(--text);
 }
 
 /* Responsive */
@@ -359,3 +359,4 @@
     justify-content: center;
   }
 }
+
