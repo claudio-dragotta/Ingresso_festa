@@ -22,16 +22,6 @@ const AppLayout = () => {
             <>
               <div className="header-left">
                 <NavLink to="/" className="brand" aria-label="Home">
-                  <span className="brand-icon" aria-hidden>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M4 20l4-10"/>
-                      <path d="M10 20l4-10"/>
-                      <path d="M16 20l4-10"/>
-                      <path d="M3 7h18"/>
-                      <path d="M6 3l1 4"/>
-                      <path d="M17 3l1 4"/>
-                    </svg>
-                  </span>
                   <h1>Festa 8 Novembre</h1>
                 </NavLink>
                 <span className="role-badge">Admin</span>
