@@ -306,6 +306,7 @@ export async function writeToGoogleSheet(fullName: string, listType: 'PAGANTE' |
         spreadsheetId,
         range: 'Lista!A:B',
         valueInputOption: 'RAW',
+        insertDataOption: 'OVERWRITE', // Scrive dopo l'ultima cella con contenuto, non dopo righe formattate vuote
         requestBody: {
           values: [[formattedName, formattedPaymentType]],
         },
@@ -318,6 +319,7 @@ export async function writeToGoogleSheet(fullName: string, listType: 'PAGANTE' |
         spreadsheetId,
         range: greenRange,
         valueInputOption: 'RAW',
+        insertDataOption: 'OVERWRITE', // Scrive dopo l'ultima cella con contenuto, non dopo righe formattate vuote
         requestBody: {
           values: [[formattedName]],
         },
