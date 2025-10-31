@@ -210,11 +210,6 @@ export default function AdminDashboard() {
       )}
       {/* Header */}
       <div className="dashboard-header">
-        <div>
-          <h1>Dashboard Admin</h1>
-          <p className="subtitle">Gestisci gli ingressi alla festa</p>
-        </div>
-
         <button
           className="sync-button"
           onClick={() => handleSync(false)}
