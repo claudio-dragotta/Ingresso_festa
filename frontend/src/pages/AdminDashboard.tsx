@@ -90,6 +90,11 @@ export default function AdminDashboard() {
   // Mutation per sync Google Sheets
   const syncMutation = useMutation({
     mutationFn: (opts?: { pruneMissing?: boolean }) => syncGoogleSheets(opts),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invitees"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates"] });
+    },
   });
 
   const resetMutation = useMutation({
@@ -242,7 +247,7 @@ export default function AdminDashboard() {
           Allinea (rimuovi mancanti)
         </button>
         <button
-          className="cancel-button"
+          className="reset-button"
           onClick={() => {
             if (confirm('Confermi il reset degli invitati e il reimport da Google Sheets?')) {
               resetMutation.mutate();
@@ -250,7 +255,19 @@ export default function AdminDashboard() {
           }}
           disabled={resetMutation.isPending}
         >
-          {resetMutation.isPending ? 'Reset/Reimport...' : 'Reset + Reimport'}
+          {resetMutation.isPending ? (
+            <>
+              <div className="spinner-small"></div>
+              Reset/Reimport...
+            </>
+          ) : (
+            <>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
+              </svg>
+              Reset + Reimport
+            </>
+          )}
         </button>
       </div>
 
