@@ -84,6 +84,18 @@ a.active {
   border-radius: 6px;
 }
 
+/* Remove default blue highlight on tap/click (iOS/Chrome) */
+a, button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Remove browser default blue outline on mouse/touch focus
+   (keyboard users still get :focus-visible outlined above) */
+button:focus,
+a:focus {
+  outline: none;
+}
+
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -95,7 +107,7 @@ button {
   color: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(47, 82, 206, 0.15);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 15%, transparent);
   position: relative;
   overflow: hidden;
 }
@@ -120,13 +132,13 @@ button:hover::before {
 
 button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(47, 82, 206, 0.3);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 30%, transparent);
   background: linear-gradient(135deg, var(--primary-2) 0%, var(--primary) 100%);
 }
 
 button:active {
   transform: translateY(0px);
-  box-shadow: 0 4px 12px rgba(47, 82, 206, 0.15);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
 button:disabled {
@@ -140,13 +152,13 @@ button.secondary {
   background: var(--surface);
   color: var(--primary);
   border: 2px solid var(--border);
-  box-shadow: 0 2px 8px rgba(47, 82, 206, 0.08);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 button.secondary:hover {
   background: var(--border);
   border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(47, 82, 206, 0.15);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
 input,
@@ -173,52 +185,11 @@ input:focus,
 textarea:focus,
 select:focus {
   outline: none;
-  border-color: #2f52ce;
-  box-shadow: 0 0 0 3px rgba(47, 82, 206, 0.15);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
-.app-shell {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem 3rem;
-}
 
-.app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-
-.app-header h1 {
-  margin: 0;
-  font-size: 1.8rem;
-}
-
-.app-header nav {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.app-header nav .nav-link {
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  background-color: transparent;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.app-header nav .nav-link.active {
-  background-color: rgba(47, 82, 206, 0.12);
-  color: #16213e;
-}
-
-.logout-button {
-  background: transparent;
-  color: #ff5f5f;
-  border: 1px solid rgba(255, 95, 95, 0.4);
-  padding: 0.5rem 0.9rem;
-}
 
 .card {
   background: #fff;

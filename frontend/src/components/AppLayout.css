@@ -222,3 +222,21 @@
     font-size: 0.75rem;
   }
 }
+
+/* Ensure header buttons match neutral style and no ripple/shadow */
+.theme-toggle {
+  box-shadow: none;
+  overflow: visible;
+}
+
+.theme-toggle::before {
+  content: none;
+}
+
+.logout-button {
+  box-shadow: none;
+}
+
+.logout-button::before {
+  content: none;
+}
