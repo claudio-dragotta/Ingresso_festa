@@ -19,9 +19,6 @@
   background: var(--surface);
   border-bottom: 2px solid var(--border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
 
 .stat-card {
@@ -67,9 +64,6 @@
   padding: 1rem;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 99;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 

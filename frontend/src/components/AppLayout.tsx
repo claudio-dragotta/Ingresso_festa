@@ -4,7 +4,7 @@ import "./AppLayout.css";
 import ThemeToggle from "./ThemeToggle";
 
 const AppLayout = () => {
-  const { logout, isAdmin, role } = useAuth();
+  const { logout, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -32,7 +32,7 @@ const AppLayout = () => {
               </span>
               <h1>Festa 8 Novembre</h1>
             </NavLink>
-            <span className="role-badge">{role === "ADMIN" ? "Admin" : "Ingresso"}</span>
+            {isAdmin && <span className="role-badge">Admin</span>}
           </div>
 
           <nav className="header-nav">
@@ -59,13 +59,15 @@ const AppLayout = () => {
               </NavLink>
             )}
 
-            <NavLink to="/search" className={navLinkClass}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="M21 21l-4.35-4.35"/>
-              </svg>
-              Ricerca
-            </NavLink>
+            {isAdmin && (
+              <NavLink to="/search" className={navLinkClass}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="M21 21l-4.35-4.35"/>
+                </svg>
+                Ricerca
+              </NavLink>
+            )}
 
             <button type="button" onClick={handleLogout} className="logout-button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
