@@ -377,37 +377,70 @@
 
 .cancel-button,
 .submit-button {
-  padding: 0.75rem 1.5rem;
+  padding: 0.875rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.cancel-button::before,
+.submit-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.cancel-button:active::before,
+.submit-button:active::before {
+  width: 300px;
+  height: 300px;
 }
 
 .cancel-button {
-  background: #ffffff;
+  background: var(--surface);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .cancel-button:hover {
-  background: #e5e7eb;
+  background: color-mix(in srgb, var(--border) 50%, transparent);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 .submit-button {
-  background: #10b981;
+  background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
   color: white;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4), 0 4px 8px rgba(5, 150, 105, 0.2);
 }
 
 .submit-button:hover:not(:disabled) {
-  background: #059669;
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.5), 0 6px 12px rgba(5, 150, 105, 0.3);
+}
+
+.submit-button:active:not(:disabled) {
+  transform: translateY(-1px) scale(0.98);
 }
 
 .submit-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Table - Ultra moderna con glassmorphism */
@@ -451,10 +484,11 @@
 .invitees-table th {
   padding: 1.25rem 1rem;
   text-align: left;
-  font-weight: 600;
+  font-weight: 800;
   font-size: 0.875rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+  color: #ffffff;
 }
 
 .invitees-table td {
