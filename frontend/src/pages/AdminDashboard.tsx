@@ -124,10 +124,20 @@ export default function AdminDashboard() {
     },
   });
 
+  // Funzione per capitalizzare la prima lettera di ogni parola
+  const capitalizeWords = (str: string): string => {
+    return str
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const dataToSubmit = {
       ...formData,
+      firstName: capitalizeWords(formData.firstName.trim()),
+      lastName: capitalizeWords(formData.lastName.trim()),
       listType: activeTab === "paganti" ? ("PAGANTE" as ListType) : ("GREEN" as ListType),
       paymentType: activeTab === "paganti" ? formData.paymentType : undefined,
     };
@@ -371,7 +381,15 @@ export default function AdminDashboard() {
                 <input
                   type="text"
                   value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Capitalizza automaticamente mentre si scrive
+                    const capitalized = value
+                      .split(' ')
+                      .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : '')
+                      .join(' ');
+                    setFormData({ ...formData, firstName: capitalized });
+                  }}
                   required
                 />
               </div>
@@ -381,7 +399,15 @@ export default function AdminDashboard() {
                 <input
                   type="text"
                   value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Capitalizza automaticamente mentre si scrive
+                    const capitalized = value
+                      .split(' ')
+                      .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : '')
+                      .join(' ');
+                    setFormData({ ...formData, lastName: capitalized });
+                  }}
                   required
                 />
               </div>

@@ -119,9 +119,228 @@
 @media (max-width: 900px) {
   .table-head, .table-row { grid-template-columns: 2fr 1fr 1fr 2fr 1.5fr; }
 }
-@media (max-width: 700px) {
-  .table-head, .table-row { grid-template-columns: 2fr 1fr 1fr 1fr; }
-  .right.actions { justify-self: stretch; }
-  .table-head .right { display: none; }
+
+@media (max-width: 768px) {
+  .users-page {
+    padding: 1rem;
+  }
+
+  .users-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .users-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.875rem;
+  }
+
+  .search-box input {
+    width: 100%;
+    min-width: auto;
+    font-size: 1rem;
+  }
+
+  .users-actions {
+    padding: 1.25rem;
+  }
+
+  .new-user-form h3 {
+    font-size: 1.125rem;
+  }
+
+  .new-user-form .row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .new-user-form input,
+  .new-user-form select,
+  .new-user-form button {
+    width: 100%;
+    font-size: 1rem;
+    padding: 0.875rem;
+  }
+
+  .new-user-form button {
+    background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+    color: white;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+  }
+
+  .new-user-form button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(16, 185, 129, 0.5);
+  }
+
+  .new-user-form button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Tabella -> Card Layout su Mobile */
+  .users-table {
+    background: transparent;
+    border: none;
+    overflow: visible;
+  }
+
+  .table-head {
+    display: none;
+  }
+
+  .table-row {
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    gap: 0.75rem;
+  }
+
+  .table-row:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
+  }
+
+  .table-row:nth-child(odd) {
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+  }
+
+  .table-row > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+  }
+
+  .table-row > div::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+  }
+
+  .table-row > div:nth-child(1) {
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .table-row > div:nth-child(1)::before {
+    content: "Username";
+  }
+
+  .table-row > div:nth-child(2)::before {
+    content: "Ruolo";
+  }
+
+  .table-row > div:nth-child(3)::before {
+    content: "Stato";
+  }
+
+  .table-row > div:nth-child(4)::before {
+    content: "Creato";
+  }
+
+  .table-row > div:nth-child(4) {
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+
+  .table-row .username {
+    font-size: 1.125rem;
+    font-weight: 800;
+  }
+
+  .table-row .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+    justify-content: stretch;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+    margin-top: 0.5rem;
+  }
+
+  .table-row .actions::before {
+    display: none;
+  }
+
+  .table-row .right {
+    text-align: left;
+  }
+
+  .users-table button {
+    width: 100%;
+    padding: 0.875rem;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .users-table button.secondary {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .users-table button.secondary:hover {
+    background: color-mix(in srgb, var(--border) 50%, transparent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .users-table button.primary {
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+  }
+
+  .users-table button.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+  }
+
+  .users-table button.danger {
+    border: 2px solid #ef4444;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+  }
+
+  .users-table button.danger:hover {
+    background: #ef4444;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+  }
+
+  .role-badge,
+  .status-badge {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .loading {
+    padding: 2rem 1rem;
+    font-size: 0.9375rem;
+  }
+
+  [data-theme="dark"] .table-row {
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(26, 32, 46, 0.98) 100%);
+  }
 }
 

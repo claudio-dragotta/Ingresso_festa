@@ -138,8 +138,8 @@
 }
 
 .clear-button {
-  background: var(--border);
-  border: none;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(220, 38, 38, 0.08));
+  border: 1.5px solid rgba(239, 68, 68, 0.3);
   border-radius: 50%;
   width: 32px;
   height: 32px;
@@ -147,19 +147,41 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
 }
 
 .clear-button:hover {
-  background: var(--muted);
-  transform: scale(1.1);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-color: #ef4444;
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.clear-button:hover svg {
+  color: white;
+}
+
+.clear-button:active {
+  transform: scale(1.05);
 }
 
 .clear-button svg {
   width: 16px;
   height: 16px;
-  color: var(--text);
+  color: #ef4444;
+  stroke-width: 2.5;
+  transition: color 0.3s;
+}
+
+[data-theme="dark"] .clear-button {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15));
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+[data-theme="dark"] .clear-button svg {
+  color: #f87171;
 }
 
 .search-hint {
@@ -501,8 +523,15 @@
   }
 
   .clear-button {
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
+    border-width: 2px;
+  }
+
+  .clear-button svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 3;
   }
 
   .results-container {
