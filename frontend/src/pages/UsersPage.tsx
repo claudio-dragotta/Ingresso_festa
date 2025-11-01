@@ -103,6 +103,8 @@ export default function UsersPage() {
             />
             <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}>
               <option value="ENTRANCE">Ingresso</option>
+              <option value="ORGANIZER">Organizzatore</option>
+              <option value="SHUTTLE">Navetta</option>
               <option value="ADMIN">Admin</option>
             </select>
             <button type="submit" disabled={createMut.isPending}>Crea</button>
@@ -125,7 +127,9 @@ export default function UsersPage() {
             <div key={u.id} className="table-row" onClick={() => setSelectedUser(u)} role="button">
               <div className="username">{u.username}</div>
               <div>
-                <span className={`role-badge ${u.role.toLowerCase()}`}>{u.role === "ADMIN" ? "Admin" : "Ingresso"}</span>
+                <span className={`role-badge ${u.role.toLowerCase()}`}>
+                  {u.role === "ADMIN" ? "Admin" : u.role === "ORGANIZER" ? "Organizzatore" : u.role === "SHUTTLE" ? "Navetta" : "Ingresso"}
+                </span>
               </div>
               <div>
                 <span className={`status-badge ${u.active ? "active" : "inactive"}`}>{u.active ? "Attivo" : "Disattivo"}</span>

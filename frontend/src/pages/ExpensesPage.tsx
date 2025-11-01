@@ -30,6 +30,7 @@ export default function ExpensesPage() {
   const queryClient = useQueryClient();
 
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 

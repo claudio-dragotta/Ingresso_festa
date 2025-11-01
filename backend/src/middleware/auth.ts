@@ -6,7 +6,7 @@ import { prisma } from "../lib/prisma";
 
 export interface AuthPayload {
   username: string;
-  role?: "ADMIN" | "ENTRANCE";
+  role?: "ADMIN" | "ENTRANCE" | "ORGANIZER" | "SHUTTLE";
   userId?: string; // presente per utenti DB
 }
 

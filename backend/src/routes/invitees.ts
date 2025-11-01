@@ -72,7 +72,7 @@ router.get("/stats", async (_req, res, next) => {
 });
 
 // POST /invitees - Crea nuovo invitato (o array di invitati)
-router.post("/", async (req, res, next) => {
+router.post("/", adminOnly, async (req, res, next) => {
   try {
     const payload = req.body;
     if (Array.isArray(payload)) {
@@ -93,7 +93,7 @@ router.post("/", async (req, res, next) => {
 });
 
 // POST /invitees/upload - Upload file (Excel/CSV)
-router.post("/upload", upload.single("file"), async (req, res, next) => {
+router.post("/upload", adminOnly, upload.single("file"), async (req, res, next) => {
   try {
     if (!req.file?.buffer) {
       return res.status(400).json({ message: "File mancante" });
@@ -117,6 +117,11 @@ router.post("/:id/checkin", async (req, res, next) => {
     const { adminOverride } = req.body;
     const userRole = (req as any).user?.role;
     const performedByUserId = (req as any).user?.userId as string | undefined;
+
+    // Solo admin o ingresso possono effettuare check-in
+    if (userRole !== 'ADMIN' && userRole !== 'ENTRANCE') {
+      return res.status(403).json({ message: "Solo admin o ingresso possono effettuare check-in" });
+    }
 
     // Solo admin può usare adminOverride per rimettere come "non entrato"
     const canOverride = userRole === 'ADMIN' && adminOverride === true;

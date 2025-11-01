@@ -19,6 +19,7 @@ import "./AdminDashboard.css";
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<"paganti" | "green">("paganti");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState<InviteeInput>({
     firstName: "",
     lastName: "",
@@ -65,7 +66,18 @@ export default function AdminDashboard() {
     }
   };
 
-  const sortedCurrent = [...currentList].sort((a, b) => {
+  // Filtra in base alla ricerca
+  const filteredList = currentList.filter((inv) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      inv.firstName.toLowerCase().includes(query) ||
+      inv.lastName.toLowerCase().includes(query) ||
+      (inv.paymentType && inv.paymentType.toLowerCase().includes(query))
+    );
+  });
+
+  const sortedCurrent = [...filteredList].sort((a, b) => {
     const dir = sortDir === "asc" ? 1 : -1;
     const aVal = ((a as any)[sortBy] ?? "").toString();
     const bVal = ((b as any)[sortBy] ?? "").toString();
@@ -379,6 +391,35 @@ export default function AdminDashboard() {
             ) : (
               <>Entrati: {stats?.green.entered ?? 0} / {stats?.green.total ?? greenList.length}</>
             )}
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="search-container">
+        <div className="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="search-icon">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Cerca per nome, cognome o metodo pagamento..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-input"
+          />
+          {searchQuery && (
+            <button
+              className="clear-search"
+              onClick={() => setSearchQuery("")}
+              aria-label="Cancella ricerca"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        <div className="search-results">
+          Mostrando {sortedCurrent.length} di {currentList.length} {activeTab === "paganti" ? "paganti" : "green"}
         </div>
       </div>
 

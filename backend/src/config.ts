@@ -49,21 +49,36 @@ export const config = {
     autoSyncEnabled: process.env.GOOGLE_SHEETS_AUTO_SYNC === "true",
     autoSyncIntervalMinutes: Number(process.env.GOOGLE_SHEETS_SYNC_INTERVAL ?? 10),
   },
+  shuttle: {
+    machineCapacity: Number(process.env.SHUTTLE_MACHINE_CAPACITY ?? 4),
+    slotCapacity: Number(process.env.SHUTTLE_SLOT_CAPACITY ?? 12),
+    stepMinutes: Number(process.env.SHUTTLE_STEP_MINUTES ?? 10),
+    outbound: {
+      from: process.env.SHUTTLE_OUTBOUND_FROM ?? "22:30",
+      to: process.env.SHUTTLE_OUTBOUND_TO ?? "00:30",
+    },
+    return: {
+      from: process.env.SHUTTLE_RETURN_FROM ?? "03:30",
+      to: process.env.SHUTTLE_RETURN_TO ?? "05:20",
+    },
+    defaultMachines: (process.env.SHUTTLE_MACHINES ?? "MACCHINA 1,MACCHINA 2,MACCHINA 3").split(",").map((s) => s.trim()).filter(Boolean),
+  },
   // Opzionale: elenco utenti definiti via ENV in JSON
   // Formato accettato: array oppure { users: [...] }
-  // Ogni utente: { username: string, password: string(bcrypt o plain), role: 'ADMIN'|'ENTRANCE', active?: boolean }
+  // Ogni utente: { username: string, password: string(bcrypt o plain), role: 'ADMIN'|'ENTRANCE'|'ORGANIZER'|'SHUTTLE', active?: boolean }
   envUsers: (() => {
     const raw = process.env.USERS_JSON || process.env.AUTH_USERS_JSON;
     if (!raw) return undefined;
     try {
       const parsed = JSON.parse(raw);
       const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.users) ? parsed.users : [];
+      const allowedRoles = new Set(["ADMIN", "ENTRANCE", "ORGANIZER", "SHUTTLE"]);
       return (list as Array<any>)
         .filter((u) => u && typeof u.username === 'string' && typeof u.password === 'string')
         .map((u) => ({
           username: String(u.username),
           password: String(u.password),
-          role: u.role === 'ADMIN' ? 'ADMIN' : 'ENTRANCE',
+          role: allowedRoles.has(u.role) ? (u.role as any) : 'ENTRANCE',
           active: typeof u.active === 'boolean' ? u.active : true,
         }));
     } catch {

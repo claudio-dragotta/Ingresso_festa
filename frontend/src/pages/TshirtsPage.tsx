@@ -31,10 +31,10 @@ export default function TshirtsPage() {
     type: ""
   });
 
-  // Query per magliette (admin: tutte, entrance: ricerca)
+  // Query per magliette (admin: tutte, entrance: ricerca server-side)
   const { data: tshirts = [], isLoading } = useQuery<Tshirt[]>({
-    queryKey: ["tshirts", searchQuery],
-    queryFn: () => fetchTshirts(searchQuery.length >= 2 ? searchQuery : undefined),
+    queryKey: ["tshirts", isAdmin ? "all" : searchQuery],
+    queryFn: () => fetchTshirts(isAdmin ? undefined : (searchQuery.length >= 2 ? searchQuery : undefined)),
     enabled: isAdmin || searchQuery.length >= 2,
     refetchInterval: isAdmin ? 30000 : false
   });
@@ -157,7 +157,20 @@ export default function TshirtsPage() {
     }
   };
 
-  const sortedTshirts = [...tshirts].sort((a, b) => {
+  // Filtra client-side per admin, server-side per entrance
+  const filteredTshirts = isAdmin && searchQuery.trim()
+    ? tshirts.filter((t) => {
+        const query = searchQuery.toLowerCase();
+        return (
+          t.firstName.toLowerCase().includes(query) ||
+          t.lastName.toLowerCase().includes(query) ||
+          (t.size && t.size.toLowerCase().includes(query)) ||
+          (t.type && t.type.toLowerCase().includes(query))
+        );
+      })
+    : tshirts;
+
+  const sortedTshirts = [...filteredTshirts].sort((a, b) => {
     const dir = sortDir === "asc" ? 1 : -1;
     const av = (a[sortBy] ?? "").toString();
     const bv = (b[sortBy] ?? "").toString();
@@ -294,18 +307,23 @@ export default function TshirtsPage() {
           <input
             type="text"
             className="search-input"
-            placeholder={isAdmin ? "Cerca maglietta..." : "Cerca maglietta PR o Vincitore..."}
+            placeholder={isAdmin ? "Cerca per nome, cognome, taglia o tipologia..." : "Cerca maglietta PR o Vincitore..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           {searchQuery && (
-            <button className="clear-button" onClick={() => setSearchQuery("")}>
+            <button className="clear-button" onClick={() => setSearchQuery("")} aria-label="Cancella ricerca">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M18 6L6 18M6 6l12 12" strokeWidth="2" strokeLinecap="round"/>
               </svg>
             </button>
           )}
         </div>
+        {isAdmin && tshirts.length > 0 && (
+          <div className="search-results">
+            Mostrando {sortedTshirts.length} di {tshirts.length} magliette
+          </div>
+        )}
         {!isAdmin && searchQuery.length < 2 && (
           <div className="search-hint">Digita almeno 2 caratteri per cercare...</div>
         )}

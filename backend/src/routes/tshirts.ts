@@ -13,6 +13,7 @@ import {
   type TshirtInput
 } from "../services/tshirtService";
 import { authenticate } from "../middleware/auth";
+import { allowRoles } from "../middleware/roles";
 import { adminOnly } from "../middleware/adminOnly";
 
 const router = Router();
@@ -71,7 +72,8 @@ router.post("/", authenticate, adminOnly, async (req, res, next) => {
 });
 
 // PATCH /api/tshirts/:id/toggle - Toggle consegna maglietta
-router.patch("/:id/toggle", authenticate, async (req, res, next) => {
+// Toggle consegna: Admin, Organizer, Entrance
+router.patch("/:id/toggle", authenticate, allowRoles(['ADMIN','ORGANIZER','ENTRANCE']), async (req, res, next) => {
   try {
     const tshirt = await toggleTshirtReceived(req.params.id);
     return res.json(tshirt);

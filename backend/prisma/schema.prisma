@@ -21,6 +21,7 @@ model Invitee {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   checkInLogs    CheckInLog[]
+  shuttleAssignments ShuttleAssignment[] @relation("InviteeShuttleAssignments")
 
   @@index([lastName, firstName])
 }
@@ -45,6 +46,7 @@ model User {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   checkInLogs  CheckInLog[]
+  markedShuttleAssignments ShuttleAssignment[] @relation("UserMarkedShuttleAssignments")
 }
 
 model SystemConfig {
@@ -87,6 +89,61 @@ model Expense {
   @@index([paymentMethod])
 }
 
+// ===================== SHUTTLES =====================
+
+enum ShuttleDirection {
+  ANDATA
+  RITORNO
+}
+
+enum ShuttleBoardStatus {
+  PENDING
+  BOARDED
+  NO_SHOW
+}
+
+model ShuttleMachine {
+  id          String              @id @default(cuid())
+  name        String              @unique
+  color       String?
+  active      Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  assignments ShuttleAssignment[]
+}
+
+model ShuttleSlot {
+  id          String              @id @default(cuid())
+  direction   ShuttleDirection
+  time        String              // HH:mm
+  capacity    Int                 @default(12)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  assignments ShuttleAssignment[]
+
+  @@unique([direction, time])
+}
+
+model ShuttleAssignment {
+  id         String             @id @default(cuid())
+  slotId     String
+  slot       ShuttleSlot        @relation(fields: [slotId], references: [id])
+  machineId  String
+  machine    ShuttleMachine     @relation(fields: [machineId], references: [id])
+  inviteeId  String?
+  invitee    Invitee?           @relation("InviteeShuttleAssignments", fields: [inviteeId], references: [id])
+  fullName   String
+  status     ShuttleBoardStatus @default(PENDING)
+  markedById String?
+  markedBy   User?              @relation("UserMarkedShuttleAssignments", fields: [markedById], references: [id])
+  markedAt   DateTime?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@index([slotId, machineId])
+  @@index([inviteeId])
+}
+
 enum ListType {
   PAGANTE
   GREEN
@@ -103,6 +160,8 @@ enum ExpenseCategory {
 enum UserRole {
   ADMIN
   ENTRANCE
+  ORGANIZER
+  SHUTTLE
 }
 
 enum CheckInStatus {

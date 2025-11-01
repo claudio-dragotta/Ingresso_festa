@@ -100,6 +100,8 @@
 .role-badge { padding: 0.25rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.8rem; }
 .role-badge.admin { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%); color: #fff; }
 .role-badge.entrance { background: var(--border); color: var(--text); }
+.role-badge.organizer { background: #f59e0b; color: #fff; }
+.role-badge.shuttle { background: #3b82f6; color: #fff; }
 
 .status-badge { padding: 0.25rem 0.5rem; border-radius: 6px; font-weight: 700; font-size: 0.8rem; }
 .status-badge.active { background: #16a34a; color: #fff; }

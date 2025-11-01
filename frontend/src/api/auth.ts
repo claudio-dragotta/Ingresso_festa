@@ -1,6 +1,6 @@
 import apiClient from "./client";
 
-export type UserRole = "ADMIN" | "ENTRANCE";
+export type UserRole = "ADMIN" | "ENTRANCE" | "ORGANIZER" | "SHUTTLE";
 
 interface LoginPayload {
   username: string;

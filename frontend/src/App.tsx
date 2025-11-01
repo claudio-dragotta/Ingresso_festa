@@ -7,10 +7,12 @@ import SearchPage from "./pages/SearchPage";
 import UsersPage from "./pages/UsersPage";
 import TshirtsPage from "./pages/TshirtsPage";
 import ExpensesPage from "./pages/ExpensesPage";
+import ShuttlesPage from "./pages/ShuttlesPage";
 import { useAuth } from "./context/AuthContext";
 
 const App = () => {
-  const { isAdmin, isAuthenticated } = useAuth();
+  const { isAdmin, isAuthenticated, role } = useAuth();
+  const canSeeShuttles = role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE";
 
   return (
     <Routes>
@@ -27,6 +29,7 @@ const App = () => {
         {isAdmin && <Route path="/users" element={<UsersPage />} />}
         {isAdmin && <Route path="/expenses" element={<ExpensesPage />} />}
         <Route path="/search" element={<SearchPage />} />
+        {canSeeShuttles && <Route path="/shuttles" element={<ShuttlesPage />} />}
         <Route path="/tshirts" element={<TshirtsPage />} />
 
         {/* Redirect basato sul ruolo */}

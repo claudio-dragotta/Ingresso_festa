@@ -7,7 +7,7 @@ import { UserRole } from "@prisma/client";
 type InputUser = {
   username: string;
   password: string; // plain or bcrypt ($2b$...)
-  role?: UserRole | "ADMIN" | "ENTRANCE";
+  role?: UserRole | "ADMIN" | "ENTRANCE" | "ORGANIZER" | "SHUTTLE";
 };
 
 const isHashed = (value: string) => value.startsWith("$2b$");
@@ -31,8 +31,14 @@ const validateUser = (u: InputUser, index: number) => {
   if (!u.password || typeof u.password !== "string") {
     throw new Error(`users[${index}].password mancante o non valido`);
   }
-  if (u.role && u.role !== "ADMIN" && u.role !== "ENTRANCE") {
-    throw new Error(`users[${index}].role deve essere 'ADMIN' o 'ENTRANCE'`);
+  if (
+    u.role &&
+    u.role !== "ADMIN" &&
+    u.role !== "ENTRANCE" &&
+    u.role !== "ORGANIZER" &&
+    u.role !== "SHUTTLE"
+  ) {
+    throw new Error(`users[${index}].role deve essere 'ADMIN' | 'ENTRANCE' | 'ORGANIZER' | 'SHUTTLE'`);
   }
 };
 
@@ -79,4 +85,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

@@ -7,6 +7,7 @@ import syncRoutes from "./sync";
 import healthRoutes from "./health";
 import tshirtRoutes from "./tshirts";
 import expenseRoutes from "./expenses";
+import shuttlesRoutes from "./shuttles";
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use("/sync", syncRoutes);
 router.use("/health", healthRoutes);
 router.use("/tshirts", tshirtRoutes);
 router.use("/expenses", expenseRoutes);
+router.use("/shuttles", shuttlesRoutes);
 
 export default router;
