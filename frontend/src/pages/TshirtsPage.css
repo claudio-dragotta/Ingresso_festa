@@ -22,9 +22,28 @@
 /* Header */
 .tshirts-header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 2rem;
   gap: 1rem;
+}
+
+.tshirt-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tshirt-title svg {
+  width: 28px;
+  height: 28px;
+}
+
+.tshirt-title h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
 }
 
 /* Sync Button */
@@ -483,6 +502,11 @@
   font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.8px;
+}
+
+.tshirts-table th.sortable {
+  cursor: pointer;
+  user-select: none;
 }
 
 .tshirts-table td {

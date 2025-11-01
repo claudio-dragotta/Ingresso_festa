@@ -67,3 +67,12 @@ export const syncTshirts = async (): Promise<SyncResult> => {
   const response = await apiClient.post<SyncResult>("/tshirts/sync");
   return response.data;
 };
+
+// PATCH /api/tshirts/:id - Aggiorna taglia e/o tipologia (solo admin)
+export const updateTshirt = async (
+  id: string,
+  data: Partial<Pick<Tshirt, 'size' | 'type'>>
+): Promise<Tshirt> => {
+  const response = await apiClient.patch<Tshirt>(`/tshirts/${id}`, data);
+  return response.data;
+};

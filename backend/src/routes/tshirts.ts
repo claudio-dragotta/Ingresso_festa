@@ -9,6 +9,7 @@ import {
   searchTshirtsForEntrance,
   syncTshirtsFromGoogleSheets,
   writeTshirtToSheets,
+  updateTshirt,
   type TshirtInput
 } from "../services/tshirtService";
 import { authenticate } from "../middleware/auth";
@@ -84,6 +85,20 @@ router.delete("/:id", authenticate, adminOnly, async (req, res, next) => {
   try {
     await deleteTshirt(req.params.id);
     return res.status(204).send();
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// PATCH /api/tshirts/:id - Aggiorna taglia e/o tipologia (solo admin)
+router.patch("/:id", authenticate, adminOnly, async (req, res, next) => {
+  try {
+    const { size, type } = req.body as { size?: string; type?: string };
+    if (!size && typeof type !== 'string') {
+      return res.status(400).json({ message: "Nessun campo da aggiornare" });
+    }
+    const tshirt = await updateTshirt(req.params.id, { size, type });
+    return res.json(tshirt);
   } catch (error) {
     return next(error);
   }

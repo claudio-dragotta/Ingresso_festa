@@ -1,6 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
-import { readTshirtsSheet, writeTshirtToGoogleSheet } from "./googleSheetsService";
+import { readTshirtsSheet, writeTshirtToGoogleSheet, updateTshirtInGoogleSheet } from "./googleSheetsService";
 import { logger } from "../logger";
 
 export interface TshirtInput {
@@ -99,6 +99,40 @@ export const toggleTshirtReceived = async (id: string) => {
 // Elimina una maglietta
 export const deleteTshirt = async (id: string) => {
   await prisma.tshirt.delete({ where: { id } });
+};
+
+// Aggiorna taglia e/o tipologia di una maglietta
+export const updateTshirt = async (id: string, data: { size?: string; type?: string }) => {
+  const existing = await prisma.tshirt.findUnique({ where: { id } });
+  if (!existing) throw new AppError("Maglietta non trovata", 404);
+
+  const nextSize = data.size ? data.size.toUpperCase().trim() : undefined;
+  const nextType = data.type?.trim();
+
+  const updated = await prisma.tshirt.update({
+    where: { id },
+    data: {
+      ...(nextSize ? { size: nextSize } : {}),
+      ...(typeof nextType === 'string' ? { type: nextType } : {}),
+    },
+  });
+
+  // Prova ad aggiornare anche su Google Sheets (best-effort)
+  try {
+    await updateTshirtInGoogleSheet({
+      oldFirstName: existing.firstName,
+      oldLastName: existing.lastName,
+      oldSize: existing.size,
+      newFirstName: updated.firstName,
+      newLastName: updated.lastName,
+      newSize: updated.size,
+      newType: updated.type,
+    });
+  } catch (err: any) {
+    logger.error('Errore sync aggiornamento maglietta su Google Sheets:', err.message);
+  }
+
+  return updated;
 };
 
 // Cerca magliette per nome/cognome (per utenti ENTRANCE - solo PR e Vincitore)

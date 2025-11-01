@@ -8,6 +8,7 @@ import {
   toggleTshirtReceived,
   deleteTshirt,
   syncTshirts,
+  updateTshirt,
   type Tshirt,
   type TshirtInput,
   type TshirtStats
@@ -20,6 +21,8 @@ export default function TshirtsPage() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"firstName" | "lastName" | "size" | "type">("lastName");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [formData, setFormData] = useState<TshirtInput>({
     firstName: "",
     lastName: "",
@@ -76,6 +79,14 @@ export default function TshirtsPage() {
     }
   });
 
+  // Mutation aggiornamento taglia/tipologia
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Pick<Tshirt, 'size' | 'type'>> }) => updateTshirt(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tshirts"] });
+    }
+  });
+
   // Capitalizza automaticamente
   const capitalizeWords = (str: string): string => {
     return str
@@ -99,11 +110,35 @@ export default function TshirtsPage() {
     }
   };
 
+  const toggleSort = (key: typeof sortBy) => {
+    if (sortBy === key) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(key);
+      setSortDir("asc");
+    }
+  };
+
+  const sortedTshirts = [...tshirts].sort((a, b) => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    const av = (a[sortBy] ?? "").toString();
+    const bv = (b[sortBy] ?? "").toString();
+    return av.localeCompare(bv, "it", { sensitivity: "base", numeric: true }) * dir;
+  });
+
   return (
     <div className="tshirts-page">
       {/* Header con sync button (solo admin) */}
-      {isAdmin && (
-        <div className="tshirts-header">
+      <div className="tshirts-header">
+        <div className="tshirt-title" aria-label="Pagina Magliette">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M16 3c-1.2 1-2.6 2-4 2s-2.8-1-4-2L4 6l2 2v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l2-2-4-3z"/>
+            <path d="M9 8h6"/>
+          </svg>
+          <h2>Magliette</h2>
+        </div>
+
+        {isAdmin && (
           <button
             className="sync-button"
             onClick={() => syncMutation.mutate()}
@@ -123,8 +158,8 @@ export default function TshirtsPage() {
               </>
             )}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Risultato sync */}
       {syncMutation.data && (
@@ -315,24 +350,70 @@ export default function TshirtsPage() {
             <table className="tshirts-table">
               <thead>
                 <tr>
-                  <th>Nome</th>
-                  <th>Cognome</th>
-                  <th>Taglia</th>
-                  <th>Tipologia</th>
+                  <th className="sortable" onClick={() => toggleSort("firstName")}>
+                    Nome {sortBy === "firstName" && (sortDir === "asc" ? "▲" : "▼")}
+                  </th>
+                  <th className="sortable" onClick={() => toggleSort("lastName")}>
+                    Cognome {sortBy === "lastName" && (sortDir === "asc" ? "▲" : "▼")}
+                  </th>
+                  <th className="sortable" onClick={() => toggleSort("size")}>
+                    Taglia {sortBy === "size" && (sortDir === "asc" ? "▲" : "▼")}
+                  </th>
+                  <th className="sortable" onClick={() => toggleSort("type")}>
+                    Tipologia {sortBy === "type" && (sortDir === "asc" ? "▲" : "▼")}
+                  </th>
                   <th>Stato</th>
                   {isAdmin && <th>Azioni</th>}
                 </tr>
               </thead>
               <tbody>
-                {tshirts.map((tshirt) => (
+                {sortedTshirts.map((tshirt) => (
                   <tr key={tshirt.id} className={tshirt.hasReceived ? "received" : ""}>
-                    <td>{tshirt.firstName}</td>
-                    <td>{tshirt.lastName}</td>
-                    <td>
-                      <span className="size-badge">{tshirt.size}</span>
+                    <td data-label="Nome">{tshirt.firstName}</td>
+                    <td data-label="Cognome">{tshirt.lastName}</td>
+                    <td data-label="Taglia">
+                      {isAdmin ? (
+                        <select
+                          value={tshirt.size}
+                          onChange={(e) => updateMutation.mutate({ id: tshirt.id, data: { size: e.target.value } })}
+                          disabled={updateMutation.isPending}
+                        >
+                          <option value="S">S</option>
+                          <option value="M">M</option>
+                          <option value="L">L</option>
+                          <option value="XL">XL</option>
+                          <option value="2XL">2XL</option>
+                          <option value="3XL">3XL</option>
+                        </select>
+                      ) : (
+                        <span className="size-badge">{tshirt.size}</span>
+                      )}
                     </td>
-                    <td>
-                      {tshirt.type && <span className="type-badge">{tshirt.type}</span>}
+                    <td data-label="Tipologia">
+                      {isAdmin ? (
+                        <>
+                          <input
+                            list="tshirt-types"
+                            defaultValue={tshirt.type || ""}
+                            placeholder="es. PR, Vincitore, Bar..."
+                            onBlur={(e) => {
+                              const newVal = e.currentTarget.value.trim();
+                              if (newVal !== tshirt.type) {
+                                updateMutation.mutate({ id: tshirt.id, data: { type: newVal } });
+                              }
+                            }}
+                          />
+                          <datalist id="tshirt-types">
+                            <option value="PR" />
+                            <option value="Vincitore" />
+                            <option value="Bar" />
+                            <option value="COMPRARE ALTRE" />
+                            <option value="Apposto" />
+                          </datalist>
+                        </>
+                      ) : (
+                        <span className="type-badge">{tshirt.type || "—"}</span>
+                      )}
                     </td>
                     <td>
                       <button

@@ -550,6 +550,11 @@
   color: #ffffff;
 }
 
+.invitees-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
 .invitees-table td {
   padding: 1.25rem 1rem;
   border-bottom: 1px solid var(--border);
@@ -975,7 +980,6 @@
     background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
   }
 }
-
 
 
 

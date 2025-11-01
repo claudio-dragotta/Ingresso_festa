@@ -65,10 +65,8 @@ const AppLayout = () => {
             </NavLink>
             <NavLink to="/tshirts" className={navLinkClass}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M16 4l3 3-3 3"/>
-                <path d="M8 4L5 7l3 3"/>
-                <path d="M5 7h8a4 4 0 0 1 4 4v8"/>
-                <circle cx="17" cy="19" r="2"/>
+                <path d="M16 3c-1.2 1-2.6 2-4 2s-2.8-1-4-2L4 6l2 2v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l2-2-4-3z"/>
+                <path d="M9 8h6"/>
               </svg>
               Magliette
             </NavLink>
@@ -146,10 +144,8 @@ const AppLayout = () => {
             </NavLink>
             <NavLink to="/tshirts" className={navLinkClass} onClick={closeMobileMenu}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M16 4l3 3-3 3"/>
-                <path d="M8 4L5 7l3 3"/>
-                <path d="M5 7h8a4 4 0 0 1 4 4v8"/>
-                <circle cx="17" cy="19" r="2"/>
+                <path d="M16 3c-1.2 1-2.6 2-4 2s-2.8-1-4-2L4 6l2 2v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l2-2-4-3z"/>
+                <path d="M9 8h6"/>
               </svg>
               <span>Magliette</span>
             </NavLink>

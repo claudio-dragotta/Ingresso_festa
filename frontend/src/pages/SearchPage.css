@@ -558,3 +558,31 @@
   }
 }
 
+/* --- Override: Clear button as a clean "X" icon (no red circle) --- */
+.search-box .clear-button {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 6px !important;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.search-box .clear-button svg {
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+  stroke-width: 2.5;
+}
+
+.search-box .clear-button:hover svg { color: #ef4444; }
+[data-theme="dark"] .search-box .clear-button svg { color: #9ca3af; }
+
+@media (max-width: 768px) {
+  .search-box .clear-button { width: 36px; height: 36px; }
+  .search-box .clear-button svg { width: 18px; height: 18px; stroke-width: 3; }
+}

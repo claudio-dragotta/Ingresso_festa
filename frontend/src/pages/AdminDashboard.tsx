@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Invitee, InviteeInput, ListType } from "../api/invitees";
 import {
@@ -26,6 +26,8 @@ export default function AdminDashboard() {
     listType: "PAGANTE",
     paymentType: "",
   });
+  const [sortBy, setSortBy] = useState<"firstName" | "lastName" | "paymentType">("lastName");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const queryClient = useQueryClient();
 
@@ -54,6 +56,30 @@ export default function AdminDashboard() {
   const greenList = invitees.filter((inv) => inv.listType === "GREEN");
 
   const currentList = activeTab === "paganti" ? pagantiList : greenList;
+
+  const toggleSort = (key: typeof sortBy) => {
+    if (sortBy === key) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(key);
+      setSortDir("asc");
+    }
+  };
+
+  const sortedCurrent = [...currentList].sort((a, b) => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    const aVal = ((a as any)[sortBy] ?? "").toString();
+    const bVal = ((b as any)[sortBy] ?? "").toString();
+    return aVal.localeCompare(bVal, "it", { sensitivity: "base", numeric: true }) * dir;
+  });
+
+  // Se si passa alla tab GREEN e si stava ordinando per pagamento, torna a cognome
+  useEffect(() => {
+    if (activeTab === "green" && sortBy === "paymentType") {
+      setSortBy("lastName");
+      setSortDir("asc");
+    }
+  }, [activeTab]);
 
   // Mutation per creare invitato
   const createMutation = useMutation({
@@ -470,15 +496,23 @@ export default function AdminDashboard() {
             <table className="invitees-table">
               <thead>
                 <tr>
-                  <th>Nome</th>
-                  <th>Cognome</th>
-                  {activeTab === "paganti" && <th>Pagamento</th>}
+                  <th className="sortable" onClick={() => toggleSort("firstName")}>
+                    Nome {sortBy === "firstName" && (sortDir === "asc" ? "▲" : "▼")}
+                  </th>
+                  <th className="sortable" onClick={() => toggleSort("lastName")}>
+                    Cognome {sortBy === "lastName" && (sortDir === "asc" ? "▲" : "▼")}
+                  </th>
+                  {activeTab === "paganti" && (
+                    <th className="sortable" onClick={() => toggleSort("paymentType")}>
+                      Pagamento {sortBy === "paymentType" && (sortDir === "asc" ? "▲" : "▼")}
+                    </th>
+                  )}
                   <th>Stato</th>
                   <th>Azioni</th>
                 </tr>
               </thead>
               <tbody>
-                {currentList.map((person) => (
+                {sortedCurrent.map((person) => (
                   <tr key={person.id} className={person.hasEntered ? "entered" : ""}>
                     <td>{person.firstName}</td>
                     <td>{person.lastName}</td>

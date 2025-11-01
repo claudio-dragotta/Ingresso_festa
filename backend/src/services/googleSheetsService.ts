@@ -427,3 +427,82 @@ export async function writeTshirtToGoogleSheet(firstName: string, lastName: stri
     throw new Error(`Impossibile scrivere maglietta su Google Sheet: ${error.message}`);
   }
 }
+
+/**
+ * Aggiorna una riga esistente nel foglio "Magliette" cercando per Nome + Cognome (+ Taglia precedente se fornita)
+ * Se la riga non viene trovata, effettua un append come fallback per non perdere i dati.
+ */
+export async function updateTshirtInGoogleSheet(params: {
+  oldFirstName: string;
+  oldLastName: string;
+  oldSize?: string;
+  newFirstName?: string;
+  newLastName?: string;
+  newSize?: string;
+  newType?: string;
+}): Promise<void> {
+  const { spreadsheetId } = config.googleSheets;
+  if (!spreadsheetId) {
+    throw new Error('GOOGLE_SHEET_ID non configurato');
+  }
+
+  const sheets = getGoogleSheetsClient();
+  const range = 'Magliette!A2:D';
+
+  // Valori nuovi (se non forniti, usa vecchi)
+  const nextFirstName = capitalizeWords((params.newFirstName ?? params.oldFirstName).trim());
+  const nextLastName = capitalizeWords((params.newLastName ?? params.oldLastName).trim());
+  const nextSize = (params.newSize ?? params.oldSize ?? '').trim().toUpperCase();
+  const nextType = (params.newType ?? '').trim();
+
+  try {
+    // Leggi tutte le righe per trovare l'indice
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+    const rows = res.data.values || [];
+
+    let rowIndex: number | null = null; // indice relativo all'inizio del range (0 = riga 2 nel foglio)
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i] || [];
+      const f = (row[0] || '').toString().trim();
+      const l = (row[1] || '').toString().trim();
+      const s = (row[2] || '').toString().trim().toUpperCase();
+      if (
+        f.localeCompare(params.oldFirstName, undefined, { sensitivity: 'accent' }) === 0 &&
+        l.localeCompare(params.oldLastName, undefined, { sensitivity: 'accent' }) === 0 &&
+        (!params.oldSize || s === params.oldSize.toUpperCase())
+      ) {
+        rowIndex = i; // trovato
+        break;
+      }
+    }
+
+    if (rowIndex === null) {
+      // Fallback: append nuova riga
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: 'Magliette!A:D',
+        valueInputOption: 'RAW',
+        insertDataOption: 'OVERWRITE',
+        requestBody: { values: [[nextFirstName, nextLastName, nextSize, nextType]] },
+      });
+      logger.warn(`Riga Magliette non trovata per ${params.oldLastName} ${params.oldFirstName}. Eseguito append.`);
+      return;
+    }
+
+    // Calcola riga assoluta nel foglio (somma offset 2 perché il range parte da A2)
+    const absoluteRow = rowIndex + 2;
+    const updateRange = `Magliette!A${absoluteRow}:D${absoluteRow}`;
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: updateRange,
+      valueInputOption: 'RAW',
+      requestBody: { values: [[nextFirstName, nextLastName, nextSize, nextType]] },
+    });
+
+    logger.info(`Aggiornata riga Magliette ${absoluteRow}: ${nextLastName} ${nextFirstName} | ${nextSize} | ${nextType}`);
+  } catch (error: any) {
+    logger.error('Errore aggiornamento Google Sheet MAGLIETTE:', error.message);
+    throw new Error(`Impossibile aggiornare Google Sheet MAGLIETTE: ${error.message}`);
+  }
+}
