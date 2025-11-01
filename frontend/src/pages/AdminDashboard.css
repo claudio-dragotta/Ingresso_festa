@@ -913,16 +913,7 @@
   }
 
   /* Riga azioni */
-  .invitees-table td:last-child {
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--border);
-    margin-top: 0.5rem;
-    justify-content: center;
-  }
-
-  .invitees-table td:last-child::before {
-    display: none;
-  }
+  /* Rimosso colonna Azioni: nessuna regola speciale per ultima cella */
 
   .payment-badge {
     font-size: 0.7rem;
@@ -980,7 +971,6 @@
     background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
   }
 }
-
 
 
 

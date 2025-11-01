@@ -20,6 +20,26 @@ export interface User {
   createdAt: string;
 }
 
+export interface UserLogItem {
+  id: string;
+  outcome: 'SUCCESS' | 'DUPLICATE' | 'BLOCKED';
+  message?: string | null;
+  createdAt: string;
+  invitee?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    listType: 'PAGANTE' | 'GREEN';
+    paymentType?: string | null;
+  } | null;
+}
+
+export interface UserLogsResponse {
+  total: number;
+  enteredCount: number;
+  logs: UserLogItem[];
+}
+
 // POST /auth/login - Login utente
 export const loginRequest = async (payload: LoginPayload): Promise<LoginResponse> => {
   const response = await apiClient.post<LoginResponse>("/auth/login", payload);
@@ -46,5 +66,11 @@ export const deleteUser = async (userId: string) => {
 // PATCH /auth/users/:id - Aggiorna stato attivo
 export const setUserActive = async (userId: string, active: boolean) => {
   const response = await apiClient.patch<User>(`/auth/users/${userId}`, { active });
+  return response.data;
+};
+
+// GET /auth/users/:id/logs - Log di check-in per utente (solo admin)
+export const fetchUserLogs = async (userId: string): Promise<UserLogsResponse> => {
+  const response = await apiClient.get<UserLogsResponse>(`/auth/users/${userId}/logs`);
   return response.data;
 };

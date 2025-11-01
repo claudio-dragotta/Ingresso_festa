@@ -4,7 +4,6 @@ import type { Invitee, InviteeInput, ListType } from "../api/invitees";
 import {
   fetchInvitees,
   createInvitee,
-  deleteInvitee,
   checkInPerson,
   syncGoogleSheets,
   fetchDuplicateInvitees,
@@ -96,13 +95,7 @@ export default function AdminDashboard() {
     },
   });
 
-  // Mutation per eliminare
-  const deleteMutation = useMutation({
-    mutationFn: deleteInvitee,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invitees"] });
-    },
-  });
+  // (rimosso) eliminazione singolo invitato dalla tabella
 
   // Mutation per check-in
   const checkInMutation = useMutation({
@@ -178,11 +171,7 @@ export default function AdminDashboard() {
     checkInMutation.mutate({ id: person.id, adminOverride: true });
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (confirm(`Sei sicuro di voler eliminare "${name}"?`)) {
-      deleteMutation.mutate(id);
-    }
-  };
+  // (rimosso) azione elimina per riga
 
   return (
     <div className="admin-dashboard">
@@ -508,7 +497,6 @@ export default function AdminDashboard() {
                     </th>
                   )}
                   <th>Stato</th>
-                  <th>Azioni</th>
                 </tr>
               </thead>
               <tbody>
@@ -530,18 +518,6 @@ export default function AdminDashboard() {
                         disabled={checkInMutation.isPending}
                       >
                         {person.hasEntered ? "Entrato" : "Non entrato"}
-                      </button>
-                    </td>
-                    <td>
-                      <button
-                        className="delete-button"
-                        onClick={() => handleDelete(person.id, `${person.lastName} ${person.firstName}`)}
-                        disabled={deleteMutation.isPending}
-                        title="Elimina"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                        </svg>
                       </button>
                     </td>
                   </tr>

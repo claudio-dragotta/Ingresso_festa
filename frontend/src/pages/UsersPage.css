@@ -91,6 +91,7 @@
 }
 .table-head { background: color-mix(in srgb, var(--border) 60%, transparent); font-weight: 700; }
 .table-row { border-top: 1px solid var(--border); }
+.users-table .table-row { cursor: pointer; }
 .table-row:nth-child(odd) { background: color-mix(in srgb, var(--border) 30%, transparent); }
 
 .right { text-align: right; }
@@ -115,6 +116,41 @@
 .users-table button.danger:hover { background: #ef4444; color: #fff; }
 
 .loading { padding: 1rem; color: var(--muted); }
+
+/* Drawer logs utente */
+.user-logs-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(480px, 100%);
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 24px rgba(0,0,0,0.08);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+}
+.drawer-header { display: flex; align-items: center; justify-content: space-between; }
+.drawer-title { display: flex; align-items: center; gap: 0.5rem; }
+.drawer-title svg { width: 22px; height: 22px; }
+.drawer-title h3 { margin: 0; }
+.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; line-height: 1; }
+.drawer-stats { display: grid; grid-template-columns: repeat(2,1fr); gap: 0.75rem; margin: 0.75rem 0 1rem; }
+.drawer-stats .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem; }
+.drawer-stats .label { display: block; color: var(--muted); font-size: 0.8125rem; }
+.drawer-stats .value { font-weight: 800; font-size: 1.25rem; color: var(--text); }
+.logs-list { overflow: auto; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+.log-row { display: grid; grid-template-columns: 1fr 2fr 2fr 1.2fr; align-items: center; gap: 0.5rem; border: 1px solid var(--border); border-radius: 10px; padding: 0.5rem 0.75rem; }
+.badge.outcome { font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 8px; border: 1px solid var(--border); text-align: center; text-transform: uppercase; font-weight: 800; }
+.badge.outcome.success { background: rgba(16,185,129,0.12); color: #047857; border-color: rgba(16,185,129,0.3); }
+.badge.outcome.duplicate { background: rgba(234,179,8,0.12); color: #92400e; border-color: rgba(234,179,8,0.3); }
+.badge.outcome.blocked { background: rgba(239,68,68,0.12); color: #b91c1c; border-color: rgba(239,68,68,0.3); }
+.person { display: flex; flex-direction: column; }
+.person .meta { color: var(--muted); font-size: 0.8125rem; }
+.message { color: var(--muted); font-size: 0.875rem; }
+.time { color: var(--text); font-size: 0.875rem; text-align: right; }
 
 @media (max-width: 900px) {
   .table-head, .table-row { grid-template-columns: 2fr 1fr 1fr 2fr 1.5fr; }
@@ -343,4 +379,3 @@
     background: linear-gradient(135deg, var(--surface) 0%, rgba(26, 32, 46, 0.98) 100%);
   }
 }
-

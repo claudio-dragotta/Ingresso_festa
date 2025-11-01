@@ -120,7 +120,7 @@ export const searchInvitees = async (query: string) => {
   );
 };
 
-export const markCheckIn = async (inviteeId: string, adminOverride: boolean = false) => {
+export const markCheckIn = async (inviteeId: string, adminOverride: boolean = false, performedByUserId?: string | null) => {
   const systemConfig = await prisma.systemConfig.findFirst();
   if (!systemConfig || systemConfig.eventStatus === "LOCKED") {
     await prisma.checkInLog.create({
@@ -128,6 +128,7 @@ export const markCheckIn = async (inviteeId: string, adminOverride: boolean = fa
         outcome: "BLOCKED",
         message: "Sistema bloccato",
         inviteeId,
+        userId: performedByUserId ?? undefined,
       },
     });
     throw new AppError("Sistema bloccato", 423, { status: systemConfig?.eventStatus ?? "LOCKED" });
@@ -143,6 +144,7 @@ export const markCheckIn = async (inviteeId: string, adminOverride: boolean = fa
       data: {
         outcome: "BLOCKED",
         message: "Invitato non trovato",
+        userId: performedByUserId ?? undefined,
       },
     });
     throw new AppError("Invitato non trovato", 404);
@@ -155,6 +157,7 @@ export const markCheckIn = async (inviteeId: string, adminOverride: boolean = fa
         invitee: { connect: { id: invitee.id } },
         outcome: "DUPLICATE",
         message: "Già entrato",
+        ...(performedByUserId ? { user: { connect: { id: performedByUserId } } } : {}),
       },
     });
     throw new AppError("Persona già entrata", 409, {
@@ -178,6 +181,7 @@ export const markCheckIn = async (inviteeId: string, adminOverride: boolean = fa
       invitee: { connect: { id: invitee.id } },
       outcome: "SUCCESS",
       message: newState ? "Ingresso autorizzato" : "Reimpostato come non entrato",
+      ...(performedByUserId ? { user: { connect: { id: performedByUserId } } } : {}),
     },
   });
 

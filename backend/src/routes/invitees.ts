@@ -116,11 +116,12 @@ router.post("/:id/checkin", async (req, res, next) => {
   try {
     const { adminOverride } = req.body;
     const userRole = (req as any).user?.role;
+    const performedByUserId = (req as any).user?.userId as string | undefined;
 
     // Solo admin può usare adminOverride per rimettere come "non entrato"
     const canOverride = userRole === 'ADMIN' && adminOverride === true;
 
-    const invitee = await markCheckIn(req.params.id, canOverride);
+    const invitee = await markCheckIn(req.params.id, canOverride, performedByUserId);
     return res.json(invitee);
   } catch (error) {
     return next(error);

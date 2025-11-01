@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createUser, deleteUser, fetchUsers, setUserActive, type User, type UserRole } from "../api/auth";
+import { createUser, deleteUser, fetchUsers, setUserActive, fetchUserLogs, type User, type UserRole, type UserLogsResponse } from "../api/auth";
 import "./UsersPage.css";
 
 const TOKEN_STORAGE_KEY = "ingresso-festa-token";
@@ -20,6 +20,12 @@ const getCurrentUserId = (): string | null => {
 export default function UsersPage() {
   const qc = useQueryClient();
   const { data: users = [], isLoading } = useQuery<User[]>({ queryKey: ["users"], queryFn: fetchUsers });
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const { data: selectedLogs } = useQuery<UserLogsResponse>({
+    queryKey: ["user-logs", selectedUser?.id],
+    queryFn: () => fetchUserLogs(selectedUser!.id),
+    enabled: !!selectedUser,
+  });
 
   const [newUser, setNewUser] = useState({ username: "", password: "", role: "ENTRANCE" as UserRole });
 
@@ -116,7 +122,7 @@ export default function UsersPage() {
           <div className="loading">Caricamento...</div>
         ) : (
           filtered.map((u) => (
-            <div key={u.id} className="table-row">
+            <div key={u.id} className="table-row" onClick={() => setSelectedUser(u)} role="button">
               <div className="username">{u.username}</div>
               <div>
                 <span className={`role-badge ${u.role.toLowerCase()}`}>{u.role === "ADMIN" ? "Admin" : "Ingresso"}</span>
@@ -129,7 +135,7 @@ export default function UsersPage() {
                 <button
                   type="button"
                   className={u.active ? "secondary" : "primary"}
-                  onClick={() => activeMut.mutate({ id: u.id, active: !u.active })}
+                  onClick={(e) => { e.stopPropagation(); activeMut.mutate({ id: u.id, active: !u.active }); }}
                   disabled={activeMut.isPending}
                 >
                   {u.active ? "Disattiva" : "Attiva"}
@@ -137,7 +143,7 @@ export default function UsersPage() {
                 <button
                   type="button"
                   className="danger"
-                  onClick={() => { if (confirm(`Eliminare utente ${u.username}?`)) deleteMut.mutate(u.id); }}
+                  onClick={(e) => { e.stopPropagation(); if (confirm(`Eliminare utente ${u.username}?`)) deleteMut.mutate(u.id); }}
                   disabled={deleteMut.isPending}
                 >
                   Elimina
@@ -147,6 +153,56 @@ export default function UsersPage() {
           ))
         )}
       </div>
+
+      {selectedUser && (
+        <div className="user-logs-drawer" role="dialog" aria-label="Dettaglio attività utente">
+          <div className="drawer-header">
+            <div className="drawer-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M20 21v-2a4 4 0 00-4-4h-8a4 4 0 00-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              <h3>Attività: {selectedUser.username}</h3>
+            </div>
+            <button className="close-btn" onClick={() => setSelectedUser(null)} aria-label="Chiudi">×</button>
+          </div>
+
+          <div className="drawer-stats">
+            <div className="stat">
+              <span className="label">Ingressi autorizzati</span>
+              <span className="value">{selectedLogs?.enteredCount ?? 0}</span>
+            </div>
+            <div className="stat">
+              <span className="label">Log totali</span>
+              <span className="value">{selectedLogs?.total ?? 0}</span>
+            </div>
+          </div>
+
+          <div className="logs-list">
+            {selectedLogs?.logs?.length ? (
+              selectedLogs.logs.map((log) => (
+                <div key={log.id} className="log-row">
+                  <div className={`badge outcome ${log.outcome.toLowerCase()}`}>{log.outcome}</div>
+                  <div className="person">
+                    {log.invitee ? (
+                      <>
+                        <strong>{log.invitee.lastName} {log.invitee.firstName}</strong>
+                        <span className="meta">{log.invitee.listType}{log.invitee.paymentType ? ` • ${log.invitee.paymentType}` : ''}</span>
+                      </>
+                    ) : (
+                      <em>N/D</em>
+                    )}
+                  </div>
+                  <div className="message">{log.message || ''}</div>
+                  <div className="time">{new Date(log.createdAt).toLocaleString()}</div>
+                </div>
+              ))
+            ) : (
+              <div className="empty">Nessun log</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

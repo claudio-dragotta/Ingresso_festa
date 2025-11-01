@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { login, createUser, listUsers, deleteUser, setUserActive } from "../services/authService";
+import { prisma } from "../lib/prisma";
 import { authenticate } from "../middleware/auth";
 import { adminOnly } from "../middleware/adminOnly";
 import { UserRole } from "@prisma/client";
@@ -76,7 +77,7 @@ router.delete("/users/:id", authenticate, adminOnly, async (req, res, next) => {
 });
 
 export default router;
- 
+
 // Attiva/Disattiva utente
 router.patch("/users/:id", authenticate, adminOnly, async (req, res, next) => {
   try {
@@ -92,6 +93,33 @@ router.patch("/users/:id", authenticate, adminOnly, async (req, res, next) => {
 
     const user = await setUserActive(req.params.id, active);
     return res.json(user);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// GET /auth/users/:id/logs - Log di check-in per utente (solo admin)
+router.get("/users/:id/logs", authenticate, adminOnly, async (req, res, next) => {
+  try {
+    const userRole = (req as any).user?.role;
+    if (userRole !== 'ADMIN') {
+      return res.status(403).json({ message: "Solo admin può vedere i log utente" });
+    }
+
+    const userId = req.params.id;
+    const logs = await prisma.checkInLog.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        invitee: { select: { id: true, firstName: true, lastName: true, listType: true, paymentType: true } },
+      },
+      take: 500, // limite ragionevole per UI
+    });
+
+    const total = logs.length;
+    const enteredCount = logs.filter(l => l.outcome === 'SUCCESS' && (l.message?.includes('Ingresso autorizzato') ?? false)).length;
+
+    return res.json({ total, enteredCount, logs });
   } catch (error) {
     return next(error);
   }

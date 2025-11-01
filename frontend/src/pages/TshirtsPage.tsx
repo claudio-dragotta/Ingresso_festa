@@ -199,8 +199,12 @@ export default function TshirtsPage() {
           <div className="size-grid">
             {Object.entries(stats.bySizeAndType)
               .sort(([a], [b]) => {
-                const order = ['S', 'M', 'L', 'XL', '2XL', '3XL'];
-                return order.indexOf(a) - order.indexOf(b);
+                const order = ['S', 'M', 'L', 'XL', '2XL'];
+                const ia = order.indexOf(a);
+                const ib = order.indexOf(b);
+                const va = ia === -1 ? 999 : ia;
+                const vb = ib === -1 ? 999 : ib;
+                return va - vb;
               })
               .map(([size, data]) => (
                 <div key={size} className="size-item">
@@ -302,7 +306,7 @@ export default function TshirtsPage() {
                   <option value="L">L</option>
                   <option value="XL">XL</option>
                   <option value="2XL">2XL</option>
-                  <option value="3XL">3XL</option>
+                  
                 </select>
               </div>
 
@@ -374,16 +378,18 @@ export default function TshirtsPage() {
                     <td data-label="Taglia">
                       {isAdmin ? (
                         <select
+                          className="pill-select size-pill"
                           value={tshirt.size}
                           onChange={(e) => updateMutation.mutate({ id: tshirt.id, data: { size: e.target.value } })}
                           disabled={updateMutation.isPending}
+                          aria-label={`Taglia per ${tshirt.firstName} ${tshirt.lastName}`}
                         >
                           <option value="S">S</option>
                           <option value="M">M</option>
                           <option value="L">L</option>
                           <option value="XL">XL</option>
                           <option value="2XL">2XL</option>
-                          <option value="3XL">3XL</option>
+                          
                         </select>
                       ) : (
                         <span className="size-badge">{tshirt.size}</span>
@@ -393,15 +399,32 @@ export default function TshirtsPage() {
                       {isAdmin ? (
                         <>
                           <input
+                            className="pill-input type-pill"
                             list="tshirt-types"
                             defaultValue={tshirt.type || ""}
                             placeholder="es. PR, Vincitore, Bar..."
+                            onChange={(e) => {
+                              const newVal = e.currentTarget.value.trim();
+                              if (newVal && newVal !== tshirt.type) {
+                                updateMutation.mutate({ id: tshirt.id, data: { type: newVal } });
+                              }
+                            }}
                             onBlur={(e) => {
                               const newVal = e.currentTarget.value.trim();
                               if (newVal !== tshirt.type) {
                                 updateMutation.mutate({ id: tshirt.id, data: { type: newVal } });
                               }
                             }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const target = e.currentTarget as HTMLInputElement;
+                                const newVal = target.value.trim();
+                                if (newVal !== tshirt.type) {
+                                  updateMutation.mutate({ id: tshirt.id, data: { type: newVal } });
+                                }
+                              }
+                            }}
+                            aria-label={`Tipologia per ${tshirt.firstName} ${tshirt.lastName}`}
                           />
                           <datalist id="tshirt-types">
                             <option value="PR" />
