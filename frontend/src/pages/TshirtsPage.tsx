@@ -35,14 +35,16 @@ export default function TshirtsPage() {
   const { data: tshirts = [], isLoading } = useQuery<Tshirt[]>({
     queryKey: ["tshirts", searchQuery],
     queryFn: () => fetchTshirts(searchQuery.length >= 2 ? searchQuery : undefined),
-    enabled: isAdmin || searchQuery.length >= 2
+    enabled: isAdmin || searchQuery.length >= 2,
+    refetchInterval: isAdmin ? 30000 : false
   });
 
   // Query per statistiche (solo admin)
   const { data: stats } = useQuery<TshirtStats>({
     queryKey: ["tshirts", "stats"],
     queryFn: fetchTshirtStats,
-    enabled: isAdmin
+    enabled: isAdmin,
+    refetchInterval: isAdmin ? 30000 : false
   });
 
   // Mutation per creare maglietta

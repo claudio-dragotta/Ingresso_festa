@@ -68,7 +68,7 @@ export const createTshirt = async (data: TshirtInput) => {
   const firstName = capitalizeWords(data.firstName.trim());
   const lastName = capitalizeWords(data.lastName.trim());
 
-  return prisma.tshirt.create({
+  const created = await prisma.tshirt.create({
     data: {
       firstName,
       lastName,
@@ -76,6 +76,15 @@ export const createTshirt = async (data: TshirtInput) => {
       type: data.type
     }
   });
+
+  // Scrivi anche su Google Sheets (best-effort)
+  try {
+    await writeTshirtToGoogleSheet(created.firstName, created.lastName, created.size, created.type);
+  } catch (err: any) {
+    logger.error('Errore scrittura nuova maglietta su Google Sheets:', err.message);
+  }
+
+  return created;
 };
 
 // Segna maglietta come consegnata o non consegnata

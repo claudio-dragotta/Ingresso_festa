@@ -1,5 +1,6 @@
 import { logger } from '../logger';
 import { fetchAndParseGoogleSheets, ParsedPerson } from './googleSheetsService';
+import { syncTshirtsFromGoogleSheets } from './tshirtService';
 import { createInvitee } from './inviteeService';
 import { ListType } from "@prisma/client";
 import { prisma } from '../lib/prisma';
@@ -216,15 +217,28 @@ export function startAutoSync(intervalMinutes: number = 10): void {
 
   logger.info(`🚀 Avvio auto-sync Google Sheets ogni ${intervalMinutes} minuti`);
 
-  // Prima sincronizzazione immediata
-  syncGoogleSheetToDatabase().catch(error => {
-    logger.error('Errore prima sincronizzazione:', error);
-  });
+  // Prima sincronizzazione immediata (persone + magliette)
+  (async () => {
+    try {
+      await syncGoogleSheetToDatabase();
+    } catch (error) {
+      logger.error('Errore prima sincronizzazione persone:', { error });
+    }
+    try {
+      await syncTshirtsFromGoogleSheets();
+      logger.info('🔄 Sincronizzazione iniziale magliette completata');
+    } catch (error) {
+      logger.error('Errore prima sincronizzazione magliette:', { error });
+    }
+  })();
 
-  // Poi ogni X minuti
+  // Poi ogni X minuti (persone + magliette)
   syncIntervalId = setInterval(() => {
     syncGoogleSheetToDatabase().catch(error => {
-      logger.error('Errore sincronizzazione automatica:', error);
+      logger.error('Errore sincronizzazione automatica persone:', { error });
+    });
+    syncTshirtsFromGoogleSheets().catch(error => {
+      logger.error('Errore sincronizzazione automatica magliette:', { error });
     });
   }, intervalMs);
 }

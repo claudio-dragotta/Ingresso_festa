@@ -122,7 +122,7 @@
   position: fixed;
   top: 0;
   right: 0;
-  width: min(480px, 100%);
+  width: clamp(320px, 90vw, 480px);
   height: 100vh;
   background: var(--surface);
   border-left: 1px solid var(--border);
@@ -132,11 +132,25 @@
   flex-direction: column;
   z-index: 40;
 }
-.drawer-header { display: flex; align-items: center; justify-content: space-between; }
+.drawer-header { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--surface); padding-bottom: 0.5rem; z-index: 1; }
 .drawer-title { display: flex; align-items: center; gap: 0.5rem; }
 .drawer-title svg { width: 22px; height: 22px; }
 .drawer-title h3 { margin: 0; }
-.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; line-height: 1; }
+.close-btn {
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.close-btn:hover { background: color-mix(in srgb, var(--border) 60%, transparent); }
 .drawer-stats { display: grid; grid-template-columns: repeat(2,1fr); gap: 0.75rem; margin: 0.75rem 0 1rem; }
 .drawer-stats .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem; }
 .drawer-stats .label { display: block; color: var(--muted); font-size: 0.8125rem; }
@@ -149,7 +163,7 @@
 .badge.outcome.blocked { background: rgba(239,68,68,0.12); color: #b91c1c; border-color: rgba(239,68,68,0.3); }
 .person { display: flex; flex-direction: column; }
 .person .meta { color: var(--muted); font-size: 0.8125rem; }
-.message { color: var(--muted); font-size: 0.875rem; }
+.message { color: var(--muted); font-size: 0.875rem; word-break: break-word; }
 .time { color: var(--text); font-size: 0.875rem; text-align: right; }
 
 @media (max-width: 900px) {
@@ -363,6 +377,11 @@
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
   }
+
+  /* Drawer responsive on small screens */
+  .user-logs-drawer { width: 100vw; }
+  .log-row { grid-template-columns: 1fr; align-items: start; }
+  .time { text-align: left; }
 
   .role-badge,
   .status-badge {

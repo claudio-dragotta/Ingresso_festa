@@ -62,6 +62,7 @@ body {
   margin: 0;
   background: linear-gradient(180deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
   min-height: 100vh;
+  overflow-x: hidden; /* evita overflow orizzontale su drawer */
 }
 
 #root {

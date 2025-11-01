@@ -528,12 +528,21 @@
 .invitees-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed; /* evita disallineamenti tra thead e tbody */
 }
 
 .invitees-table thead {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
 }
+
+/* Arrotonda gli angoli dell'intestazione per allinearla al contenitore */
+.invitees-table thead th:first-child { border-top-left-radius: 16px; }
+.invitees-table thead th:last-child { border-top-right-radius: 16px; }
+
+/* Mantieni il testo su una sola riga per evitare shift di larghezza */
+.invitees-table th,
+.invitees-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 [data-theme="dark"] .table-container {
   background: linear-gradient(135deg, var(--surface) 0%, rgba(26, 32, 46, 0.98) 100%);
@@ -971,6 +980,5 @@
     background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
   }
 }
-
 
 
