@@ -52,6 +52,22 @@ model SystemConfig {
   createdAt    DateTime     @default(now())
 }
 
+model Tshirt {
+  id           String       @id @default(cuid())
+  firstName    String
+  lastName     String
+  size         String       // S, M, L, XL, 2XL, ecc.
+  type         String       // "COMPRARE ALTRE", "APPOSTO", "Vincitore", "PR", ecc.
+  hasReceived  Boolean      @default(false) // true = consegnata, false = da consegnare
+  receivedAt   DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([lastName, firstName])
+  @@index([type])
+  @@index([hasReceived])
+}
+
 enum ListType {
   PAGANTE
   GREEN

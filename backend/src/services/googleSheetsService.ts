@@ -331,3 +331,99 @@ export async function writeToGoogleSheet(fullName: string, listType: 'PAGANTE' |
     throw new Error(`Impossibile scrivere su Google Sheet: ${error.message}`);
   }
 }
+
+/**
+ * MAGLIETTE - Legge i dati dal foglio "Magliette"
+ * Colonne: A=Nome, B=Cognome, C=Taglia, D=Tipologia
+ * @returns Array di magliette
+ */
+export interface ParsedTshirt {
+  firstName: string;
+  lastName: string;
+  size: string;
+  type: string;
+}
+
+export async function readTshirtsSheet(): Promise<ParsedTshirt[]> {
+  const { spreadsheetId } = config.googleSheets;
+
+  if (!spreadsheetId) {
+    throw new Error('GOOGLE_SHEET_ID non configurato');
+  }
+
+  const range = 'Magliette!A2:D'; // Dalla riga 2 (salta intestazione)
+
+  logger.info(`Lettura Google Sheet MAGLIETTE: ${spreadsheetId}, range: ${range}`);
+
+  const sheets = getGoogleSheetsClient();
+
+  try {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range,
+    });
+
+    const rows = response.data.values;
+
+    if (!rows || rows.length === 0) {
+      logger.warn('Google Sheet MAGLIETTE vuoto o nessun dato nel range specificato');
+      return [];
+    }
+
+    // Estrai colonne A (Nome), B (Cognome), C (Taglia), D (Tipologia)
+    const data = rows
+      .filter(row => row[0] && row[1] && row[2]) // Nome, Cognome, Taglia obbligatori
+      .map(row => ({
+        firstName: capitalizeWords(row[0]?.toString().trim() || ''),
+        lastName: capitalizeWords(row[1]?.toString().trim() || ''),
+        size: row[2]?.toString().trim().toUpperCase() || '',
+        type: row[3]?.toString().trim() || '',
+      }));
+
+    logger.info(`Lette ${data.length} magliette dal Google Sheet`);
+    return data;
+
+  } catch (error: any) {
+    logger.error('Errore lettura Google Sheet MAGLIETTE:', error.message);
+    throw new Error(`Impossibile leggere Google Sheet MAGLIETTE: ${error.message}`);
+  }
+}
+
+/**
+ * Scrive una nuova maglietta nel foglio "Magliette"
+ * @param firstName Nome
+ * @param lastName Cognome
+ * @param size Taglia
+ * @param type Tipologia
+ */
+export async function writeTshirtToGoogleSheet(firstName: string, lastName: string, size: string, type: string): Promise<void> {
+  const { spreadsheetId } = config.googleSheets;
+
+  if (!spreadsheetId) {
+    throw new Error('GOOGLE_SHEET_ID non configurato');
+  }
+
+  // Formatta con iniziali maiuscole
+  const formattedFirstName = capitalizeWords(firstName.trim());
+  const formattedLastName = capitalizeWords(lastName.trim());
+  const formattedSize = size.trim().toUpperCase();
+  const formattedType = type.trim();
+
+  const sheets = getGoogleSheetsClient();
+
+  try {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: 'Magliette!A:D',
+      valueInputOption: 'RAW',
+      insertDataOption: 'OVERWRITE',
+      requestBody: {
+        values: [[formattedFirstName, formattedLastName, formattedSize, formattedType]],
+      },
+    });
+    logger.info(`Scritta maglietta su Google Sheet: ${formattedLastName} ${formattedFirstName} | ${formattedSize} | ${formattedType}`);
+  } catch (error: any) {
+    logger.error('Errore scrittura maglietta su Google Sheet:', error.message);
+    throw new Error(`Impossibile scrivere maglietta su Google Sheet: ${error.message}`);
+  }
+}

@@ -5,6 +5,7 @@ import LoginPage from "./pages/LoginPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import SearchPage from "./pages/SearchPage";
 import UsersPage from "./pages/UsersPage";
+import TshirtsPage from "./pages/TshirtsPage";
 import { useAuth } from "./context/AuthContext";
 
 const App = () => {
@@ -24,6 +25,7 @@ const App = () => {
         <Route path="/dashboard" element={isAdmin ? <AdminDashboard /> : <Navigate to="/search" replace />} />
         {isAdmin && <Route path="/users" element={<UsersPage />} />}
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/tshirts" element={<TshirtsPage />} />
 
         {/* Redirect basato sul ruolo */}
         <Route

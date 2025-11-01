@@ -5,6 +5,7 @@ import settingsRoutes from "./settings";
 import dashboardRoutes from "./dashboard";
 import syncRoutes from "./sync";
 import healthRoutes from "./health";
+import tshirtRoutes from "./tshirts";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use("/settings", settingsRoutes);
 router.use("/dashboard", dashboardRoutes);
 router.use("/sync", syncRoutes);
 router.use("/health", healthRoutes);
+router.use("/tshirts", tshirtRoutes);
 
 export default router;
