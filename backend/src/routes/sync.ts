@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { syncGoogleSheetToDatabase, isAutoSyncActive } from '../services/syncService';
+import { syncTshirtsFromGoogleSheets } from '../services/tshirtService';
 import { testGoogleSheetsConnection } from '../services/googleSheetsService';
 import { authenticate } from '../middleware/auth';
 import { adminOnly } from '../middleware/adminOnly';
@@ -105,13 +106,16 @@ router.post(
   adminOnly,
   async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      logger.warn('⚠️ Reset invitati + log e reimport da Google Sheets');
+      logger.warn('⚠️ Reset INVITATI + LOG + TSHIRTS e reimport da Google Sheets');
       const deletedLogs = await prisma.checkInLog.deleteMany({});
       const deletedInvitees = await prisma.invitee.deleteMany({});
-      const result = await syncGoogleSheetToDatabase();
+      const deletedTshirts = await prisma.tshirt.deleteMany({});
+      const peopleImport = await syncGoogleSheetToDatabase();
+      const tshirtImport = await syncTshirtsFromGoogleSheets();
       return res.json({
-        reset: { deletedInvitees: deletedInvitees.count, deletedLogs: deletedLogs.count },
-        import: result,
+        reset: { deletedInvitees: deletedInvitees.count, deletedLogs: deletedLogs.count, deletedTshirts: deletedTshirts.count },
+        import: peopleImport,
+        tshirts: tshirtImport,
       });
     } catch (error) {
       return next(error);

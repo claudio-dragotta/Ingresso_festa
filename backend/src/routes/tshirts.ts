@@ -107,7 +107,8 @@ router.patch("/:id", authenticate, adminOnly, async (req, res, next) => {
 // POST /api/tshirts/sync - Sincronizza magliette da Google Sheets (solo admin)
 router.post("/sync", authenticate, adminOnly, async (req, res, next) => {
   try {
-    const result = await syncTshirtsFromGoogleSheets();
+    const pruneMissing = Boolean((req.body as any)?.pruneMissing);
+    const result = await syncTshirtsFromGoogleSheets({ pruneMissing });
     return res.json(result);
   } catch (error) {
     return next(error);

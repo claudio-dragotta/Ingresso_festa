@@ -63,8 +63,8 @@ export const deleteTshirt = async (id: string): Promise<void> => {
 };
 
 // POST /api/tshirts/sync - Sincronizza magliette da Google Sheets (solo admin)
-export const syncTshirts = async (): Promise<SyncResult> => {
-  const response = await apiClient.post<SyncResult>("/tshirts/sync");
+export const syncTshirts = async (opts?: { pruneMissing?: boolean }): Promise<SyncResult> => {
+  const response = await apiClient.post<SyncResult>("/tshirts/sync", opts ?? {});
   return response.data;
 };
 

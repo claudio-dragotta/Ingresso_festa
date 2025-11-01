@@ -76,6 +76,12 @@ export interface SyncResult {
   };
 }
 
+export interface ResetReimportResponse {
+  reset: { deletedInvitees: number; deletedLogs: number; deletedTshirts: number };
+  import: SyncResult;
+  tshirts: SyncResult;
+}
+
 // GET /invitees - Lista tutti gli invitati
 export const fetchInvitees = async () => {
   const response = await apiClient.get<Invitee[]>("/invitees");
@@ -153,9 +159,7 @@ export const syncGoogleSheets = async (opts?: { pruneMissing?: boolean }) => {
 
 // POST /sync/reset-and-reimport - Reset DB invitati + reimport da Google Sheets (admin)
 export const resetAndReimport = async () => {
-  const response = await apiClient.post<{ reset: { deletedInvitees: number; deletedLogs: number }; import: SyncResult }>(
-    "/sync/reset-and-reimport",
-  );
+  const response = await apiClient.post<ResetReimportResponse>("/sync/reset-and-reimport");
   return response.data;
 };
 

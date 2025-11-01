@@ -13,6 +13,7 @@ import {
   type TshirtInput,
   type TshirtStats
 } from "../api/tshirts";
+import { resetAndReimport, syncGoogleSheets } from "../api/invitees";
 import "./TshirtsPage.css";
 
 export default function TshirtsPage() {
@@ -71,12 +72,47 @@ export default function TshirtsPage() {
   });
 
   // Mutation per sync
+  const [notice, setNotice] = useState<{
+    kind: 'sync' | 'align' | 'reset';
+    success: boolean;
+    title: string;
+    body: string;
+  } | null>(null);
+
   const syncMutation = useMutation({
-    mutationFn: syncTshirts,
-    onSuccess: () => {
+    mutationFn: () => syncTshirts(),
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["tshirts"] });
       queryClient.invalidateQueries({ queryKey: ["tshirts", "stats"] });
-    }
+      setNotice({ kind: 'sync', success: true, title: 'Sincronizzazione completata!', body: `${data.newImported} nuove importate, ${data.alreadyExists} già presenti` });
+    },
+    onError: (err: any) => setNotice({ kind: 'sync', success: false, title: 'Errore sincronizzazione', body: err?.message || 'Errore imprevisto' })
+  });
+
+  const alignMutation = useMutation({
+    mutationFn: async () => {
+      const [people, tshirtsRes] = await Promise.all([
+        syncGoogleSheets({ pruneMissing: true }),
+        syncTshirts({ pruneMissing: true }),
+      ]);
+      return { people, tshirts: tshirtsRes } as any;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["tshirts"] });
+      queryClient.invalidateQueries({ queryKey: ["tshirts", "stats"] });
+      setNotice({ kind: 'align', success: true, title: 'Allineamento completato!', body: `Magliette: +${data.tshirts.newImported} nuove, ${data.tshirts.alreadyExists} già presenti. Invitati: +${data.people.newImported}/${data.people.totalFromSheet} (mancanti rimossi)` });
+    },
+    onError: (err: any) => setNotice({ kind: 'align', success: false, title: 'Errore allineamento', body: err?.message || 'Errore imprevisto' })
+  });
+
+  const resetAllMutation = useMutation({
+    mutationFn: resetAndReimport,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["tshirts"] });
+      queryClient.invalidateQueries({ queryKey: ["tshirts", "stats"] });
+      setNotice({ kind: 'reset', success: true, title: 'Reset + Reimport completato!', body: `Reset: ${data.reset.deletedInvitees} invitati, ${data.reset.deletedLogs} log, ${data.reset.deletedTshirts} magliette. Import: +${data.import.newImported} invitati, +${data.tshirts.newImported} magliette` });
+    },
+    onError: (err: any) => setNotice({ kind: 'reset', success: false, title: 'Errore reset/reimport', body: err?.message || 'Errore imprevisto' })
   });
 
   // Mutation aggiornamento taglia/tipologia
@@ -139,37 +175,63 @@ export default function TshirtsPage() {
         </div>
 
         {isAdmin && (
-          <button
-            className="sync-button"
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-          >
-            {syncMutation.isPending ? (
-              <>
-                <div className="spinner-small"></div>
-                Sincronizzazione...
-              </>
-            ) : (
-              <>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
-                </svg>
-                Sincronizza da Google Sheets
-              </>
-            )}
-          </button>
+          <div className="tshirts-actions">
+            <button
+              className="sync-button"
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+              title="Sincronizza (solo import)"
+            >
+              {syncMutation.isPending ? (
+                <>
+                  <div className="spinner-small"></div>
+                  Sincronizzazione...
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
+                  </svg>
+                  Sincronizza
+                </>
+              )}
+            </button>
+            <button
+              className="sync-button"
+              onClick={() => alignMutation.mutate()}
+              disabled={alignMutation.isPending}
+              title="Allinea (rimuove mancanti)"
+            >
+              {alignMutation.isPending ? 'Allineamento...' : 'Allinea (rimuovi mancanti)'}
+            </button>
+            <button
+              className="reset-button"
+              onClick={() => {
+                if (confirm('Confermi il reset di INVITATI + LOG + TSHIRTS e reimport da Google Sheets?')) {
+                  resetAllMutation.mutate();
+                }
+              }}
+              disabled={resetAllMutation.isPending}
+            >
+              {resetAllMutation.isPending ? 'Reset/Reimport...' : 'Reset + Reimport'}
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Risultato sync */}
-      {syncMutation.data && (
-        <div className="sync-result success">
+      {/* Banner risultato azioni (sync/allinea/reset) */}
+      {notice && (
+        <div className={`sync-result ${notice.success ? 'success' : 'error'}`}>
           <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            {notice.success ? (
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            ) : (
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            )}
           </svg>
           <div>
-            <strong>Sincronizzazione completata!</strong>
-            <p>{syncMutation.data.newImported} nuove importate, {syncMutation.data.alreadyExists} già presenti</p>
+            <strong>{notice.title}</strong>
+            <p>{notice.body}</p>
           </div>
         </div>
       )}

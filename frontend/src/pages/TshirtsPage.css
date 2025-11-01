@@ -46,6 +46,22 @@
   color: var(--text);
 }
 
+.tshirts-actions { display: flex; gap: 0.5rem; }
+.reset-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(239,68,68,0.3);
+}
+.reset-button:disabled { opacity: .7; cursor: not-allowed; }
+
 /* Sync Button */
 .sync-button {
   display: flex;

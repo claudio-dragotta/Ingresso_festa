@@ -153,8 +153,10 @@ export const searchTshirtsForEntrance = async (query: string) => {
 
   // Filtra per tipo (PR o Vincitore) e per nome/cognome
   return allTshirts.filter(t => {
-    const typeLower = t.type.toLowerCase();
-    const matchesType = typeLower.includes('pr') || typeLower.includes('vincitore');
+    // Normalizza tipologia eliminando spazi extra
+    const typeLower = (t.type || '').toString().trim().toLowerCase();
+    // Consenti SOLO PR o VINCITORE/VINCENTE (no match parziali come "comprare altre")
+    const matchesType = typeLower === 'pr' || typeLower === 'vincitore' || typeLower === 'vincente';
     const matchesSearch =
       t.firstName.toLowerCase().includes(normalizedQuery) ||
       t.lastName.toLowerCase().includes(normalizedQuery);
@@ -185,7 +187,7 @@ export const searchTshirts = async (query: string) => {
 };
 
 // Sincronizza magliette da Google Sheets
-export const syncTshirtsFromGoogleSheets = async () => {
+export const syncTshirtsFromGoogleSheets = async (opts?: { pruneMissing?: boolean }) => {
   logger.info('Inizio sincronizzazione magliette da Google Sheets');
 
   try {
@@ -195,7 +197,10 @@ export const syncTshirtsFromGoogleSheets = async () => {
     let newImported = 0;
     let alreadyExists = 0;
 
+    const sheetKeys = new Set<string>();
     for (const sheetTshirt of sheetTshirts) {
+      const key = `${sheetTshirt.lastName}|${sheetTshirt.firstName}|${sheetTshirt.size}`.toLowerCase();
+      sheetKeys.add(key);
       // Cerca se esiste già (stesso nome, cognome, taglia)
       const existing = await prisma.tshirt.findFirst({
         where: {
@@ -226,6 +231,20 @@ export const syncTshirtsFromGoogleSheets = async () => {
         });
         newImported++;
       }
+    }
+
+    // Rimuovi mancanti se richiesto
+    if (opts?.pruneMissing) {
+      const all = await prisma.tshirt.findMany({ select: { id: true, firstName: true, lastName: true, size: true } });
+      let deleted = 0;
+      for (const t of all) {
+        const key = `${t.lastName}|${t.firstName}|${t.size}`.toLowerCase();
+        if (!sheetKeys.has(key)) {
+          await prisma.tshirt.delete({ where: { id: t.id } });
+          deleted++;
+        }
+      }
+      logger.info(`Allineamento magliette: rimossi ${deleted} elementi mancanti nel foglio`);
     }
 
     logger.info(`Sincronizzazione magliette completata: ${newImported} nuove, ${alreadyExists} esistenti`);
