@@ -54,6 +54,12 @@ const AppLayout = () => {
                   </svg>
                   Utenti
                 </NavLink>
+                <NavLink to="/expenses" className={navLinkClass}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                  </svg>
+                  Spese
+                </NavLink>
               </>
             ) : null}
             <NavLink to="/search" className={navLinkClass}>
@@ -132,6 +138,12 @@ const AppLayout = () => {
                     <circle cx="12" cy="7" r="4"/>
                   </svg>
                   <span>Utenti</span>
+                </NavLink>
+                <NavLink to="/expenses" className={navLinkClass} onClick={closeMobileMenu}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                  </svg>
+                  <span>Spese</span>
                 </NavLink>
               </>
             )}

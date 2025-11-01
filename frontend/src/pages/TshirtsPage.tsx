@@ -376,12 +376,16 @@ export default function TshirtsPage() {
 
               <div className="form-field">
                 <label>Tipologia</label>
-                <input
-                  type="text"
+                <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  placeholder="es. PR, Vincitore, COMPRARE ALTRE..."
-                />
+                >
+                  <option value="">Seleziona...</option>
+                  <option value="Bar">Bar</option>
+                  <option value="Organizzatore">Organizzatore</option>
+                  <option value="Vincente">Vincente</option>
+                  <option value="PR">PR</option>
+                </select>
               </div>
             </div>
 
@@ -461,43 +465,18 @@ export default function TshirtsPage() {
                     </td>
                     <td data-label="Tipologia">
                       {isAdmin ? (
-                        <>
-                          <input
-                            className="pill-input type-pill"
-                            list="tshirt-types"
-                            defaultValue={tshirt.type || ""}
-                            placeholder="es. PR, Vincitore, Bar..."
-                            onChange={(e) => {
-                              const newVal = e.currentTarget.value.trim();
-                              if (newVal && newVal !== tshirt.type) {
-                                updateMutation.mutate({ id: tshirt.id, data: { type: newVal } });
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const newVal = e.currentTarget.value.trim();
-                              if (newVal !== tshirt.type) {
-                                updateMutation.mutate({ id: tshirt.id, data: { type: newVal } });
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                const target = e.currentTarget as HTMLInputElement;
-                                const newVal = target.value.trim();
-                                if (newVal !== tshirt.type) {
-                                  updateMutation.mutate({ id: tshirt.id, data: { type: newVal } });
-                                }
-                              }
-                            }}
-                            aria-label={`Tipologia per ${tshirt.firstName} ${tshirt.lastName}`}
-                          />
-                          <datalist id="tshirt-types">
-                            <option value="PR" />
-                            <option value="Vincitore" />
-                            <option value="Bar" />
-                            <option value="COMPRARE ALTRE" />
-                            <option value="Apposto" />
-                          </datalist>
-                        </>
+                        <select
+                          className="pill-select type-pill"
+                          value={tshirt.type || ""}
+                          onChange={(e) => updateMutation.mutate({ id: tshirt.id, data: { type: e.target.value } })}
+                          aria-label={`Tipologia per ${tshirt.firstName} ${tshirt.lastName}`}
+                        >
+                          <option value="">—</option>
+                          <option value="Bar">Bar</option>
+                          <option value="Organizzatore">Organizzatore</option>
+                          <option value="Vincente">Vincente</option>
+                          <option value="PR">PR</option>
+                        </select>
                       ) : (
                         <span className="type-badge">{tshirt.type || "—"}</span>
                       )}

@@ -71,9 +71,33 @@ model Tshirt {
   @@index([hasReceived])
 }
 
+model Expense {
+  id            String          @id @default(cuid())
+  description   String
+  amount        Float
+  category      ExpenseCategory @default(ALTRO)
+  paymentMethod String          // paypal, contanti, p2p, bonifico - da quale metodo sono stati presi i soldi
+  date          DateTime        @default(now())
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([date])
+  @@index([category])
+  @@index([paymentMethod])
+}
+
 enum ListType {
   PAGANTE
   GREEN
+}
+
+enum ExpenseCategory {
+  BEVANDE
+  CIBO
+  SERVIZI
+  DECORAZIONI
+  ALTRO
 }
 
 enum UserRole {

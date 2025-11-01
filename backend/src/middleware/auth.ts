@@ -43,3 +43,11 @@ export const authenticate = async (req: Request, _res: Response, next: NextFunct
     return next(new AppError("Token non valido", 401));
   }
 };
+
+export const isAdmin = (req: Request, _res: Response, next: NextFunction) => {
+  const user = (req as Request & { user?: AuthPayload }).user;
+  if (!user || user.role !== "ADMIN") {
+    return next(new AppError("Accesso negato", 403));
+  }
+  return next();
+};

@@ -1,0 +1,97 @@
+import { apiClient } from "./client";
+
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  category: "BEVANDE" | "CIBO" | "SERVIZI" | "DECORAZIONI" | "ALTRO";
+  paymentMethod: string;
+  date: string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExpenseStats {
+  totalAmount: number;
+  totalCount: number;
+  byCategory: {
+    category: string;
+    amount: number;
+    count: number;
+  }[];
+}
+
+export interface PaymentMethodBalance {
+  method: string;
+  income: number;
+  expenses: number;
+  balance: number;
+  personCount: number;
+}
+
+export interface BalancesReport {
+  balances: PaymentMethodBalance[];
+  totalIncome: number;
+  totalExpenses: number;
+  totalBalance: number;
+}
+
+export interface CreateExpenseDto {
+  description: string;
+  amount: number;
+  category: "BEVANDE" | "CIBO" | "SERVIZI" | "DECORAZIONI" | "ALTRO";
+  paymentMethod: string;
+  date?: string;
+  notes?: string;
+}
+
+export interface UpdateExpenseDto {
+  description?: string;
+  amount?: number;
+  category?: "BEVANDE" | "CIBO" | "SERVIZI" | "DECORAZIONI" | "ALTRO";
+  paymentMethod?: string;
+  date?: string;
+  notes?: string;
+}
+
+export const fetchExpenses = async (params?: {
+  category?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<Expense[]> => {
+  const response = await apiClient.get<Expense[]>("/expenses", { params });
+  return response.data;
+};
+
+export const fetchExpenseStats = async (params?: {
+  startDate?: string;
+  endDate?: string;
+}): Promise<ExpenseStats> => {
+  const response = await apiClient.get<ExpenseStats>("/expenses/stats", { params });
+  return response.data;
+};
+
+export const fetchBalances = async (): Promise<BalancesReport> => {
+  const response = await apiClient.get<BalancesReport>("/expenses/balances");
+  return response.data;
+};
+
+export const fetchExpenseById = async (id: string): Promise<Expense> => {
+  const response = await apiClient.get<Expense>(`/expenses/${id}`);
+  return response.data;
+};
+
+export const createExpense = async (data: CreateExpenseDto): Promise<Expense> => {
+  const response = await apiClient.post<Expense>("/expenses", data);
+  return response.data;
+};
+
+export const updateExpense = async (id: string, data: UpdateExpenseDto): Promise<Expense> => {
+  const response = await apiClient.patch<Expense>(`/expenses/${id}`, data);
+  return response.data;
+};
+
+export const deleteExpense = async (id: string): Promise<void> => {
+  await apiClient.delete(`/expenses/${id}`);
+};
