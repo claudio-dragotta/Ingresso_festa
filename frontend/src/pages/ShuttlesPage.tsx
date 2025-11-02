@@ -23,7 +23,14 @@ const ShuttlesPage = () => {
   });
 
   const machines: ShuttleMachine[] = useMemo(() => cfg?.machines ?? [], [cfg]);
-  const times = useMemo(() => slots.map((s) => s.time), [slots]);
+  const times = useMemo(() => {
+    // Estrai e ordina gli orari in modo cronologico
+    const timesList = slots.map((s) => s.time);
+    return timesList.sort((a, b) => {
+      // Confronto semplice per formato "HH:mm"
+      return a.localeCompare(b);
+    });
+  }, [slots]);
 
   const toggleMut = useMutation({
     mutationFn: (a: ShuttleAssignment) => updateAssignmentStatus(a.id, a.status === "BOARDED" ? "PENDING" : "BOARDED"),
