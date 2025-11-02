@@ -418,9 +418,6 @@ export default function AdminDashboard() {
             </button>
           )}
         </div>
-        <div className="search-results">
-          Mostrando {sortedCurrent.length} di {currentList.length} {activeTab === "paganti" ? "paganti" : "green"}
-        </div>
       </div>
 
       {/* Add Form */}

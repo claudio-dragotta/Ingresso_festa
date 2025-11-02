@@ -319,11 +319,6 @@ export default function TshirtsPage() {
             </button>
           )}
         </div>
-        {isAdmin && tshirts.length > 0 && (
-          <div className="search-results">
-            Mostrando {sortedTshirts.length} di {tshirts.length} magliette
-          </div>
-        )}
         {!isAdmin && searchQuery.length < 2 && (
           <div className="search-hint">Digita almeno 2 caratteri per cercare...</div>
         )}

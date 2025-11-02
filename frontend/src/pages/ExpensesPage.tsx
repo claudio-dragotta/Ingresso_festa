@@ -463,11 +463,6 @@ export default function ExpensesPage() {
               </button>
             )}
           </div>
-          {expenses.length > 0 && (
-            <div className="search-results">
-              Mostrando {filteredExpenses.length} di {expenses.length} spese
-            </div>
-          )}
         </div>
 
         {/* Filter */}
