@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ShuttleAssignment, ShuttleBoardStatus, ShuttleDirection, ShuttleMachine, ShuttleSlot } from "../api/shuttles";
+import type { ShuttleAssignment, ShuttleDirection, ShuttleMachine, ShuttleSlot } from "../api/shuttles";
 import { createAssignment, fetchAssignments, fetchShuttleConfig, fetchSlots, updateAssignmentStatus } from "../api/shuttles";
 import { useAuth } from "../context/AuthContext";
 
@@ -8,7 +8,6 @@ const ShuttlesPage = () => {
   const { role } = useAuth();
   const qc = useQueryClient();
   const canWrite = role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE";
-  const canManage = role === "ADMIN" || role === "ORGANIZER";
 
   const [direction, setDirection] = useState<ShuttleDirection>("ANDATA");
   const { data: cfg } = useQuery({ queryKey: ["shuttle-config"], queryFn: fetchShuttleConfig });

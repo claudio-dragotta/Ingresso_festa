@@ -171,6 +171,25 @@ export default function ExpensesPage() {
     return PAYMENT_METHODS.find((m) => m.value === method.toLowerCase())?.emoji || "💰";
   };
 
+  // Filtra spese in base alla ricerca e alla categoria
+  const filteredExpenses = expenses.filter((exp) => {
+    // Filtro categoria
+    const matchesCategory = categoryFilter === "ALL" || exp.category === categoryFilter;
+
+    // Filtro ricerca
+    const matchesSearch = !searchQuery.trim() || (() => {
+      const query = searchQuery.toLowerCase();
+      return (
+        exp.description.toLowerCase().includes(query) ||
+        getCategoryLabel(exp.category).toLowerCase().includes(query) ||
+        getPaymentMethodLabel(exp.paymentMethod).toLowerCase().includes(query) ||
+        (exp.notes && exp.notes.toLowerCase().includes(query))
+      );
+    })();
+
+    return matchesCategory && matchesSearch;
+  });
+
   return (
     <div className="expenses-page">
       <div className="expenses-container">
@@ -404,6 +423,37 @@ export default function ExpensesPage() {
           </div>
         )}
 
+        {/* Search Bar */}
+        <div className="search-container">
+          <div className="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="search-icon">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Cerca per descrizione, categoria, metodo pagamento o note..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
+            {searchQuery && (
+              <button
+                className="clear-search"
+                onClick={() => setSearchQuery("")}
+                aria-label="Cancella ricerca"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {expenses.length > 0 && (
+            <div className="search-results">
+              Mostrando {filteredExpenses.length} di {expenses.length} spese
+            </div>
+          )}
+        </div>
+
         {/* Filter */}
         <div className="filter-section">
           <label>Filtra per categoria:</label>
@@ -428,6 +478,10 @@ export default function ExpensesPage() {
             <div className="empty-state">
               <p>Nessuna spesa registrata</p>
             </div>
+          ) : filteredExpenses.length === 0 ? (
+            <div className="empty-state">
+              <p>Nessuna spesa corrisponde ai criteri di ricerca</p>
+            </div>
           ) : (
             <div className="expenses-table">
               <table>
@@ -443,7 +497,7 @@ export default function ExpensesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {expenses.map((expense) => (
+                  {filteredExpenses.map((expense) => (
                     <tr key={expense.id}>
                       <td data-label="Data">
                         {new Date(expense.date).toLocaleDateString("it-IT")}

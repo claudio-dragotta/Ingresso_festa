@@ -531,6 +531,21 @@
   table-layout: fixed; /* evita disallineamenti tra thead e tbody */
 }
 
+/* Larghezze colonne specifiche per allineamento ottimale */
+.invitees-table th:nth-child(1),
+.invitees-table td:nth-child(1) { width: 25%; } /* Nome */
+
+.invitees-table th:nth-child(2),
+.invitees-table td:nth-child(2) { width: 25%; } /* Cognome */
+
+.invitees-table th:nth-child(3),
+.invitees-table td:nth-child(3) { width: 30%; } /* Pagamento (quando visibile) */
+
+.invitees-table th:nth-child(4),
+.invitees-table td:nth-child(4),
+.invitees-table th:last-child,
+.invitees-table td:last-child { width: 20%; } /* Stato */
+
 .invitees-table thead {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
