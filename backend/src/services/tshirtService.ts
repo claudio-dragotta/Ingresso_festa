@@ -144,6 +144,22 @@ export const updateTshirt = async (id: string, data: { size?: string; type?: str
   return updated;
 };
 
+// Ottieni tutte le magliette PR e Vincenti (per utenti ENTRANCE)
+export const fetchTshirtsForEntrance = async () => {
+  const allTshirts = await prisma.tshirt.findMany({
+    orderBy: [
+      { lastName: 'asc' },
+      { firstName: 'asc' }
+    ]
+  });
+
+  // Filtra per tipo (PR o Vincitore)
+  return allTshirts.filter(t => {
+    const typeLower = (t.type || '').toString().trim().toLowerCase();
+    return typeLower === 'pr' || typeLower === 'vincitore' || typeLower === 'vincente';
+  });
+};
+
 // Cerca magliette per nome/cognome (per utenti ENTRANCE - solo PR e Vincitore)
 export const searchTshirtsForEntrance = async (query: string) => {
   const normalizedQuery = query.trim().toLowerCase();

@@ -31,11 +31,10 @@ export default function TshirtsPage() {
     type: ""
   });
 
-  // Query per magliette (admin: tutte, entrance: ricerca server-side)
+  // Query per magliette (admin: tutte, entrance: PR e Vincenti + ricerca)
   const { data: tshirts = [], isLoading } = useQuery<Tshirt[]>({
     queryKey: ["tshirts", isAdmin ? "all" : searchQuery],
-    queryFn: () => fetchTshirts(isAdmin ? undefined : (searchQuery.length >= 2 ? searchQuery : undefined)),
-    enabled: isAdmin || searchQuery.length >= 2,
+    queryFn: () => fetchTshirts(searchQuery.length >= 2 ? searchQuery : undefined),
     refetchInterval: isAdmin ? 30000 : false
   });
 
@@ -319,9 +318,6 @@ export default function TshirtsPage() {
             </button>
           )}
         </div>
-        {!isAdmin && searchQuery.length < 2 && (
-          <div className="search-hint">Digita almeno 2 caratteri per cercare...</div>
-        )}
       </div>
 
       {/* Pulsante Aggiungi (solo admin) */}

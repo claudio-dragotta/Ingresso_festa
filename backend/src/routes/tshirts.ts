@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   fetchTshirts,
+  fetchTshirtsForEntrance,
   fetchTshirtStats,
   createTshirt,
   toggleTshirtReceived,
@@ -32,14 +33,15 @@ router.get("/", authenticate, async (req, res, next) => {
       return res.json(results);
     }
 
-    // Lista completa solo per admin
+    // Lista completa
     if (userRole === 'ADMIN') {
       const tshirts = await fetchTshirts();
       return res.json(tshirts);
     }
 
-    // Per utenti ENTRANCE, restituisci lista vuota (usano solo ricerca)
-    return res.json([]);
+    // Per utenti ENTRANCE, restituisci solo magliette PR e Vincenti
+    const tshirtsForEntrance = await fetchTshirtsForEntrance();
+    return res.json(tshirtsForEntrance);
   } catch (error) {
     return next(error);
   }
