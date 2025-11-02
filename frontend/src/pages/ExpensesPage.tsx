@@ -62,9 +62,12 @@ export default function ExpensesPage() {
     queryFn: () => fetchBalances(),
   });
 
-  // Debug: mostra errori
+  // Debug: mostra errori e dati
   if (balancesError) {
     console.error("Errore caricamento balances:", balancesError);
+  }
+  if (balances) {
+    console.log("Balances caricati:", balances);
   }
 
   // Mutation: create
@@ -213,6 +216,11 @@ export default function ExpensesPage() {
         {balancesError && (
           <div className="error-state" style={{padding: "1rem", background: "#fee2e2", border: "1px solid #ef4444", borderRadius: "8px", marginBottom: "1rem"}}>
             <p style={{color: "#991b1b", margin: 0}}>⚠️ Errore caricamento saldi. Verifica di essere loggato come admin.</p>
+          </div>
+        )}
+        {balances && balances.totalIncome === 0 && (
+          <div className="warning-state" style={{padding: "1rem", background: "#fef3c7", border: "1px solid #f59e0b", borderRadius: "8px", marginBottom: "1rem"}}>
+            <p style={{color: "#92400e", margin: 0}}>⚠️ Nessun pagante trovato o i metodi di pagamento non sono impostati. Assicurati che i paganti abbiano un metodo di pagamento selezionato (PayPal, Contanti, P2P, Bonifico).</p>
           </div>
         )}
         {balances && (
