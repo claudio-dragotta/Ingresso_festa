@@ -65,3 +65,19 @@ export const deleteAssignment = async (id: string) => {
   await apiClient.delete(`/shuttles/assignments/${id}`);
 };
 
+export interface SyncFromSheetsResult {
+  message: string;
+  newImported: number;
+  updated: number;
+  alreadyExists: number;
+  deleted: number;
+}
+
+export const syncShuttlesFromSheets = async (direction: ShuttleDirection, pruneMissing = false): Promise<SyncFromSheetsResult> => {
+  const res = await apiClient.post<SyncFromSheetsResult>("/shuttles/sync-from-sheets", {
+    direction,
+    pruneMissing,
+  });
+  return res.data;
+};
+

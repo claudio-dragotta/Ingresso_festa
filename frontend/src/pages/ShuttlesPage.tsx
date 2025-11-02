@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ShuttleAssignment, ShuttleDirection, ShuttleMachine, ShuttleSlot } from "../api/shuttles";
-import { createAssignment, fetchAssignments, fetchShuttleConfig, fetchSlots, updateAssignmentStatus } from "../api/shuttles";
+import { createAssignment, fetchAssignments, fetchShuttleConfig, fetchSlots, updateAssignmentStatus, syncShuttlesFromSheets } from "../api/shuttles";
 import { useAuth } from "../context/AuthContext";
 
 const ShuttlesPage = () => {
@@ -37,6 +37,38 @@ const ShuttlesPage = () => {
     },
   });
 
+  // Mutation per sincronizzazione da Google Sheets
+  const [syncResult, setSyncResult] = useState<{
+    success: boolean;
+    message: string;
+    stats?: { newImported: number; alreadyExists: number; deleted: number };
+  } | null>(null);
+
+  const syncMut = useMutation({
+    mutationFn: () => syncShuttlesFromSheets(direction, false),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["assignments"] });
+      qc.invalidateQueries({ queryKey: ["slots"] });
+      setSyncResult({
+        success: true,
+        message: `Sincronizzazione ${direction} completata!`,
+        stats: {
+          newImported: data.newImported,
+          alreadyExists: data.alreadyExists,
+          deleted: data.deleted,
+        },
+      });
+      setTimeout(() => setSyncResult(null), 8000);
+    },
+    onError: (err: any) => {
+      setSyncResult({
+        success: false,
+        message: err?.response?.data?.message || `Errore sincronizzazione ${direction}`,
+      });
+      setTimeout(() => setSyncResult(null), 8000);
+    },
+  });
+
   // Form stato locale
   const [newName, setNewName] = useState("");
   const [newMachine, setNewMachine] = useState<string>("");
@@ -65,19 +97,74 @@ const ShuttlesPage = () => {
           <h1>Navette</h1>
           <p className="subtitle">Gestione andata/ritorno per fasce orarie e macchine</p>
         </div>
-        <div className="search-box" style={{ display: "flex", gap: ".5rem" }}>
-          <select value={direction} onChange={(e) => setDirection(e.target.value as ShuttleDirection)}>
-            <option value="ANDATA">Andata</option>
-            <option value="RITORNO">Ritorno</option>
-          </select>
-          <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
-            <option value="ALL">Tutte le fasce</option>
-            {times.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+        <div style={{ display: "flex", gap: ".5rem", alignItems: "center", flexWrap: "wrap" }}>
+          <div className="search-box" style={{ display: "flex", gap: ".5rem" }}>
+            <select value={direction} onChange={(e) => setDirection(e.target.value as ShuttleDirection)}>
+              <option value="ANDATA">Andata</option>
+              <option value="RITORNO">Ritorno</option>
+            </select>
+            <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
+              <option value="ALL">Tutte le fasce</option>
+              {times.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+          {canWrite && (
+            <button
+              onClick={() => syncMut.mutate()}
+              disabled={syncMut.isPending}
+              className="sync-button"
+              style={{
+                padding: "0.5rem 1rem",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                cursor: syncMut.isPending ? "not-allowed" : "pointer",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
+            >
+              {syncMut.isPending ? (
+                <>
+                  <span style={{ animation: "spin 1s linear infinite" }}>⟳</span>
+                  Sincronizzazione...
+                </>
+              ) : (
+                <>
+                  <span>⟳</span>
+                  Importa da Google Sheets
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Banner risultato sincronizzazione */}
+      {syncResult && (
+        <div
+          style={{
+            padding: "1rem",
+            marginBottom: "1rem",
+            borderRadius: "8px",
+            background: syncResult.success ? "#d1fae5" : "#fee2e2",
+            border: `1px solid ${syncResult.success ? "#10b981" : "#ef4444"}`,
+            color: syncResult.success ? "#065f46" : "#991b1b",
+          }}
+        >
+          <strong>{syncResult.message}</strong>
+          {syncResult.stats && (
+            <p style={{ marginTop: "0.5rem", fontSize: "0.9rem" }}>
+              {syncResult.stats.newImported} nuove importate, {syncResult.stats.alreadyExists} già presenti
+              {syncResult.stats.deleted > 0 && `, ${syncResult.stats.deleted} eliminate`}
+            </p>
+          )}
+        </div>
+      )}
 
       {canWrite && (
         <div className="users-actions">

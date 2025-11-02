@@ -2,6 +2,8 @@ import { prisma } from "../lib/prisma";
 import { config } from "../config";
 import { AppError } from "../utils/errors";
 import { ShuttleBoardStatus, ShuttleDirection } from "@prisma/client";
+import { readShuttlesSheet, updateShuttleCellInGoogleSheet, ParsedShuttleAssignment } from "./googleSheetsService";
+import { logger } from "../logger";
 
 const parseTime = (hhmm: string) => {
   const [h, m] = hhmm.split(":");
@@ -172,4 +174,176 @@ export const updateAssignmentStatus = async (
 export const deleteAssignment = async (id: string) => {
   await prisma.shuttleAssignment.delete({ where: { id } });
 };
+
+/**
+ * SINCRONIZZAZIONE GOOGLE SHEETS
+ */
+
+/**
+ * Helper per parsare nome completo in firstName/lastName
+ * Gestisce formati misti: "Nome Cognome" oppure "Cognome Nome"
+ */
+function parseFullName(fullName: string): { firstName: string; lastName: string } {
+  const parts = fullName.trim().split(/\s+/);
+
+  if (parts.length === 1) {
+    return { firstName: '', lastName: parts[0] };
+  }
+
+  // Assumiamo che l'ultima parola sia il nome, il resto cognome
+  // (come nel parser esistente per invitati)
+  const firstName = parts.pop()!;
+  const lastName = parts.join(' ');
+
+  return { firstName, lastName };
+}
+
+/**
+ * Importa le assegnazioni navette da Google Sheets
+ * Crea slot, macchine e assegnazioni se non esistono
+ * @param direction "ANDATA" o "RITORNO"
+ * @param pruneMissing Se true, rimuove assegnazioni non più presenti su Sheets
+ * @returns Statistiche import
+ */
+export async function syncShuttlesFromGoogleSheets(
+  direction: ShuttleDirection,
+  pruneMissing = false
+): Promise<{
+  newImported: number;
+  updated: number;
+  alreadyExists: number;
+  deleted: number;
+}> {
+  logger.info(`Inizio sincronizzazione navette ${direction} da Google Sheets`);
+
+  // Leggi dati da Google Sheets
+  const sheetAssignments = await readShuttlesSheet(direction);
+
+  logger.info(`Lette ${sheetAssignments.length} assegnazioni da Google Sheets`);
+
+  let newImported = 0;
+  let updated = 0;
+  let alreadyExists = 0;
+
+  // Mappa per tracciare le assegnazioni viste
+  const seenAssignments = new Set<string>();
+
+  for (const sheetAssignment of sheetAssignments) {
+    try {
+      // 1. Assicurati che lo slot esista
+      const slot = await prisma.shuttleSlot.upsert({
+        where: {
+          direction_time: {
+            direction,
+            time: sheetAssignment.slotTime,
+          },
+        },
+        update: {},
+        create: {
+          direction,
+          time: sheetAssignment.slotTime,
+          capacity: config.shuttle.slotCapacity,
+        },
+      });
+
+      // 2. Assicurati che la macchina esista
+      const machine = await prisma.shuttleMachine.upsert({
+        where: { name: sheetAssignment.machineName },
+        update: { active: true },
+        create: { name: sheetAssignment.machineName, active: true },
+      });
+
+      // 3. Controlla se l'assegnazione esiste già
+      // Cerchiamo per: slotId + machineId + fullName
+      const existing = await prisma.shuttleAssignment.findFirst({
+        where: {
+          slotId: slot.id,
+          machineId: machine.id,
+          fullName: sheetAssignment.fullName,
+        },
+      });
+
+      if (existing) {
+        alreadyExists++;
+        seenAssignments.add(existing.id);
+      } else {
+        // Crea nuova assegnazione
+        const created = await prisma.shuttleAssignment.create({
+          data: {
+            slotId: slot.id,
+            machineId: machine.id,
+            fullName: sheetAssignment.fullName,
+            inviteeId: null, // Potremmo cercare l'invitee per nome, ma per ora null
+          },
+        });
+        newImported++;
+        seenAssignments.add(created.id);
+        logger.info(`Creata assegnazione: ${sheetAssignment.fullName} su ${machine.name} alle ${slot.time}`);
+      }
+    } catch (error: any) {
+      logger.error(`Errore importando assegnazione ${sheetAssignment.fullName}:`, error.message);
+    }
+  }
+
+  // Se richiesto, elimina assegnazioni non più presenti su Sheets
+  let deleted = 0;
+  if (pruneMissing) {
+    const allDbAssignments = await prisma.shuttleAssignment.findMany({
+      where: {
+        slot: { direction },
+      },
+      select: { id: true },
+    });
+
+    for (const dbAssignment of allDbAssignments) {
+      if (!seenAssignments.has(dbAssignment.id)) {
+        await prisma.shuttleAssignment.delete({ where: { id: dbAssignment.id } });
+        deleted++;
+      }
+    }
+  }
+
+  logger.info(`Sincronizzazione navette ${direction} completata: ${newImported} nuove, ${alreadyExists} esistenti, ${deleted} eliminate`);
+
+  return {
+    newImported,
+    updated,
+    alreadyExists,
+    deleted,
+  };
+}
+
+/**
+ * Esporta un'assegnazione modificata verso Google Sheets
+ * @param assignment L'assegnazione da esportare
+ */
+export async function exportAssignmentToGoogleSheets(assignmentId: string): Promise<void> {
+  const assignment = await prisma.shuttleAssignment.findUnique({
+    where: { id: assignmentId },
+    include: {
+      slot: true,
+      machine: true,
+    },
+  });
+
+  if (!assignment) {
+    throw new AppError("Assegnazione non trovata", 404);
+  }
+
+  // Ricostruiamo la posizione della cella basandoci su:
+  // - Slot time → colonna
+  // - Machine name → range di righe
+
+  const direction = assignment.slot.direction === 'ANDATA' ? 'ANDATA' : 'RITORNO';
+
+  // Calcola colonna dal time
+  // Assumiamo che i tempi siano sequenziali e inizino da colonna B
+  // Per ora, dobbiamo leggere il foglio per capire quale colonna corrisponde al time
+  // Questa è una limitazione - in produzione, meglio mantenere un mapping in config
+
+  // TODO: Per ora skippiamo l'export automatico
+  // In alternativa, possiamo implementare un endpoint manuale "Export to Sheets"
+
+  logger.warn(`Export automatico verso Sheets non ancora implementato per assegnazione ${assignmentId}`);
+}
 

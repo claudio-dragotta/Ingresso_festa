@@ -12,6 +12,7 @@ import {
   createAssignment,
   updateAssignmentStatus,
   deleteAssignment,
+  syncShuttlesFromGoogleSheets,
 } from "../services/shuttleService";
 import { ShuttleBoardStatus, ShuttleDirection } from "@prisma/client";
 
@@ -111,6 +112,30 @@ router.delete("/assignments/:id", adminOrOrganizerOnly, async (req, res, next) =
     await deleteAssignment(id);
     res.status(204).send();
   } catch (e) { next(e); }
+});
+
+// Sincronizzazione da Google Sheets
+router.post("/sync-from-sheets", adminOrOrganizerOnly, async (req, res, next) => {
+  try {
+    const { direction, pruneMissing } = req.body as {
+      direction: ShuttleDirection;
+      pruneMissing?: boolean;
+    };
+
+    if (direction !== "ANDATA" && direction !== "RITORNO") {
+      res.status(400).json({ message: "Direzione non valida. Usare ANDATA o RITORNO" });
+      return;
+    }
+
+    const result = await syncShuttlesFromGoogleSheets(direction, pruneMissing ?? false);
+
+    res.json({
+      message: `Sincronizzazione ${direction} completata`,
+      ...result,
+    });
+  } catch (e) {
+    next(e);
+  }
 });
 
 export default router;

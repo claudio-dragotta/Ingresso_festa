@@ -506,3 +506,185 @@ export async function updateTshirtInGoogleSheet(params: {
     throw new Error(`Impossibile aggiornare Google Sheet MAGLIETTE: ${error.message}`);
   }
 }
+
+/**
+ * NAVETTE - Struttura Google Sheets per navette
+ *
+ * Layout:
+ * - Riga 1 (da colonna B): Orari (22:30, 22:40, 22:50, ...)
+ * - Colonna A, ogni 4 righe: Nome macchina (MACCHINA 1, MACCHINA 2, MACCHINA 3)
+ * - Righe 2-5: MACCHINA 1 (4 posti per ogni slot orario)
+ * - Righe 6-9: MACCHINA 2 (4 posti per ogni slot orario)
+ * - Righe 10-13: MACCHINA 3 (4 posti per ogni slot orario)
+ *
+ * Esempio:
+ *      A            B        C        D
+ * 1                22:30    22:40    22:50
+ * 2   MACCHINA 1  Mario    Luca     Anna
+ * 3                Paolo    Sara
+ * 4
+ * 5
+ * 6   MACCHINA 2  Carlo
+ * 7
+ * 8
+ * 9
+ */
+
+export interface ParsedShuttleAssignment {
+  machineName: string; // "MACCHINA 1", "MACCHINA 2", etc.
+  slotTime: string; // "22:30", "22:40", etc.
+  fullName: string; // Nome completo della persona
+  direction: 'ANDATA' | 'RITORNO';
+  cellPosition: { row: number; col: string }; // Posizione cella per update
+}
+
+/**
+ * Legge il foglio navette (Andata o Ritorno)
+ * @param direction "ANDATA" o "RITORNO"
+ * @returns Array di assegnazioni parsate
+ */
+export async function readShuttlesSheet(direction: 'ANDATA' | 'RITORNO'): Promise<ParsedShuttleAssignment[]> {
+  const { spreadsheetId } = config.googleSheets;
+
+  if (!spreadsheetId) {
+    throw new Error('GOOGLE_SHEET_ID non configurato');
+  }
+
+  const sheetName = direction === 'ANDATA' ? 'Navette Andata' : 'Navette Ritorno';
+  const range = `${sheetName}!A1:ZZ20`; // Leggi tutto, max 20 righe e tutte le colonne
+
+  logger.info(`Lettura Google Sheet NAVETTE ${direction}: ${spreadsheetId}, range: ${range}`);
+
+  const sheets = getGoogleSheetsClient();
+
+  try {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range,
+    });
+
+    const rows = response.data.values;
+
+    if (!rows || rows.length === 0) {
+      logger.warn(`Google Sheet NAVETTE ${direction} vuoto`);
+      return [];
+    }
+
+    const assignments: ParsedShuttleAssignment[] = [];
+
+    // Riga 1 contiene gli orari (da colonna B = indice 1)
+    const timeRow = rows[0] || [];
+    const times: string[] = [];
+    for (let colIdx = 1; colIdx < timeRow.length; colIdx++) {
+      const time = timeRow[colIdx]?.toString().trim();
+      if (time) {
+        times.push(time);
+      }
+    }
+
+    if (times.length === 0) {
+      logger.warn(`Nessun orario trovato nella riga 1 del foglio ${sheetName}`);
+      return [];
+    }
+
+    logger.info(`Orari trovati: ${times.join(', ')}`);
+
+    // Analizza le macchine (ogni 4 righe)
+    // Macchina 1: righe 2-5 (indici 1-4)
+    // Macchina 2: righe 6-9 (indici 5-8)
+    // Macchina 3: righe 10-13 (indici 9-12)
+
+    const machineGroups = [
+      { name: 'MACCHINA 1', startRow: 1, endRow: 4 }, // righe 2-5 nel foglio
+      { name: 'MACCHINA 2', startRow: 5, endRow: 8 }, // righe 6-9
+      { name: 'MACCHINA 3', startRow: 9, endRow: 12 }, // righe 10-13
+    ];
+
+    for (const machine of machineGroups) {
+      // Verifica nome macchina in colonna A
+      const machineNameCell = rows[machine.startRow]?.[0]?.toString().trim();
+      const machineName = machineNameCell || machine.name; // fallback al nome di default
+
+      logger.info(`Analizzando ${machineName} (righe ${machine.startRow + 1}-${machine.endRow + 1})`);
+
+      // Per ogni slot orario (colonna)
+      for (let timeIdx = 0; timeIdx < times.length; timeIdx++) {
+        const colIdx = timeIdx + 1; // +1 perché colonna B = indice 1
+        const slotTime = times[timeIdx];
+        const colLetter = String.fromCharCode(66 + timeIdx); // B=66, C=67, etc.
+
+        // Per ogni posto nella macchina (4 righe)
+        for (let seatOffset = 0; seatOffset < 4; seatOffset++) {
+          const rowIdx = machine.startRow + seatOffset;
+          const absoluteRow = rowIdx + 1; // +1 perché array parte da 0, foglio da 1
+
+          if (rowIdx >= rows.length) continue;
+
+          const cell = rows[rowIdx]?.[colIdx];
+          const fullName = cell?.toString().trim();
+
+          if (fullName) {
+            assignments.push({
+              machineName,
+              slotTime,
+              fullName,
+              direction,
+              cellPosition: {
+                row: absoluteRow,
+                col: colLetter,
+              },
+            });
+          }
+        }
+      }
+    }
+
+    logger.info(`Parsate ${assignments.length} assegnazioni navette ${direction} da Google Sheet`);
+    return assignments;
+
+  } catch (error: any) {
+    logger.error(`Errore lettura Google Sheet NAVETTE ${direction}:`, error.message);
+    throw new Error(`Impossibile leggere Google Sheet NAVETTE ${direction}: ${error.message}`);
+  }
+}
+
+/**
+ * Scrive o aggiorna una cella nel foglio navette
+ * @param direction "ANDATA" o "RITORNO"
+ * @param cellPosition Posizione cella (es. { row: 2, col: "B" })
+ * @param fullName Nome completo da scrivere (vuoto per cancellare)
+ */
+export async function updateShuttleCellInGoogleSheet(
+  direction: 'ANDATA' | 'RITORNO',
+  cellPosition: { row: number; col: string },
+  fullName: string
+): Promise<void> {
+  const { spreadsheetId } = config.googleSheets;
+
+  if (!spreadsheetId) {
+    throw new Error('GOOGLE_SHEET_ID non configurato');
+  }
+
+  const sheetName = direction === 'ANDATA' ? 'Navette Andata' : 'Navette Ritorno';
+  const cellRange = `${sheetName}!${cellPosition.col}${cellPosition.row}`;
+
+  const formattedName = fullName.trim() ? capitalizeWords(fullName.trim()) : '';
+
+  const sheets = getGoogleSheetsClient();
+
+  try {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: cellRange,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[formattedName]],
+      },
+    });
+
+    logger.info(`Aggiornata cella navette ${direction} ${cellRange}: "${formattedName}"`);
+  } catch (error: any) {
+    logger.error(`Errore aggiornamento cella navette ${direction}:`, error.message);
+    throw new Error(`Impossibile aggiornare cella navette: ${error.message}`);
+  }
+}
