@@ -57,10 +57,15 @@ export default function ExpensesPage() {
   });
 
   // Query balances
-  const { data: balances } = useQuery({
+  const { data: balances, error: balancesError, isLoading: balancesLoading } = useQuery({
     queryKey: ["expenses-balances"],
     queryFn: () => fetchBalances(),
   });
+
+  // Debug: mostra errori
+  if (balancesError) {
+    console.error("Errore caricamento balances:", balancesError);
+  }
 
   // Mutation: create
   const createMutation = useMutation({
@@ -199,6 +204,17 @@ export default function ExpensesPage() {
         </header>
 
         {/* Balances by Payment Method */}
+        {balancesLoading && (
+          <div className="loading-state">
+            <div className="spinner"></div>
+            <p>Caricamento saldi...</p>
+          </div>
+        )}
+        {balancesError && (
+          <div className="error-state" style={{padding: "1rem", background: "#fee2e2", border: "1px solid #ef4444", borderRadius: "8px", marginBottom: "1rem"}}>
+            <p style={{color: "#991b1b", margin: 0}}>⚠️ Errore caricamento saldi. Verifica di essere loggato come admin.</p>
+          </div>
+        )}
         {balances && (
           <div className="balances-section">
             <h2>Saldi per Metodo di Pagamento</h2>

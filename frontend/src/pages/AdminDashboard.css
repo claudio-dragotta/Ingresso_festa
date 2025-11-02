@@ -528,23 +528,29 @@
 .invitees-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed; /* evita disallineamenti tra thead e tbody */
+  table-layout: fixed;
 }
 
-/* Larghezze colonne specifiche per allineamento ottimale */
+/* Larghezze colonne per tabella con 4 colonne (paganti) */
 .invitees-table th:nth-child(1),
 .invitees-table td:nth-child(1) { width: 25%; } /* Nome */
 
 .invitees-table th:nth-child(2),
 .invitees-table td:nth-child(2) { width: 25%; } /* Cognome */
 
+/* La terza colonna può essere Pagamento (se 4 colonne) o Stato (se 3 colonne) */
 .invitees-table th:nth-child(3),
-.invitees-table td:nth-child(3) { width: 30%; } /* Pagamento (quando visibile) */
+.invitees-table td:nth-child(3) { width: 30%; } /* Pagamento o Stato */
 
+/* La quarta colonna è sempre Stato (solo se presente) */
 .invitees-table th:nth-child(4),
-.invitees-table td:nth-child(4),
-.invitees-table th:last-child,
-.invitees-table td:last-child { width: 20%; } /* Stato */
+.invitees-table td:nth-child(4) { width: 20%; } /* Stato */
+
+/* Per tabelle con 3 colonne (non paganti), la terza colonna è Stato e deve prendere lo spazio rimanente */
+.invitees-table tr:has(> td:nth-child(3):last-child) td:nth-child(3),
+.invitees-table thead tr:has(> th:nth-child(3):last-child) th:nth-child(3) {
+  width: 50%; /* Nome 25% + Cognome 25% + Stato 50% = 100% */
+}
 
 .invitees-table thead {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

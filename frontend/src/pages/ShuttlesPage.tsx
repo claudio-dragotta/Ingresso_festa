@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ShuttleAssignment, ShuttleDirection, ShuttleMachine, ShuttleSlot } from "../api/shuttles";
 import { createAssignment, fetchAssignments, fetchShuttleConfig, fetchSlots, updateAssignmentStatus, syncShuttlesFromSheets } from "../api/shuttles";
 import { useAuth } from "../context/AuthContext";
+import "./ShuttlesPage.css";
 
 const ShuttlesPage = () => {
   const { role } = useAuth();
@@ -80,86 +81,88 @@ const ShuttlesPage = () => {
 
   const grouped = useMemo(() => {
     const filterByTime = selectedTime === "ALL" ? assignments : assignments.filter(a => a.slot.time === selectedTime);
-    const map = new Map<string, ShuttleAssignment[]>();
-    for (const m of machines) map.set(m.id, []);
+    const map = new Map<string, Map<string, ShuttleAssignment[]>>();
+
+    // Initialize: for each machine, create a map of time -> assignments[]
+    for (const m of machines) {
+      const timeMap = new Map<string, ShuttleAssignment[]>();
+      for (const t of times) {
+        timeMap.set(t, []);
+      }
+      map.set(m.id, timeMap);
+    }
+
+    // Fill with actual assignments
     for (const a of filterByTime) {
-      const arr = map.get(a.machineId) || [];
-      arr.push(a);
-      map.set(a.machineId, arr);
+      const timeMap = map.get(a.machineId);
+      if (timeMap) {
+        const arr = timeMap.get(a.slot.time) || [];
+        arr.push(a);
+        timeMap.set(a.slot.time, arr);
+      }
     }
     return map;
-  }, [assignments, machines, selectedTime]);
+  }, [assignments, machines, selectedTime, times]);
+
+  const getOccupancyLevel = (count: number, max: number) => {
+    if (count === 0) return "low";
+    if (count >= max) return "full";
+    if (count / max >= 0.75) return "high";
+    if (count / max >= 0.5) return "medium";
+    return "low";
+  };
 
   return (
-    <div className="users-page" style={{ minHeight: "100vh" }}>
-      <div className="users-header">
-        <div>
-          <h1>Navette</h1>
-          <p className="subtitle">Gestione andata/ritorno per fasce orarie e macchine</p>
-        </div>
-        <div style={{ display: "flex", gap: ".5rem", alignItems: "center", flexWrap: "wrap" }}>
-          <div className="search-box" style={{ display: "flex", gap: ".5rem" }}>
-            <select value={direction} onChange={(e) => setDirection(e.target.value as ShuttleDirection)}>
-              <option value="ANDATA">Andata</option>
-              <option value="RITORNO">Ritorno</option>
-            </select>
-            <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
-              <option value="ALL">Tutte le fasce</option>
-              {times.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-          {canWrite && (
-            <button
-              onClick={() => syncMut.mutate()}
-              disabled={syncMut.isPending}
-              className="sync-button"
-              style={{
-                padding: "0.5rem 1rem",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                cursor: syncMut.isPending ? "not-allowed" : "pointer",
-                fontWeight: "600",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
-            >
-              {syncMut.isPending ? (
-                <>
-                  <span style={{ animation: "spin 1s linear infinite" }}>⟳</span>
-                  Sincronizzazione...
-                </>
-              ) : (
-                <>
-                  <span>⟳</span>
-                  Importa da Google Sheets
-                </>
-              )}
-            </button>
-          )}
-        </div>
+    <div className="shuttles-page">
+      <div className="shuttles-header">
+        <h1>Navette</h1>
+        <p className="subtitle">Gestione trasporti per andata e ritorno</p>
       </div>
 
-      {/* Banner risultato sincronizzazione */}
+      <div className="shuttles-controls">
+        <div className="control-group">
+          <label>Direzione</label>
+          <select value={direction} onChange={(e) => setDirection(e.target.value as ShuttleDirection)}>
+            <option value="ANDATA">Andata</option>
+            <option value="RITORNO">Ritorno</option>
+          </select>
+        </div>
+        <div className="control-group">
+          <label>Fascia oraria</label>
+          <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
+            <option value="ALL">Tutte le fasce</option>
+            {times.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+        {canWrite && (
+          <button
+            onClick={() => syncMut.mutate()}
+            disabled={syncMut.isPending}
+            className="sync-button"
+          >
+            {syncMut.isPending ? (
+              <>
+                <span style={{ animation: "spin 1s linear infinite" }}>⟳</span>
+                Sincronizzazione...
+              </>
+            ) : (
+              <>
+                <span>⟳</span>
+                Importa da Sheets
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
       {syncResult && (
-        <div
-          style={{
-            padding: "1rem",
-            marginBottom: "1rem",
-            borderRadius: "8px",
-            background: syncResult.success ? "#d1fae5" : "#fee2e2",
-            border: `1px solid ${syncResult.success ? "#10b981" : "#ef4444"}`,
-            color: syncResult.success ? "#065f46" : "#991b1b",
-          }}
-        >
+        <div className={`sync-banner ${syncResult.success ? "success" : "error"}`}>
           <strong>{syncResult.message}</strong>
           {syncResult.stats && (
-            <p style={{ marginTop: "0.5rem", fontSize: "0.9rem" }}>
-              {syncResult.stats.newImported} nuove importate, {syncResult.stats.alreadyExists} già presenti
+            <p>
+              {syncResult.stats.newImported} nuove, {syncResult.stats.alreadyExists} esistenti
               {syncResult.stats.deleted > 0 && `, ${syncResult.stats.deleted} eliminate`}
             </p>
           )}
@@ -167,55 +170,128 @@ const ShuttlesPage = () => {
       )}
 
       {canWrite && (
-        <div className="users-actions">
-          <form className="new-user-form" onSubmit={(e) => { e.preventDefault(); if (!newName.trim()) return; addMut.mutate({ direction, time: newTime || times[0], machineId: newMachine || machines[0]?.id!, fullName: newName.trim() }); setNewName(""); }}>
-            <h3>Nuova assegnazione</h3>
-            <div className="row">
-              <input type="text" placeholder="Nome e Cognome" value={newName} onChange={(e) => setNewName(e.target.value)} required />
-              <select value={newMachine} onChange={(e) => setNewMachine(e.target.value)}>
-                {machines.map((m) => (<option key={m.id} value={m.id}>{m.name}</option>))}
-              </select>
-              <select value={newTime} onChange={(e) => setNewTime(e.target.value)}>
-                {times.map((t) => (<option key={t} value={t}>{t}</option>))}
-              </select>
-              <button type="submit" disabled={addMut.isPending}>Aggiungi</button>
+        <div className="add-assignment-card">
+          <h3>Aggiungi assegnazione</h3>
+          <form
+            className="add-assignment-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newName.trim()) return;
+              addMut.mutate({
+                direction,
+                time: newTime || times[0],
+                machineId: newMachine || machines[0]?.id!,
+                fullName: newName.trim(),
+              });
+              setNewName("");
+            }}
+          >
+            <div className="form-field">
+              <label htmlFor="name">Nome e Cognome</label>
+              <input
+                id="name"
+                type="text"
+                placeholder="Es. Mario Rossi"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                required
+              />
             </div>
+            <div className="form-field">
+              <label htmlFor="machine">Macchina</label>
+              <select id="machine" value={newMachine} onChange={(e) => setNewMachine(e.target.value)}>
+                {machines.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor="time">Orario</label>
+              <select id="time" value={newTime} onChange={(e) => setNewTime(e.target.value)}>
+                {times.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <button type="submit" disabled={addMut.isPending}>
+              {addMut.isPending ? "..." : "Aggiungi"}
+            </button>
           </form>
         </div>
       )}
 
-      <div className="users-table">
-        <div className="table-head">
-          <div>Macchina</div>
-          <div>Capienza (slot/macc.)</div>
-          <div>Assegnati</div>
-          <div>Azioni</div>
-          <div className="right">Note</div>
+      {selectedTime !== "ALL" && (
+        <div className="filter-info">
+          Mostrando solo fascia oraria: <strong>{selectedTime}</strong>
         </div>
+      )}
+
+      <div className="shuttles-grid">
         {machines.map((m) => {
-          const list = grouped.get(m.id) ?? [];
+          const timeMap = grouped.get(m.id);
+          if (!timeMap) return null;
+
+          const allAssignments = Array.from(timeMap.values()).flat();
+          const totalOccupied = allAssignments.length;
+          const maxCapacity = (selectedTime === "ALL" ? times.length : 1) * (cfg?.machineCapacity ?? 4);
+
           return (
-            <div key={m.id} className="table-row">
-              <div className="username">{m.name}</div>
-              <div>{cfg?.slotCapacity ?? 12} / {cfg?.machineCapacity ?? 4}</div>
-              <div>
-                <div style={{ display: "flex", gap: ".4rem", flexWrap: "wrap" }}>
-                  {list.map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      className={`status-badge ${a.status === "BOARDED" ? "active" : "inactive"}`}
-                      onClick={() => canWrite && toggleMut.mutate(a)}
-                      title={a.slot.time}
-                    >
-                      {a.fullName} ({a.slot.time})
-                    </button>
-                  ))}
-                  {list.length === 0 && <span className="subtitle">Nessuno</span>}
+            <div key={m.id} className="machine-card">
+              <div className="machine-header">
+                <div className="machine-name">
+                  <div className="machine-icon">{m.name.match(/\d+/)?.[0] ?? "M"}</div>
+                  <span>{m.name}</span>
+                </div>
+                <div className="machine-stats">
+                  <div className="stat-item">
+                    <div className="stat-label">Occupati</div>
+                    <div className="stat-value">{totalOccupied}</div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-label">Posti totali</div>
+                    <div className="stat-value">{maxCapacity}</div>
+                  </div>
                 </div>
               </div>
-              <div>-</div>
-              <div className="right">&nbsp;</div>
+
+              <div className="time-slots">
+                {(selectedTime === "ALL" ? times : [selectedTime]).map((time) => {
+                  const assignmentsList = timeMap.get(time) ?? [];
+                  const occupancy = assignmentsList.length;
+                  const capacity = cfg?.machineCapacity ?? 4;
+                  const level = getOccupancyLevel(occupancy, capacity);
+
+                  return (
+                    <div key={time} className="time-slot-card">
+                      <div className="time-slot-header">
+                        <div className="time-slot-time">{time}</div>
+                        <div className={`occupancy-badge ${level}`}>
+                          {occupancy}/{capacity}
+                        </div>
+                      </div>
+                      <div className="assignments-list">
+                        {assignmentsList.length > 0 ? (
+                          assignmentsList.map((a) => (
+                            <div
+                              key={a.id}
+                              className={`assignment-item ${a.status === "BOARDED" ? "boarded" : ""}`}
+                              onClick={() => canWrite && toggleMut.mutate(a)}
+                              title={a.status === "BOARDED" ? "Salito - clicca per annullare" : "In attesa - clicca per marcare come salito"}
+                            >
+                              <span className="assignment-name">{a.fullName}</span>
+                              <span className="assignment-status">
+                                {a.status === "BOARDED" ? "✓" : "○"}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="empty-slot">Nessuna assegnazione</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
         })}
