@@ -2,7 +2,7 @@ import { prisma } from "../lib/prisma";
 import { config } from "../config";
 import { AppError } from "../utils/errors";
 import { ShuttleBoardStatus, ShuttleDirection } from "@prisma/client";
-import { readShuttlesSheet, updateShuttleCellInGoogleSheet, ParsedShuttleAssignment } from "./googleSheetsService";
+import { readShuttlesSheet, updateShuttleCellInGoogleSheet, readShuttleTimesFromSheet, ParsedShuttleAssignment } from "./googleSheetsService";
 import { logger } from "../logger";
 
 const parseTime = (hhmm: string) => {
@@ -143,7 +143,7 @@ export const createAssignment = async (data: {
     if (existsSameDirection) throw new AppError("Persona già assegnata per questa direzione", 409);
   }
 
-  return prisma.shuttleAssignment.create({
+  const created = await prisma.shuttleAssignment.create({
     data: {
       slotId: slot.id,
       machineId,
@@ -152,6 +152,13 @@ export const createAssignment = async (data: {
     },
     include: { invitee: true, slot: true, machine: true },
   });
+
+  // Export automatico verso Google Sheets (in background, non blocca l'operazione)
+  exportAssignmentToGoogleSheets(created.id, 'create').catch((err) =>
+    logger.error(`Errore export assegnazione ${created.id} verso Sheets:`, err)
+  );
+
+  return created;
 };
 
 export const updateAssignmentStatus = async (
@@ -172,6 +179,15 @@ export const updateAssignmentStatus = async (
 };
 
 export const deleteAssignment = async (id: string) => {
+  // Export verso Sheets PRIMA di eliminare (così abbiamo ancora i dati)
+  // Facciamo await ma catchiamo gli errori per non bloccare l'operazione
+  try {
+    await exportAssignmentToGoogleSheets(id, 'delete');
+  } catch (err: any) {
+    logger.error(`Errore export delete assegnazione ${id} verso Sheets:`, err?.message || err);
+    // Continuiamo comunque con il delete dall'app
+  }
+
   await prisma.shuttleAssignment.delete({ where: { id } });
 };
 
@@ -314,10 +330,85 @@ export async function syncShuttlesFromGoogleSheets(
 }
 
 /**
- * Esporta un'assegnazione modificata verso Google Sheets
- * @param assignment L'assegnazione da esportare
+ * Trova la posizione di una cella nel foglio navette basandosi su machine e time
+ * @param direction ANDATA o RITORNO
+ * @param machineName Nome macchina (es. "MACCHINA 1")
+ * @param slotTime Orario slot (es. "22:30")
+ * @param fullName Nome persona da cercare (per trovare la riga specifica)
+ * @returns Posizione cella { row, col } o null se non trovata
  */
-export async function exportAssignmentToGoogleSheets(assignmentId: string): Promise<void> {
+async function findShuttleCellPosition(
+  direction: 'ANDATA' | 'RITORNO',
+  machineName: string,
+  slotTime: string,
+  fullName?: string
+): Promise<{ row: number; col: string } | null> {
+  // Leggi tutte le assegnazioni dal foglio per trovare gli orari e le posizioni
+  const sheetAssignments = await readShuttlesSheet(direction);
+
+  // Trova tutte le celle per questa macchina e time
+  const matchingCells = sheetAssignments.filter(
+    (a) => a.machineName === machineName && a.slotTime === slotTime
+  );
+
+  if (fullName) {
+    // Cerca la cella con questo nome specifico
+    const exactMatch = matchingCells.find((a) => a.fullName === fullName);
+    if (exactMatch) {
+      return exactMatch.cellPosition;
+    }
+  }
+
+  // Se non troviamo un match esatto, cerchiamo la prima cella vuota
+  // Dobbiamo controllare quali righe sono occupate per questa macchina e time
+
+  // Mappa macchine → range righe
+  const machineRowRanges: Record<string, { startRow: number; endRow: number }> = {
+    'MACCHINA 1': { startRow: 2, endRow: 5 },
+    'MACCHINA 2': { startRow: 6, endRow: 9 },
+    'MACCHINA 3': { startRow: 10, endRow: 13 },
+  };
+
+  const rowRange = machineRowRanges[machineName];
+  if (!rowRange) {
+    logger.warn(`Macchina ${machineName} non trovata nel mapping righe`);
+    return null;
+  }
+
+  // Trova la colonna per il time leggendo gli orari dalla riga 1
+  const times = await readShuttleTimesFromSheet(direction);
+  const timeIdx = times.findIndex((t) => t === slotTime);
+
+  if (timeIdx === -1) {
+    logger.warn(`Time ${slotTime} non trovato nella riga 1 del foglio navette ${direction}`);
+    return null;
+  }
+
+  const colLetter = String.fromCharCode(66 + timeIdx); // B=66, C=67, etc.
+
+  // Trova la prima riga disponibile nel range
+  const occupiedRows = matchingCells.map((c) => c.cellPosition.row);
+
+  for (let row = rowRange.startRow; row <= rowRange.endRow; row++) {
+    if (!occupiedRows.includes(row)) {
+      return { row, col: colLetter };
+    }
+  }
+
+  // Tutte le righe sono occupate
+  logger.warn(`Tutte le righe per ${machineName} slot ${slotTime} sono occupate`);
+  return null;
+}
+
+/**
+ * Esporta un'assegnazione verso Google Sheets
+ * @param assignmentId ID assegnazione da esportare
+ * @param action "create" o "delete"
+ */
+export async function exportAssignmentToGoogleSheets(
+  assignmentId: string,
+  action: 'create' | 'delete'
+): Promise<void> {
   const assignment = await prisma.shuttleAssignment.findUnique({
     where: { id: assignmentId },
     include: {
@@ -330,20 +421,56 @@ export async function exportAssignmentToGoogleSheets(assignmentId: string): Prom
     throw new AppError("Assegnazione non trovata", 404);
   }
 
-  // Ricostruiamo la posizione della cella basandoci su:
-  // - Slot time → colonna
-  // - Machine name → range di righe
-
   const direction = assignment.slot.direction === 'ANDATA' ? 'ANDATA' : 'RITORNO';
 
-  // Calcola colonna dal time
-  // Assumiamo che i tempi siano sequenziali e inizino da colonna B
-  // Per ora, dobbiamo leggere il foglio per capire quale colonna corrisponde al time
-  // Questa è una limitazione - in produzione, meglio mantenere un mapping in config
+  try {
+    if (action === 'create') {
+      // Trova una cella disponibile per questa macchina e time
+      const cellPos = await findShuttleCellPosition(
+        direction,
+        assignment.machine.name,
+        assignment.slot.time
+      );
 
-  // TODO: Per ora skippiamo l'export automatico
-  // In alternativa, possiamo implementare un endpoint manuale "Export to Sheets"
+      if (!cellPos) {
+        logger.error(
+          `Impossibile trovare cella disponibile per ${assignment.machine.name} ${assignment.slot.time}`
+        );
+        return;
+      }
 
-  logger.warn(`Export automatico verso Sheets non ancora implementato per assegnazione ${assignmentId}`);
+      // Scrivi il nome nella cella
+      await updateShuttleCellInGoogleSheet(direction, cellPos, assignment.fullName);
+
+      logger.info(
+        `Esportata assegnazione ${assignment.fullName} su Sheets: ${cellPos.col}${cellPos.row}`
+      );
+    } else if (action === 'delete') {
+      // Trova la cella con questo nome specifico
+      const cellPos = await findShuttleCellPosition(
+        direction,
+        assignment.machine.name,
+        assignment.slot.time,
+        assignment.fullName
+      );
+
+      if (!cellPos) {
+        logger.warn(
+          `Cella per ${assignment.fullName} non trovata su Sheets, skip delete`
+        );
+        return;
+      }
+
+      // Svuota la cella
+      await updateShuttleCellInGoogleSheet(direction, cellPos, '');
+
+      logger.info(
+        `Eliminata assegnazione ${assignment.fullName} da Sheets: ${cellPos.col}${cellPos.row}`
+      );
+    }
+  } catch (error: any) {
+    logger.error(`Errore export assegnazione verso Sheets:`, error.message);
+    // Non facciamo throw per evitare di bloccare l'operazione principale
+  }
 }
 

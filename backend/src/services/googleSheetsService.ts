@@ -688,3 +688,43 @@ export async function updateShuttleCellInGoogleSheet(
     throw new Error(`Impossibile aggiornare cella navette: ${error.message}`);
   }
 }
+
+/**
+ * Legge gli orari dalla riga 1 del foglio navette
+ * @param direction "ANDATA" o "RITORNO"
+ * @returns Array di orari (es. ["22:30", "22:40", ...])
+ */
+export async function readShuttleTimesFromSheet(direction: 'ANDATA' | 'RITORNO'): Promise<string[]> {
+  const { spreadsheetId } = config.googleSheets;
+
+  if (!spreadsheetId) {
+    throw new Error('GOOGLE_SHEET_ID non configurato');
+  }
+
+  const sheetName = direction === 'ANDATA' ? 'Navette Andata' : 'Navette Ritorno';
+  const range = `${sheetName}!B1:ZZ1`;
+
+  const sheets = getGoogleSheetsClient();
+
+  try {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range,
+    });
+
+    const timeRow = response.data.values?.[0] || [];
+    const times: string[] = [];
+
+    for (const time of timeRow) {
+      const trimmed = time?.toString().trim();
+      if (trimmed) {
+        times.push(trimmed);
+      }
+    }
+
+    return times;
+  } catch (error: any) {
+    logger.error(`Errore lettura orari navette ${direction}:`, error.message);
+    throw new Error(`Impossibile leggere orari navette: ${error.message}`);
+  }
+}
