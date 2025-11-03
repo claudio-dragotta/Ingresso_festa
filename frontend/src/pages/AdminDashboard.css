@@ -1041,15 +1041,13 @@
 /* ================= NEW TABLE (ricreata da zero) ================= */
 /* Container con scroll orizzontale se necessario */
 .data-table-container {
+  /* Allinea il contenitore alla tabella Magliette (.table-container) */
   background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
   border: 1.5px solid var(--border);
-  border-radius: 16px;
+  border-radius: 18px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-  overflow-x: hidden; /* niente scroll orizzontale */
-  overflow-y: visible;
-  margin: 0 auto; /* centrata */
+  overflow: hidden;
   width: 100%;
-  max-width: 1200px;
 }
 
 /* wrapper opzionale non obbligatorio */
@@ -1062,24 +1060,34 @@
 }
 
 .data-table thead {
+  /* Stesso header della tabella Magliette */
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
 }
 
 .data-table th,
 .data-table td {
-  padding: 1rem;
+  padding: 1.25rem 1rem; /* come Magliette */
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* Stile header identico a Magliette */
+.data-table th {
+  font-weight: 800;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #ffffff;
+}
+
 .data-table th.sortable { cursor: pointer; user-select: none; }
 
 .data-table tbody td { border-bottom: 1px solid var(--border); color: var(--text); }
 
-.data-table tbody tr { transition: background 0.2s ease; }
+.data-table tbody tr { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 .data-table tbody tr:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); }
 
 .data-table tbody tr.entered { background: color-mix(in srgb, #ef4444 10%, transparent); }
