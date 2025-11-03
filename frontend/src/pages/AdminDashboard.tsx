@@ -530,6 +530,12 @@ export default function AdminDashboard() {
         ) : (
           <div className={`data-table-container ${activeTab === "paganti" ? "has-payment" : "no-payment"}`}>
             <table className="data-table">
+              <colgroup>
+                <col className="col-name" />
+                <col className="col-last" />
+                {activeTab === "paganti" && <col className="col-pay" />}
+                <col className="col-status" />
+              </colgroup>
               <thead>
                 <tr>
                   <th className="sortable" onClick={() => toggleSort("firstName")}>

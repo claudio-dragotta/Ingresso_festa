@@ -1045,8 +1045,11 @@
   border: 1.5px solid var(--border);
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-  overflow-x: auto; /* scroll orizzontale se serve */
-  overflow-y: hidden;
+  overflow-x: hidden; /* niente scroll orizzontale */
+  overflow-y: visible;
+  margin: 0 auto; /* centrata */
+  width: 100%;
+  max-width: 1200px;
 }
 
 /* wrapper opzionale non obbligatorio */
@@ -1054,7 +1057,6 @@
 
 .data-table {
   width: 100%;
-  min-width: 880px; /* evita schiacciamento su viewport medi */
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -1091,12 +1093,54 @@
 .data-table-container.no-payment col.col-last { width: 34%; }
 .data-table-container.no-payment col.col-status { width: 32%; }
 
-/* Stato: non tagliare il contenuto, dare min larghezza */
-.data-table td.cell-status { overflow: visible; }
-.data-table col.col-status { min-width: 140px; }
+/* Stato: resta su una riga ma senza rompere il layout */
+.data-table td.cell-status { overflow: hidden; }
 .status-badge { white-space: nowrap; }
 
-/* Mobile: su schermi stretti si usa lo scroll orizzontale del contenitore */
+/* Mobile: nessuno scroll orizzontale, layout a card verticale */
 @media (max-width: 768px) {
-  .data-table { min-width: 720px; }
+  .data-table { display: block; width: 100%; }
+  .data-table thead { display: none; }
+  .data-table tbody { display: flex; flex-direction: column; gap: 0.75rem; }
+
+  .data-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    padding: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  }
+
+  .data-table tbody tr.entered {
+    border-color: rgba(239, 68, 68, 0.3);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(220, 38, 38, 0.05) 100%);
+  }
+
+  .data-table td {
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    overflow: visible;
+  }
+
+  .data-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+  }
+
+  /* Etichette per righe su mobile */
+  .data-table td:nth-child(1)::before { content: "Nome"; }
+  .data-table td:nth-child(2)::before { content: "Cognome"; }
+  .data-table td:nth-child(3)::before { content: "Pagamento"; }
+  .data-table td:has(.status-badge)::before { content: "Stato"; }
+
+  .status-badge { padding: 0.625rem 1rem; font-size: 0.8125rem; }
 }
