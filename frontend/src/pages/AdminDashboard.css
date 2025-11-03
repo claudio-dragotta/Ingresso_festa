@@ -508,10 +508,21 @@
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 18px;
-  overflow: hidden;
+  /* Allow horizontal scroll if content slightly overflows
+     so the last column (Stato) never gets cut off */
+  overflow: hidden; /* default */
+  overflow-x: auto; /* override X to avoid clipping */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
   border: 1.5px solid var(--border);
   animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Slight right shift on larger screens to improve visibility of the last column */
+@media (min-width: 992px) {
+  .table-container {
+    margin-left: 1rem;
+    width: calc(100% - 1rem);
+  }
 }
 
 @keyframes slideIn {
@@ -696,6 +707,30 @@
   opacity: 0.6;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* --- Fix visibilità colonna STATO e responsività --- */
+/* Evita che il testo del badge vada a capo */
+.status-badge { white-space: nowrap; }
+
+/* Mantieni una larghezza minima della tabella su viewport medi;
+   il contenitore gestisce lo scroll orizzontale se serve */
+.invitees-table { min-width: 880px; }
+
+/* Non tagliare il contenuto della cella che contiene il badge di stato */
+.invitees-table td:has(.status-badge) { overflow: visible; }
+
+/* Più spazio alle colonne finali per evitare tagli del badge */
+.invitees-table th:nth-child(3),
+.invitees-table td:nth-child(3) { width: 28%; }
+.invitees-table th:nth-child(4),
+.invitees-table td:nth-child(4) { width: 22%; min-width: 140px; }
+
+/* Caso a 3 colonne (lista GREEN): la terza è STATO */
+.invitees-table tr:has(> td:nth-child(3):last-child) td:nth-child(3),
+.invitees-table thead tr:has(> th:nth-child(3):last-child) th:nth-child(3) {
+  width: 50%;
+  min-width: 140px;
 }
 
 .delete-button {
