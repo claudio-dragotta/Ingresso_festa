@@ -180,16 +180,18 @@
 .input-icon {
   position: absolute;
   left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
   width: 20px;
   height: 20px;
   color: var(--muted);
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
 }
 
 .input-wrapper input {
   width: 100%;
-  padding: 1rem 1rem 1rem 3.25rem;
+  padding: 1rem 1rem 1rem 3.5rem;
   border: 2px solid var(--border);
   border-radius: 12px;
   font-size: 1rem;
@@ -197,7 +199,7 @@
   background: var(--surface);
   color: var(--text);
   position: relative;
-  z-index: 0;
+  z-index: 1;
 }
 
 .input-wrapper input:focus {
