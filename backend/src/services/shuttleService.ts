@@ -82,6 +82,41 @@ export const deleteMachine = async (id: string) => {
   await prisma.shuttleMachine.delete({ where: { id } });
 };
 
+export const deleteSlot = async (direction: ShuttleDirection, time: string, syncWithSheets = true) => {
+  // Trova lo slot
+  const slot = await prisma.shuttleSlot.findUnique({
+    where: { direction_time: { direction, time } },
+  });
+
+  if (!slot) {
+    throw new AppError("Slot non trovato", 404);
+  }
+
+  // Elimina tutte le assegnazioni per questo slot
+  await prisma.shuttleAssignment.deleteMany({
+    where: { slotId: slot.id },
+  });
+
+  // Elimina lo slot
+  await prisma.shuttleSlot.delete({
+    where: { id: slot.id },
+  });
+
+  // Sincronizza con Google Sheets (elimina colonna)
+  if (syncWithSheets) {
+    try {
+      const { deleteShuttleSlotFromSheet } = await import('./googleSheetsService');
+      await deleteShuttleSlotFromSheet(direction, time);
+      logger.info(`Slot ${direction} ${time} eliminato anche da Google Sheets`);
+    } catch (error: any) {
+      logger.error(`Errore eliminazione slot da Google Sheets: ${error.message}`);
+      // Non blocchiamo l'operazione se fallisce la sincronizzazione con Sheets
+    }
+  }
+
+  logger.info(`Slot ${direction} ${time} eliminato con successo`);
+};
+
 export const listSlots = async (direction: ShuttleDirection) => {
   const slots = await prisma.shuttleSlot.findMany({ where: { direction } });
 

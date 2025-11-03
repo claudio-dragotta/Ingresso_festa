@@ -728,3 +728,72 @@ export async function readShuttleTimesFromSheet(direction: 'ANDATA' | 'RITORNO')
     throw new Error(`Impossibile leggere orari navette: ${error.message}`);
   }
 }
+
+/**
+ * Elimina uno slot (colonna orario) dal foglio navette
+ * @param direction "ANDATA" o "RITORNO"
+ * @param time Orario dello slot da eliminare (es. "22:30")
+ */
+export async function deleteShuttleSlotFromSheet(direction: 'ANDATA' | 'RITORNO', time: string): Promise<void> {
+  const { spreadsheetId } = config.googleSheets;
+
+  if (!spreadsheetId) {
+    throw new Error('GOOGLE_SHEET_ID non configurato');
+  }
+
+  const sheetName = direction === 'ANDATA' ? 'Navette Andata' : 'Navette Ritorno';
+  const sheets = getGoogleSheetsClient();
+
+  try {
+    // 1. Ottieni i metadati del foglio per trovare lo sheetId
+    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+    const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === sheetName);
+
+    if (!sheet || !sheet.properties?.sheetId) {
+      throw new Error(`Foglio ${sheetName} non trovato`);
+    }
+
+    const sheetId = sheet.properties.sheetId;
+
+    // 2. Leggi la riga 1 per trovare l'indice della colonna con quell'orario
+    const range = `${sheetName}!B1:ZZ1`;
+    const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+    const timeRow = response.data.values?.[0] || [];
+
+    let columnIndex = -1;
+    for (let i = 0; i < timeRow.length; i++) {
+      if (timeRow[i]?.toString().trim() === time.trim()) {
+        columnIndex = i + 1; // +1 perché colonna B = indice 1 (0=A, 1=B, 2=C, ...)
+        break;
+      }
+    }
+
+    if (columnIndex === -1) {
+      throw new Error(`Orario ${time} non trovato nel foglio ${sheetName}`);
+    }
+
+    // 3. Elimina la colonna usando batchUpdate
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: 'COLUMNS',
+                startIndex: columnIndex,
+                endIndex: columnIndex + 1, // endIndex è esclusivo
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    logger.info(`Eliminata colonna ${columnIndex} (orario ${time}) dal foglio ${sheetName}`);
+  } catch (error: any) {
+    logger.error(`Errore eliminazione slot da Google Sheet ${direction}:`, error.message);
+    throw new Error(`Impossibile eliminare slot da Google Sheet: ${error.message}`);
+  }
+}

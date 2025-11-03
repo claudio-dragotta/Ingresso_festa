@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ShuttleAssignment, ShuttleDirection, ShuttleMachine, ShuttleSlot } from "../api/shuttles";
-import { createAssignment, fetchAssignments, fetchShuttleConfig, fetchSlots, updateAssignmentStatus, syncShuttlesFromSheets } from "../api/shuttles";
+import { createAssignment, fetchAssignments, fetchShuttleConfig, fetchSlots, updateAssignmentStatus, syncShuttlesFromSheets, deleteSlot } from "../api/shuttles";
 import { useAuth } from "../context/AuthContext";
 import "./ShuttlesPage.css";
 
@@ -9,6 +9,7 @@ const ShuttlesPage = () => {
   const { role } = useAuth();
   const qc = useQueryClient();
   const canWrite = role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE";
+  const canManageSlots = role === "ADMIN" || role === "ORGANIZER";
 
   const [direction, setDirection] = useState<ShuttleDirection>("ANDATA");
   const { data: cfg } = useQuery({ queryKey: ["shuttle-config"], queryFn: fetchShuttleConfig });
@@ -93,6 +94,26 @@ const ShuttlesPage = () => {
         message: err?.response?.data?.message || `Errore sincronizzazione ${direction}`,
       });
       setTimeout(() => setSyncResult(null), 8000);
+    },
+  });
+
+  const deleteSlotMut = useMutation({
+    mutationFn: (time: string) => deleteSlot(direction, time),
+    onSuccess: (_, time) => {
+      qc.invalidateQueries({ queryKey: ["slots"] });
+      qc.invalidateQueries({ queryKey: ["assignments"] });
+      setSyncResult({
+        success: true,
+        message: `Slot ${time} eliminato con successo`,
+      });
+      setTimeout(() => setSyncResult(null), 5000);
+    },
+    onError: (err: any, time) => {
+      setSyncResult({
+        success: false,
+        message: err?.response?.data?.message || `Errore eliminazione slot ${time}`,
+      });
+      setTimeout(() => setSyncResult(null), 5000);
     },
   });
 
@@ -291,8 +312,24 @@ const ShuttlesPage = () => {
                     <div key={time} className="time-slot-card">
                       <div className="time-slot-header">
                         <div className="time-slot-time">{time}</div>
-                        <div className={`occupancy-badge ${level}`}>
-                          {occupancy}/{capacity}
+                        <div className="time-slot-actions">
+                          <div className={`occupancy-badge ${level}`}>
+                            {occupancy}/{capacity}
+                          </div>
+                          {canManageSlots && (
+                            <button
+                              className="delete-slot-button"
+                              onClick={() => {
+                                if (confirm(`Eliminare lo slot ${time}? Verranno eliminate anche tutte le assegnazioni per questo orario e la colonna dal foglio Google Sheets.`)) {
+                                  deleteSlotMut.mutate(time);
+                                }
+                              }}
+                              disabled={deleteSlotMut.isPending}
+                              title={`Elimina slot ${time}`}
+                            >
+                              🗑️
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div className="assignments-list">

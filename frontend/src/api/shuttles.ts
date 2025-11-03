@@ -65,6 +65,10 @@ export const deleteAssignment = async (id: string) => {
   await apiClient.delete(`/shuttles/assignments/${id}`);
 };
 
+export const deleteSlot = async (direction: ShuttleDirection, time: string) => {
+  await apiClient.delete(`/shuttles/slots/${direction}/${encodeURIComponent(time)}`);
+};
+
 export interface SyncFromSheetsResult {
   message: string;
   newImported: number;

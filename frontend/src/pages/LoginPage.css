@@ -180,13 +180,16 @@
 .input-icon {
   position: absolute;
   left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
+  /* Use top/bottom centering to avoid browser-specific misalignment */
+  top: 0;
+  bottom: 0;
+  margin: auto 0;
   width: 20px;
   height: 20px;
   color: var(--muted);
   pointer-events: none;
   z-index: 2;
+  display: block;
 }
 
 .input-wrapper input {

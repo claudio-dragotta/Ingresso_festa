@@ -7,6 +7,7 @@ import {
   createMachine,
   updateMachine,
   deleteMachine,
+  deleteSlot,
   listSlots,
   listAssignments,
   createAssignment,
@@ -71,6 +72,21 @@ router.get("/slots", async (req, res, next): Promise<void> => {
     const slots = await listSlots(direction);
     res.json(slots);
   } catch (e) { next(e); }
+});
+
+// Elimina slot (solo Admin o Organizzatore)
+router.delete("/slots/:direction/:time", adminOrOrganizerOnly, async (req, res, next): Promise<void> => {
+  try {
+    const { direction, time } = req.params;
+    if (direction !== "ANDATA" && direction !== "RITORNO") {
+      res.status(400).json({ message: "Direzione non valida" });
+      return;
+    }
+    await deleteSlot(direction as ShuttleDirection, decodeURIComponent(time), true);
+    res.json({ message: `Slot ${time} eliminato con successo` });
+  } catch (e) {
+    next(e);
+  }
 });
 
 // Assignments
