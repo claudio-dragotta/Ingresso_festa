@@ -120,8 +120,19 @@ export const deleteSlot = async (direction: ShuttleDirection, time: string, sync
 export const listSlots = async (direction: ShuttleDirection) => {
   const slots = await prisma.shuttleSlot.findMany({ where: { direction } });
 
-  // Ordina cronologicamente convertendo ore in minuti
-  const sortedSlots = slots.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+  // Ordina cronologicamente gestendo il passaggio mezzanotte
+  // Orari dopo mezzanotte (00:00 - 06:00) vengono trattati come giorno dopo
+  const sortedSlots = slots.sort((a, b) => {
+    const minutesA = timeToMinutes(a.time);
+    const minutesB = timeToMinutes(b.time);
+
+    // Se l'orario è prima delle 06:00 (360 minuti), aggiungi 24 ore (1440 minuti)
+    // così 00:10 diventa 24:10 e viene dopo 22:30
+    const adjustedA = minutesA < 360 ? minutesA + 1440 : minutesA;
+    const adjustedB = minutesB < 360 ? minutesB + 1440 : minutesB;
+
+    return adjustedA - adjustedB;
+  });
 
   // add occupancy count
   const counts = await prisma.shuttleAssignment.groupBy({
