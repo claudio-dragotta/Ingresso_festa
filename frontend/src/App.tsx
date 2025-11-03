@@ -13,6 +13,7 @@ import { useAuth } from "./context/AuthContext";
 const App = () => {
   const { isAdmin, isAuthenticated, role } = useAuth();
   const canSeeShuttles = role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE";
+  const canSeeDashboard = role === "ADMIN" || role === "ORGANIZER";
 
   return (
     <Routes>
@@ -24,8 +25,8 @@ const App = () => {
           </ProtectedRoute>
         }
       >
-        {/* Admin ha accesso a entrambe le pagine */}
-        <Route path="/dashboard" element={isAdmin ? <AdminDashboard /> : <Navigate to="/search" replace />} />
+        {/* Admin e Organizer hanno accesso alla dashboard (organizer in sola lettura) */}
+        <Route path="/dashboard" element={canSeeDashboard ? <AdminDashboard /> : <Navigate to="/search" replace />} />
         {isAdmin && <Route path="/users" element={<UsersPage />} />}
         {isAdmin && <Route path="/expenses" element={<ExpensesPage />} />}
         <Route path="/search" element={<SearchPage />} />
@@ -37,7 +38,11 @@ const App = () => {
           path="/"
           element={
             isAuthenticated ? (
-              <Navigate to={isAdmin ? "/dashboard" : "/search"} replace />
+              <Navigate to={
+                isAdmin || role === "ORGANIZER" ? "/dashboard" :
+                role === "SHUTTLE" ? "/shuttles" :
+                "/search"
+              } replace />
             ) : (
               <Navigate to="/login" replace />
             )

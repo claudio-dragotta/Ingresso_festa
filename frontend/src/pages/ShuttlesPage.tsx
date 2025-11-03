@@ -24,13 +24,32 @@ const ShuttlesPage = () => {
 
   const machines: ShuttleMachine[] = useMemo(() => cfg?.machines ?? [], [cfg]);
   const times = useMemo(() => {
-    // Estrai e ordina gli orari in modo cronologico
-    const timesList = slots.map((s) => s.time);
-    return timesList.sort((a, b) => {
-      // Confronto semplice per formato "HH:mm"
-      return a.localeCompare(b);
+    // Estrai orari unici e ordina cronologicamente con gestione post-mezzanotte
+    const toMinutes = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      return (h * 60) + m;
+    };
+
+    const uniqueTimes = Array.from(new Set(slots.map((s) => s.time)));
+
+    // Usa una "ancora" per ruotare l'ordinamento in modo che gli orari dopo mezzanotte
+    // (es. 00:30) vengano dopo quelli serali (es. 22:10).
+    const anchorTime = direction === "ANDATA" ? cfg?.outbound?.from : cfg?.return?.from;
+    const anchorMinutes = anchorTime ? toMinutes(anchorTime) : 0;
+
+    return uniqueTimes.sort((a, b) => {
+      const am = toMinutes(a);
+      const bm = toMinutes(b);
+      if (anchorTime) {
+        // Ruota rispetto all'ancora: ordina per distanza crescente dall'ancora
+        const ka = (am - anchorMinutes + 1440) % 1440;
+        const kb = (bm - anchorMinutes + 1440) % 1440;
+        return ka - kb;
+      }
+      // Fallback: ordinamento naturale per minuti
+      return am - bm;
     });
-  }, [slots]);
+  }, [slots, cfg, direction]);
 
   const toggleMut = useMutation({
     mutationFn: (a: ShuttleAssignment) => updateAssignmentStatus(a.id, a.status === "BOARDED" ? "PENDING" : "BOARDED"),
@@ -308,4 +327,3 @@ const ShuttlesPage = () => {
 };
 
 export default ShuttlesPage;
-

@@ -17,8 +17,12 @@ import { resetAndReimport, syncGoogleSheets } from "../api/invitees";
 import "./TshirtsPage.css";
 
 export default function TshirtsPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, role } = useAuth();
   const queryClient = useQueryClient();
+
+  // ORGANIZER può vedere tutte le magliette in SOLA LETTURA
+  const canViewAll = isAdmin || role === 'ORGANIZER';
+  const canModify = isAdmin; // Solo ADMIN può modificare/eliminare/aggiungere
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,11 +35,11 @@ export default function TshirtsPage() {
     type: ""
   });
 
-  // Query per magliette (admin: tutte, entrance: PR e Vincenti + ricerca)
+  // Query per magliette (admin/organizer: tutte, entrance/shuttle: PR e Vincenti + ricerca)
   const { data: tshirts = [], isLoading } = useQuery<Tshirt[]>({
-    queryKey: ["tshirts", isAdmin ? "all" : searchQuery],
+    queryKey: ["tshirts", canViewAll ? "all" : searchQuery],
     queryFn: () => fetchTshirts(searchQuery.length >= 2 ? searchQuery : undefined),
-    refetchInterval: isAdmin ? 30000 : false
+    refetchInterval: canViewAll ? 30000 : false
   });
 
   // Query per statistiche (solo admin)
@@ -156,8 +160,8 @@ export default function TshirtsPage() {
     }
   };
 
-  // Filtra client-side per admin, server-side per entrance
-  const filteredTshirts = isAdmin && searchQuery.trim()
+  // Filtra client-side per admin/organizer, server-side per entrance/shuttle
+  const filteredTshirts = canViewAll && searchQuery.trim()
     ? tshirts.filter((t) => {
         const query = searchQuery.toLowerCase();
         return (
@@ -306,7 +310,7 @@ export default function TshirtsPage() {
           <input
             type="text"
             className="search-input"
-            placeholder={isAdmin ? "Cerca per nome, cognome, taglia o tipologia..." : "Cerca maglietta PR o Vincitore..."}
+            placeholder={canViewAll ? "Cerca per nome, cognome, taglia o tipologia..." : "Cerca maglietta PR o Vincitore..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -423,8 +427,8 @@ export default function TshirtsPage() {
               <path d="M9 11l3 3L22 4"/>
               <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
             </svg>
-            <h3>{isAdmin ? "Nessuna maglietta in lista" : "Nessun risultato"}</h3>
-            <p>{isAdmin ? "Aggiungi magliette manualmente o sincronizza da Google Sheets" : "Prova con un'altra ricerca"}</p>
+            <h3>{canViewAll ? "Nessuna maglietta in lista" : "Nessun risultato"}</h3>
+            <p>{canViewAll ? "Aggiungi magliette manualmente o sincronizza da Google Sheets" : "Prova con un'altra ricerca"}</p>
           </div>
         ) : (
           <div className="table-container">
@@ -444,7 +448,7 @@ export default function TshirtsPage() {
                     Tipologia {sortBy === "type" && (sortDir === "asc" ? "▲" : "▼")}
                   </th>
                   <th>Stato</th>
-                  {isAdmin && <th>Azioni</th>}
+                  {canModify && <th>Azioni</th>}
                 </tr>
               </thead>
               <tbody>
@@ -453,7 +457,7 @@ export default function TshirtsPage() {
                     <td data-label="Nome">{tshirt.firstName}</td>
                     <td data-label="Cognome">{tshirt.lastName}</td>
                     <td data-label="Taglia">
-                      {isAdmin ? (
+                      {canModify ? (
                         <select
                           className="pill-select size-pill"
                           value={tshirt.size}
@@ -466,14 +470,14 @@ export default function TshirtsPage() {
                           <option value="L">L</option>
                           <option value="XL">XL</option>
                           <option value="2XL">2XL</option>
-                          
+
                         </select>
                       ) : (
                         <span className="size-badge">{tshirt.size}</span>
                       )}
                     </td>
                     <td data-label="Tipologia">
-                      {isAdmin ? (
+                      {canModify ? (
                         <select
                           className="pill-select type-pill"
                           value={tshirt.type || ""}
@@ -499,7 +503,7 @@ export default function TshirtsPage() {
                         {tshirt.hasReceived ? "Consegnata" : "Da Consegnare"}
                       </button>
                     </td>
-                    {isAdmin && (
+                    {canModify && (
                       <td>
                         <button
                           className="delete-button"

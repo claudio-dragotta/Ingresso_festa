@@ -10,6 +10,8 @@ const AppLayout = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const canSeeDashboard = isAdmin || role === "ORGANIZER";
+
   const handleLogout = () => {
     logout();
     navigate("/login", { replace: true });
@@ -37,9 +39,8 @@ const AppLayout = () => {
           {/* Desktop Navigation */}
           <nav className="header-nav desktop-nav">
             <ThemeToggle />
-            {isAdmin ? (
-              <>
-                <NavLink to="/dashboard" className={navLinkClass}>
+            {canSeeDashboard && (
+              <NavLink to="/dashboard" className={navLinkClass}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="3" width="7" height="7"/>
                     <rect x="14" y="3" width="7" height="7"/>
@@ -48,6 +49,9 @@ const AppLayout = () => {
                   </svg>
                   Dashboard
                 </NavLink>
+            )}
+            {isAdmin && (
+              <>
                 <NavLink to="/users" className={navLinkClass}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 21v-2a4 4 0 00-4-4h-8a4 4 0 00-4 4v2"/>
@@ -62,7 +66,7 @@ const AppLayout = () => {
                   Spese
                 </NavLink>
               </>
-            ) : null}
+            )}
             <NavLink to="/search" className={navLinkClass}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8"/>
@@ -131,9 +135,8 @@ const AppLayout = () => {
             </button>
           </div>
           <div className="mobile-menu-links">
-            {isAdmin && (
-              <>
-                <NavLink to="/dashboard" className={navLinkClass} onClick={closeMobileMenu}>
+            {canSeeDashboard && (
+              <NavLink to="/dashboard" className={navLinkClass} onClick={closeMobileMenu}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="3" width="7" height="7"/>
                     <rect x="14" y="3" width="7" height="7"/>
@@ -142,6 +145,9 @@ const AppLayout = () => {
                   </svg>
                   <span>Dashboard</span>
                 </NavLink>
+            )}
+            {isAdmin && (
+              <>
                 <NavLink to="/users" className={navLinkClass} onClick={closeMobileMenu}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 21v-2a4 4 0 00-4-4h-8a4 4 0 00-4 4v2"/>

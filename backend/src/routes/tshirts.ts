@@ -27,19 +27,19 @@ router.get("/", authenticate, async (req, res, next) => {
 
     if (query && query.length >= 2) {
       // Ricerca
-      const results = userRole === 'ADMIN'
+      const results = (userRole === 'ADMIN' || userRole === 'ORGANIZER')
         ? await searchTshirts(query)
         : await searchTshirtsForEntrance(query);
       return res.json(results);
     }
 
     // Lista completa
-    if (userRole === 'ADMIN') {
+    if (userRole === 'ADMIN' || userRole === 'ORGANIZER') {
       const tshirts = await fetchTshirts();
       return res.json(tshirts);
     }
 
-    // Per utenti ENTRANCE, restituisci solo magliette PR e Vincenti
+    // Per utenti ENTRANCE e SHUTTLE, restituisci solo magliette PR e Vincenti
     const tshirtsForEntrance = await fetchTshirtsForEntrance();
     return res.json(tshirtsForEntrance);
   } catch (error) {

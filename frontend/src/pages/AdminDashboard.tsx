@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../context/AuthContext";
 import type { Invitee, InviteeInput, ListType } from "../api/invitees";
 import {
   fetchInvitees,
@@ -17,6 +18,9 @@ import {
 import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
+  const { isAdmin, role } = useAuth();
+  const isOrganizer = role === 'ORGANIZER';
+
   const [activeTab, setActiveTab] = useState<"paganti" | "green">("paganti");
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -187,7 +191,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="admin-dashboard">
-      {duplicates.length > 0 && (
+      {/* Duplicati solo per admin */}
+      {!isOrganizer && duplicates.length > 0 && (
         <div className="duplicates-alert">
           <svg viewBox="0 0 24 24" fill="currentColor" className="dup-icon">
             <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
@@ -227,7 +232,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-      {duplicates.length > 0 && (
+      {!isOrganizer && duplicates.length > 0 && (
         <div className="duplicates-alert">
           <svg viewBox="0 0 24 24" fill="currentColor" className="dup-icon">
             <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
@@ -250,9 +255,10 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-      {/* Header */}
-      <div className="dashboard-header">
-        <button
+      {/* Header - sync buttons solo per admin */}
+      {!isOrganizer && (
+        <div className="dashboard-header">
+          <button
           className="sync-button"
           onClick={() => handleSync(false)}
           disabled={syncMutation.isPending}
@@ -306,7 +312,8 @@ export default function AdminDashboard() {
             </>
           )}
         </button>
-      </div>
+        </div>
+      )}
 
       {/* Sync Result */}
       {syncMutation.data && (
@@ -375,24 +382,26 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      {/* Add Button */}
-      <div className="actions-bar">
-        <button className="add-button" onClick={() => setShowAddForm(!showAddForm)}>
+      {/* Add Button - solo per admin */}
+      {!isOrganizer && (
+        <div className="actions-bar">
+          <button className="add-button" onClick={() => setShowAddForm(!showAddForm)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 5v14m-7-7h14"/>
           </svg>
           Aggiungi {activeTab === "paganti" ? "Pagante" : "Green"}
         </button>
 
-        <div className="list-stats">
-          {activeTab === "paganti"
-            ? (
-              <>Entrati: {stats?.paganti.entered ?? 0} / {stats?.paganti.total ?? pagantiList.length}</>
-            ) : (
-              <>Entrati: {stats?.green.entered ?? 0} / {stats?.green.total ?? greenList.length}</>
-            )}
+          <div className="list-stats">
+            {activeTab === "paganti"
+              ? (
+                <>Entrati: {stats?.paganti.entered ?? 0} / {stats?.paganti.total ?? pagantiList.length}</>
+              ) : (
+                <>Entrati: {stats?.green.entered ?? 0} / {stats?.green.total ?? greenList.length}</>
+              )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Search Bar */}
       <div className="search-container">
@@ -420,8 +429,8 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Add Form */}
-      {showAddForm && (
+      {/* Add Form - solo per admin */}
+      {!isOrganizer && showAddForm && (
         <div className="add-form-container">
           <form className="add-form" onSubmit={handleSubmit}>
             <h3>
@@ -550,13 +559,19 @@ export default function AdminDashboard() {
                       </td>
                     )}
                     <td>
-                      <button
-                        className={`status-badge ${person.hasEntered ? "entered" : "not-entered"}`}
-                        onClick={() => handleCheckIn(person)}
-                        disabled={checkInMutation.isPending}
-                      >
-                        {person.hasEntered ? "Entrato" : "Non entrato"}
-                      </button>
+                      {isOrganizer ? (
+                        <span className={`status-badge ${person.hasEntered ? "entered" : "not-entered"} read-only`}>
+                          {person.hasEntered ? "Entrato" : "Non entrato"}
+                        </span>
+                      ) : (
+                        <button
+                          className={`status-badge ${person.hasEntered ? "entered" : "not-entered"}`}
+                          onClick={() => handleCheckIn(person)}
+                          disabled={checkInMutation.isPending}
+                        >
+                          {person.hasEntered ? "Entrato" : "Non entrato"}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
