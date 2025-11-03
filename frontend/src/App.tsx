@@ -14,6 +14,7 @@ const App = () => {
   const { isAdmin, isAuthenticated, role } = useAuth();
   const canSeeShuttles = role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE";
   const canSeeDashboard = role === "ADMIN" || role === "ORGANIZER";
+  const isShuttle = role === "SHUTTLE";
 
   return (
     <Routes>
@@ -29,9 +30,9 @@ const App = () => {
         <Route path="/dashboard" element={canSeeDashboard ? <AdminDashboard /> : <Navigate to="/search" replace />} />
         {isAdmin && <Route path="/users" element={<UsersPage />} />}
         {isAdmin && <Route path="/expenses" element={<ExpensesPage />} />}
-        <Route path="/search" element={<SearchPage />} />
+        {!isShuttle && <Route path="/search" element={<SearchPage />} />}
         {canSeeShuttles && <Route path="/shuttles" element={<ShuttlesPage />} />}
-        <Route path="/tshirts" element={<TshirtsPage />} />
+        {!isShuttle && <Route path="/tshirts" element={<TshirtsPage />} />}
 
         {/* Redirect basato sul ruolo */}
         <Route

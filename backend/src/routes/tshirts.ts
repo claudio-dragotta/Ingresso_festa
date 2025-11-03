@@ -20,7 +20,7 @@ import { adminOnly } from "../middleware/adminOnly";
 const router = Router();
 
 // GET /api/tshirts - Ottieni lista magliette (Admin: tutte, Entrance: solo PR e Vincitore)
-router.get("/", authenticate, async (req, res, next) => {
+router.get("/", authenticate, allowRoles(['ADMIN','ORGANIZER','ENTRANCE']), async (req, res, next) => {
   try {
     const userRole = (req as any).user?.role;
     const query = req.query.search as string | undefined;

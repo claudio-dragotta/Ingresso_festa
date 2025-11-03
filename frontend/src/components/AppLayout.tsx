@@ -7,6 +7,7 @@ import ThemeToggle from "./ThemeToggle";
 const AppLayout = () => {
   const { logout, isAdmin, role } = useAuth();
   const showShuttles = role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE";
+  const isShuttle = role === "SHUTTLE";
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -67,13 +68,15 @@ const AppLayout = () => {
                 </NavLink>
               </>
             )}
-            <NavLink to="/search" className={navLinkClass}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="M21 21l-4.35-4.35"/>
-              </svg>
-              Ricerca
-            </NavLink>
+            {!isShuttle && (
+              <NavLink to="/search" className={navLinkClass}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="M21 21l-4.35-4.35"/>
+                </svg>
+                Ricerca
+              </NavLink>
+            )}
             {showShuttles && (
               <NavLink to="/shuttles" className={navLinkClass}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -83,13 +86,15 @@ const AppLayout = () => {
                 Navette
               </NavLink>
             )}
-            <NavLink to="/tshirts" className={navLinkClass}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M16 3c-1.2 1-2.6 2-4 2s-2.8-1-4-2L4 6l2 2v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l2-2-4-3z"/>
-                <path d="M9 8h6"/>
-              </svg>
-              Magliette
-            </NavLink>
+            {!isShuttle && (
+              <NavLink to="/tshirts" className={navLinkClass}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M16 3c-1.2 1-2.6 2-4 2s-2.8-1-4-2L4 6l2 2v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l2-2-4-3z"/>
+                  <path d="M9 8h6"/>
+                </svg>
+                Magliette
+              </NavLink>
+            )}
             <button type="button" onClick={handleLogout} className="logout-button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -172,20 +177,24 @@ const AppLayout = () => {
                 <span>Navette</span>
               </NavLink>
             )}
-            <NavLink to="/search" className={navLinkClass} onClick={closeMobileMenu}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="M21 21l-4.35-4.35"/>
-              </svg>
-              <span>Ricerca</span>
-            </NavLink>
-            <NavLink to="/tshirts" className={navLinkClass} onClick={closeMobileMenu}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M16 3c-1.2 1-2.6 2-4 2s-2.8-1-4-2L4 6l2 2v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l2-2-4-3z"/>
-                <path d="M9 8h6"/>
-              </svg>
-              <span>Magliette</span>
-            </NavLink>
+            {!isShuttle && (
+              <NavLink to="/search" className={navLinkClass} onClick={closeMobileMenu}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="M21 21l-4.35-4.35"/>
+                </svg>
+                <span>Ricerca</span>
+              </NavLink>
+            )}
+            {!isShuttle && (
+              <NavLink to="/tshirts" className={navLinkClass} onClick={closeMobileMenu}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M16 3c-1.2 1-2.6 2-4 2s-2.8-1-4-2L4 6l2 2v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l2-2-4-3z"/>
+                  <path d="M9 8h6"/>
+                </svg>
+                <span>Magliette</span>
+              </NavLink>
+            )}
             <button type="button" onClick={() => { handleLogout(); closeMobileMenu(); }} className="logout-button mobile">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>

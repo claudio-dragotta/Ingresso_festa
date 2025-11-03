@@ -13,6 +13,7 @@ import {
 } from "../services/inviteeService";
 import { authenticate } from "../middleware/auth";
 import { adminOnly } from "../middleware/adminOnly";
+import { allowRoles } from "../middleware/roles";
 import { parseFileBuffer } from "../services/importService";
 import { keepOneAndDeleteOthersInGroup, promoteDuplicateGroupToPagante } from "../services/inviteeService";
 import { ListType } from "@prisma/client";
@@ -48,7 +49,7 @@ router.get("/", async (_req, res, next) => {
 });
 
 // GET /invitees/search?q=mario - Ricerca invitati
-router.get("/search", async (req, res, next) => {
+router.get("/search", allowRoles(["ADMIN", "ORGANIZER", "ENTRANCE"]), async (req, res, next) => {
   try {
     const query = req.query.q as string;
     if (!query || query.trim().length === 0) {
@@ -62,7 +63,7 @@ router.get("/search", async (req, res, next) => {
 });
 
 // GET /invitees/stats - Statistiche per i contatori
-router.get("/stats", async (_req, res, next) => {
+router.get("/stats", allowRoles(["ADMIN", "ORGANIZER", "ENTRANCE"]), async (_req, res, next) => {
   try {
     const stats = await getStats();
     return res.json(stats);
