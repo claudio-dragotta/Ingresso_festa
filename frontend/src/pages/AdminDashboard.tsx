@@ -528,8 +528,8 @@ export default function AdminDashboard() {
             <p>Aggiungi persone manualmente o sincronizza da Google Sheets</p>
           </div>
         ) : (
-          <div className="table-container">
-            <table className="invitees-table">
+          <div className={`data-table-container ${activeTab === "paganti" ? "has-payment" : "no-payment"}`}>
+            <table className="data-table">
               <thead>
                 <tr>
                   <th className="sortable" onClick={() => toggleSort("firstName")}>
@@ -558,7 +558,7 @@ export default function AdminDashboard() {
                         )}
                       </td>
                     )}
-                    <td>
+                    <td className="cell-status">
                       {isOrganizer ? (
                         <span className={`status-badge ${person.hasEntered ? "entered" : "not-entered"} read-only`}>
                           {person.hasEntered ? "Entrato" : "Non entrato"}

@@ -1038,3 +1038,65 @@
 }
 
 
+/* ================= NEW TABLE (ricreata da zero) ================= */
+/* Container con scroll orizzontale se necessario */
+.data-table-container {
+  background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  overflow-x: auto; /* scroll orizzontale se serve */
+  overflow-y: hidden;
+}
+
+/* wrapper opzionale non obbligatorio */
+.data-table-scroll { -webkit-overflow-scrolling: touch; }
+
+.data-table {
+  width: 100%;
+  min-width: 880px; /* evita schiacciamento su viewport medi */
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.data-table thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.data-table th,
+.data-table td {
+  padding: 1rem;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-table th.sortable { cursor: pointer; user-select: none; }
+
+.data-table tbody td { border-bottom: 1px solid var(--border); color: var(--text); }
+
+.data-table tbody tr { transition: background 0.2s ease; }
+.data-table tbody tr:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+
+.data-table tbody tr.entered { background: color-mix(in srgb, #ef4444 10%, transparent); }
+
+/* Larghezze colonne tramite colgroup */
+.data-table col.col-status { width: 22%; }
+.data-table col.col-name { width: 28%; }
+.data-table col.col-last { width: 28%; }
+.data-table col.col-pay { width: 22%; }
+.data-table-container.no-payment col.col-name { width: 34%; }
+.data-table-container.no-payment col.col-last { width: 34%; }
+.data-table-container.no-payment col.col-status { width: 32%; }
+
+/* Stato: non tagliare il contenuto, dare min larghezza */
+.data-table td.cell-status { overflow: visible; }
+.data-table col.col-status { min-width: 140px; }
+.status-badge { white-space: nowrap; }
+
+/* Mobile: su schermi stretti si usa lo scroll orizzontale del contenitore */
+@media (max-width: 768px) {
+  .data-table { min-width: 720px; }
+}
