@@ -83,7 +83,11 @@ export const deleteMachine = async (id: string) => {
 };
 
 export const listSlots = async (direction: ShuttleDirection) => {
-  const slots = await prisma.shuttleSlot.findMany({ where: { direction }, orderBy: { time: "asc" } });
+  const slots = await prisma.shuttleSlot.findMany({ where: { direction } });
+
+  // Ordina cronologicamente convertendo ore in minuti
+  const sortedSlots = slots.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+
   // add occupancy count
   const counts = await prisma.shuttleAssignment.groupBy({
     by: ["slotId"],
@@ -91,7 +95,7 @@ export const listSlots = async (direction: ShuttleDirection) => {
     where: { slot: { direction } },
   });
   const countMap = new Map(counts.map((c) => [c.slotId, c._count.slotId]));
-  return slots.map((s) => ({ ...s, occupancy: countMap.get(s.id) ?? 0 }));
+  return sortedSlots.map((s) => ({ ...s, occupancy: countMap.get(s.id) ?? 0 }));
 };
 
 export const listAssignments = async (params: { direction?: ShuttleDirection; time?: string; machineId?: string }) => {

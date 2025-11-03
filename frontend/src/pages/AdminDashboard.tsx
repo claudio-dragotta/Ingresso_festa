@@ -18,7 +18,7 @@ import {
 import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
-  const { isAdmin, role } = useAuth();
+  const { role } = useAuth();
   const isOrganizer = role === 'ORGANIZER';
 
   const [activeTab, setActiveTab] = useState<"paganti" | "green">("paganti");
