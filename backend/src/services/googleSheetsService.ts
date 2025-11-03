@@ -550,7 +550,9 @@ export async function readShuttlesSheet(direction: 'ANDATA' | 'RITORNO'): Promis
     throw new Error('GOOGLE_SHEET_ID non configurato');
   }
 
-  const sheetName = direction === 'ANDATA' ? 'Navette Andata' : 'Navette Ritorno';
+  const sheetName = direction === 'ANDATA'
+    ? (config.googleSheets as any).shuttlesOutboundSheetName || 'Navette Andata'
+    : (config.googleSheets as any).shuttlesReturnSheetName || 'Navette Ritorno';
   const range = `${sheetName}!A1:ZZ20`; // Leggi tutto, max 20 righe e tutte le colonne
 
   logger.info(`Lettura Google Sheet NAVETTE ${direction}: ${spreadsheetId}, range: ${range}`);
@@ -665,7 +667,9 @@ export async function updateShuttleCellInGoogleSheet(
     throw new Error('GOOGLE_SHEET_ID non configurato');
   }
 
-  const sheetName = direction === 'ANDATA' ? 'Navette Andata' : 'Navette Ritorno';
+  const sheetName = direction === 'ANDATA'
+    ? (config.googleSheets as any).shuttlesOutboundSheetName || 'Navette Andata'
+    : (config.googleSheets as any).shuttlesReturnSheetName || 'Navette Ritorno';
   const cellRange = `${sheetName}!${cellPosition.col}${cellPosition.row}`;
 
   const formattedName = fullName.trim() ? capitalizeWords(fullName.trim()) : '';
@@ -701,7 +705,9 @@ export async function readShuttleTimesFromSheet(direction: 'ANDATA' | 'RITORNO')
     throw new Error('GOOGLE_SHEET_ID non configurato');
   }
 
-  const sheetName = direction === 'ANDATA' ? 'Navette Andata' : 'Navette Ritorno';
+  const sheetName = direction === 'ANDATA'
+    ? (config.googleSheets as any).shuttlesOutboundSheetName || 'Navette Andata'
+    : (config.googleSheets as any).shuttlesReturnSheetName || 'Navette Ritorno';
   const range = `${sheetName}!B1:ZZ1`;
 
   const sheets = getGoogleSheetsClient();
@@ -741,7 +747,9 @@ export async function deleteShuttleSlotFromSheet(direction: 'ANDATA' | 'RITORNO'
     throw new Error('GOOGLE_SHEET_ID non configurato');
   }
 
-  const sheetName = direction === 'ANDATA' ? 'Navette Andata' : 'Navette Ritorno';
+  const sheetName = direction === 'ANDATA'
+    ? (config.googleSheets as any).shuttlesOutboundSheetName || 'Navette Andata'
+    : (config.googleSheets as any).shuttlesReturnSheetName || 'Navette Ritorno';
   const sheets = getGoogleSheetsClient();
 
   try {

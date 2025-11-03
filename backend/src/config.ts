@@ -48,6 +48,9 @@ export const config = {
     credentials: process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "",
     autoSyncEnabled: process.env.GOOGLE_SHEETS_AUTO_SYNC === "true",
     autoSyncIntervalMinutes: Number(process.env.GOOGLE_SHEETS_SYNC_INTERVAL ?? 10),
+    // Nomi dei tab per le navette (configurabili per adattarsi al foglio reale)
+    shuttlesOutboundSheetName: process.env.GOOGLE_SHEET_SHUTTLES_OUTBOUND_NAME ?? "Navette Andata",
+    shuttlesReturnSheetName: process.env.GOOGLE_SHEET_SHUTTLES_RETURN_NAME ?? "Navette Ritorno",
   },
   shuttle: {
     machineCapacity: Number(process.env.SHUTTLE_MACHINE_CAPACITY ?? 4),
