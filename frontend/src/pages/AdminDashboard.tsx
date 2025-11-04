@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import type { Invitee, InviteeInput, ListType } from "../api/invitees";
@@ -23,6 +23,7 @@ export default function AdminDashboard() {
 
   const [activeTab, setActiveTab] = useState<"paganti" | "green">("paganti");
   const [showAddForm, setShowAddForm] = useState(false);
+  const firstNameInputRef = useRef<HTMLInputElement | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState<InviteeInput>({
     firstName: "",
@@ -101,15 +102,27 @@ export default function AdminDashboard() {
     mutationFn: createInvitee,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invitees"] });
-      setShowAddForm(false);
       setFormData({
         firstName: "",
         lastName: "",
         listType: activeTab === "paganti" ? "PAGANTE" : "GREEN",
         paymentType: "",
       });
+      // Metti il focus su "Nome" per inserimenti consecutivi
+      setTimeout(() => {
+        firstNameInputRef.current?.focus();
+      }, 0);
     },
   });
+
+  // Quando apro il form, metti il focus su "Nome"
+  useEffect(() => {
+    if (showAddForm) {
+      setTimeout(() => {
+        firstNameInputRef.current?.focus();
+      }, 0);
+    }
+  }, [showAddForm]);
 
   // (rimosso) eliminazione singolo invitato dalla tabella
 
@@ -442,6 +455,7 @@ export default function AdminDashboard() {
                 <label>Nome *</label>
                 <input
                   type="text"
+                  ref={firstNameInputRef}
                   value={formData.firstName}
                   onChange={(e) => {
                     const value = e.target.value;
