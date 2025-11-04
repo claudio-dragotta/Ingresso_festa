@@ -153,8 +153,22 @@ export const updateEventStatus = async (status: EventStatus) => {
 
 // POST /sync/google-sheets - Sincronizza con Google Sheets
 export const syncGoogleSheets = async (opts?: { pruneMissing?: boolean }) => {
-  const response = await apiClient.post<SyncResult>("/sync/google-sheets", opts ?? {});
-  return response.data;
+  const response = await apiClient.post<any>("/sync/google-sheets", opts ?? {});
+  const raw = response.data as any;
+  // Backend può rispondere sia piatto (SyncResult) sia annidato in { data, success, message }
+  if (raw && typeof raw === 'object' && raw.data && typeof raw.data === 'object') {
+    const flat: SyncResult = {
+      success: Boolean(raw.success ?? raw.data.success ?? false),
+      totalFromSheet: Number(raw.data.totalFromSheet ?? 0),
+      newImported: Number(raw.data.newImported ?? 0),
+      alreadyExists: Number(raw.data.alreadyExists ?? 0),
+      errors: Array.isArray(raw.data.errors) ? raw.data.errors : [],
+      duration: Number(raw.data.duration ?? 0),
+      breakdown: raw.data.breakdown ?? { paganti: { imported: 0, exists: 0 }, green: { imported: 0, exists: 0 } },
+    };
+    return flat;
+  }
+  return raw as SyncResult;
 };
 
 // POST /sync/reset-and-reimport - Reset DB invitati + reimport da Google Sheets (admin)

@@ -73,10 +73,16 @@ router.get("/stats", allowRoles(["ADMIN", "ORGANIZER", "ENTRANCE"]), async (_req
 });
 
 // POST /invitees - Crea nuovo invitato (o array di invitati)
-router.post("/", adminOnly, async (req, res, next) => {
+router.post("/", allowRoles(["ADMIN", "ORGANIZER"]), async (req, res, next) => {
   try {
     const payload = req.body;
+    const userRole = (req as any).user?.role as "ADMIN" | "ORGANIZER" | undefined;
+
+    // Blocca import multiplo per ORGANIZER
     if (Array.isArray(payload)) {
+      if (userRole !== "ADMIN") {
+        return res.status(403).json({ message: "Solo admin può importare più invitati alla volta" });
+      }
       const valid = payload.filter(isValidInvitee);
       const results = await createInviteesBulk(valid);
       return res.status(201).json(results);
@@ -86,7 +92,16 @@ router.post("/", adminOnly, async (req, res, next) => {
       return res.status(400).json({ message: "Nome, cognome e tipo lista sono obbligatori" });
     }
 
-    const result = await createInvitee(payload);
+    // Gli ORGANIZER possono creare SOLO GREEN e senza paymentType
+    const sanitized = userRole === "ORGANIZER"
+      ? { firstName: payload.firstName, lastName: payload.lastName, listType: "GREEN" as ListType }
+      : payload;
+
+    if (userRole === "ORGANIZER" && sanitized.listType !== "GREEN") {
+      return res.status(403).json({ message: "Gli organizer possono aggiungere solo invitati GREEN" });
+    }
+
+    const result = await createInvitee(sanitized);
     return res.status(201).json(result);
   } catch (error) {
     return next(error);
@@ -119,9 +134,9 @@ router.post("/:id/checkin", async (req, res, next) => {
     const userRole = (req as any).user?.role;
     const performedByUserId = (req as any).user?.userId as string | undefined;
 
-    // Solo admin o ingresso possono effettuare check-in
-    if (userRole !== 'ADMIN' && userRole !== 'ENTRANCE') {
-      return res.status(403).json({ message: "Solo admin o ingresso possono effettuare check-in" });
+    // Admin, ingresso e organizer possono effettuare check-in
+    if (userRole !== 'ADMIN' && userRole !== 'ENTRANCE' && userRole !== 'ORGANIZER') {
+      return res.status(403).json({ message: "Solo admin, ingresso o organizer possono effettuare check-in" });
     }
 
     // Solo admin può usare adminOverride per rimettere come "non entrato"

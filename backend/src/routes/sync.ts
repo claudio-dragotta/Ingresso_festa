@@ -37,6 +37,7 @@ router.post(
           alreadyExists: result.alreadyExists,
           errors: result.errors,
           duration: result.duration,
+          breakdown: result.breakdown,
         },
       });
     } catch (error) {

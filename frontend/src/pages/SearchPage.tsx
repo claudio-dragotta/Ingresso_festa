@@ -8,7 +8,7 @@ import "./SearchPage.css";
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const { isAdmin } = useAuth();
+  const { isAdmin, role } = useAuth();
   const queryClient = useQueryClient();
 
   // Debounce della ricerca
@@ -51,9 +51,11 @@ export default function SearchPage() {
   };
 
   const canClick = (person: Invitee) => {
-    // Utenti ENTRANCE non possono cliccare su rosso (già entrato)
-    // Admin può sempre cliccare
-    return isAdmin || !person.hasEntered;
+    // Admin può sempre cliccare (anche per rimettere non entrato)
+    if (isAdmin) return true;
+    // ENTRANCE e ORGANIZER possono marcare entrata solo se non ancora entrato
+    if (role === 'ENTRANCE' || role === 'ORGANIZER') return !person.hasEntered;
+    return false;
   };
 
   return (

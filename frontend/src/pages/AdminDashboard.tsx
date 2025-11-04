@@ -395,14 +395,14 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      {/* Add Button - solo per admin */}
-      {!isOrganizer && (
+      {/* Add Button - admin sempre, organizer solo su GREEN */}
+      {(!isOrganizer || (isOrganizer && activeTab === "green")) && (
         <div className="actions-bar">
           <button className="add-button" onClick={() => setShowAddForm(!showAddForm)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 5v14m-7-7h14"/>
           </svg>
-          Aggiungi {activeTab === "paganti" ? "Pagante" : "Green"}
+          Aggiungi {activeTab === "paganti" ? (isOrganizer ? "" : "Pagante") : "Green"}
         </button>
 
           <div className="list-stats">
@@ -442,12 +442,12 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Add Form - solo per admin */}
-      {!isOrganizer && showAddForm && (
+      {/* Add Form - admin sempre, organizer solo su GREEN */}
+      {showAddForm && (!isOrganizer || (isOrganizer && activeTab === "green")) && (
         <div className="add-form-container">
-          <form className="add-form" onSubmit={handleSubmit}>
+          <form className="add-form" onSubmit={handleSubmit} autoComplete="off">
             <h3>
-              Aggiungi {activeTab === "paganti" ? "Pagante" : "Green"}
+              Aggiungi {activeTab === "paganti" ? (isOrganizer ? "" : "Pagante") : "Green"}
             </h3>
 
             <div className="form-row">
@@ -464,7 +464,7 @@ export default function AdminDashboard() {
                       .split(' ')
                       .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : '')
                       .join(' ');
-                    setFormData({ ...formData, firstName: capitalized });
+                    setFormData(prev => ({ ...prev, firstName: capitalized }));
                   }}
                   required
                 />
@@ -482,7 +482,7 @@ export default function AdminDashboard() {
                       .split(' ')
                       .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : '')
                       .join(' ');
-                    setFormData({ ...formData, lastName: capitalized });
+                    setFormData(prev => ({ ...prev, lastName: capitalized }));
                   }}
                   required
                 />
@@ -494,7 +494,7 @@ export default function AdminDashboard() {
                 <label>Tipologia Pagamento</label>
                 <select
                   value={formData.paymentType}
-                  onChange={(e) => setFormData({ ...formData, paymentType: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, paymentType: e.target.value }))}
                 >
                   <option value="">Seleziona...</option>
                   <option value="bonifico">Bonifico</option>
@@ -580,9 +580,19 @@ export default function AdminDashboard() {
                     )}
                     <td className="cell-status">
                       {isOrganizer ? (
-                        <span className={`status-badge ${person.hasEntered ? "entered" : "not-entered"} read-only`}>
-                          {person.hasEntered ? "Entrato" : "Non entrato"}
-                        </span>
+                        person.hasEntered ? (
+                          <span className={`status-badge ${person.hasEntered ? "entered" : "not-entered"} read-only`}>
+                            Entrato
+                          </span>
+                        ) : (
+                          <button
+                            className={`status-badge ${person.hasEntered ? "entered" : "not-entered"}`}
+                            onClick={() => handleCheckIn(person)}
+                            disabled={checkInMutation.isPending}
+                          >
+                            Non entrato
+                          </button>
+                        )
                       ) : (
                         <button
                           className={`status-badge ${person.hasEntered ? "entered" : "not-entered"}`}
