@@ -21,6 +21,10 @@ export default function AdminDashboard() {
   const { role } = useAuth();
   const isOrganizer = role === 'ORGANIZER';
 
+  const duplicatesRef = useRef<HTMLDivElement | null>(null);
+  const hasShownDupHintRef = useRef(false);
+  const [showDupHint, setShowDupHint] = useState(false);
+
   const [activeTab, setActiveTab] = useState<"paganti" | "green">("paganti");
   const [showAddForm, setShowAddForm] = useState(false);
   const firstNameInputRef = useRef<HTMLInputElement | null>(null);
@@ -124,6 +128,31 @@ export default function AdminDashboard() {
     }
   }, [showAddForm]);
 
+  // Mostra un avviso quando ci sono duplicati all'apertura o dopo sync
+  useEffect(() => {
+    if (!hasShownDupHintRef.current && duplicates.length > 0) {
+      hasShownDupHintRef.current = true;
+      setShowDupHint(true);
+      setTimeout(() => setShowDupHint(false), 6000);
+    }
+  }, [duplicates.length]);
+
+  useEffect(() => {
+    if (syncMutation.data && duplicates.length > 0) {
+      setShowDupHint(true);
+      setTimeout(() => setShowDupHint(false), 6000);
+    }
+  }, [syncMutation.data]);
+
+  const scrollToDuplicates = () => {
+    const el = duplicatesRef.current;
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.add('dup-highlight');
+      setTimeout(() => el.classList.remove('dup-highlight'), 1500);
+    }
+  };
+
   // (rimosso) eliminazione singolo invitato dalla tabella
 
   // Mutation per check-in
@@ -206,7 +235,7 @@ export default function AdminDashboard() {
     <div className="admin-dashboard">
       {/* Duplicati solo per admin */}
       {!isOrganizer && duplicates.length > 0 && (
-        <div className="duplicates-alert">
+        <div className="duplicates-alert" ref={duplicatesRef}>
           <svg viewBox="0 0 24 24" fill="currentColor" className="dup-icon">
             <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
           </svg>
@@ -243,6 +272,23 @@ export default function AdminDashboard() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+      {/* Hint che appare quando ci sono duplicati dopo refresh/sync */}
+      {!isOrganizer && showDupHint && duplicates.length > 0 && (
+        <div className="dup-hint" role="status">
+          <div className="dup-hint-left">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="dup-hint-icon">
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+            </svg>
+            <div>
+              <strong>{duplicates.length} gruppi di duplicati rilevati</strong>
+              <div className="dup-hint-sub">Clicca per rivederli ora</div>
+            </div>
+          </div>
+          <button type="button" className="add-button" onClick={scrollToDuplicates}>
+            Vai ai duplicati
+          </button>
         </div>
       )}
       {!isOrganizer && duplicates.length > 0 && (

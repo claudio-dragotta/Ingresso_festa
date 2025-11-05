@@ -30,6 +30,16 @@
   margin-bottom: 1rem;
 }
 
+.dup-highlight {
+  animation: dupPulse 1.2s ease-in-out 1;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+}
+
+@keyframes dupPulse {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45); }
+  100% { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.0); }
+}
+
 .dup-icon {
   width: 22px;
   height: 22px;
@@ -49,6 +59,29 @@
 .dup-count::first-letter { color: transparent; }
 .dup-items { display: inline-flex; gap: 0.25rem; }
 .dup-badge { border: 1px solid var(--border); padding: 0.1rem 0.4rem; border-radius: 6px; font-size: 0.75rem; color: var(--text); }
+
+/* Duplicates hint banner */
+.dup-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0 1rem;
+  background: color-mix(in srgb, #fff7ed 85%, transparent);
+  border: 1px dashed #f59e0b;
+  border-radius: 12px;
+  animation: slideDown 0.25s ease;
+}
+
+.dup-hint-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dup-hint-icon { width: 20px; height: 20px; color: #f59e0b; }
+.dup-hint-sub { color: #b45309; font-size: 0.85rem; }
 
 .dashboard-header {
   display: flex;
