@@ -137,12 +137,8 @@ export default function AdminDashboard() {
     }
   }, [duplicates.length]);
 
-  useEffect(() => {
-    if (syncMutation.data && duplicates.length > 0) {
-      setShowDupHint(true);
-      setTimeout(() => setShowDupHint(false), 6000);
-    }
-  }, [syncMutation.data]);
+  // Mostra l'hint anche immediatamente dopo una sincronizzazione completata
+  // (dichiarato nuovamente dopo la definizione di syncMutation per evitare ordine di riferimento)
 
   const scrollToDuplicates = () => {
     const el = duplicatesRef.current;
@@ -182,6 +178,14 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates"] });
     },
   });
+
+  // Mostra hint duplicati quando una sync termina e risultano duplicati
+  useEffect(() => {
+    if (syncMutation.data && duplicates.length > 0) {
+      setShowDupHint(true);
+      setTimeout(() => setShowDupHint(false), 6000);
+    }
+  }, [syncMutation.data, duplicates.length]);
 
   // Duplicates actions
   const promoteMut = useMutation({
