@@ -253,7 +253,7 @@
   .table-row {
     display: flex;
     flex-direction: column;
-    background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+    background: var(--surface);
     border: 1.5px solid var(--border);
     border-radius: 16px;
     padding: 1.25rem;
@@ -268,9 +268,7 @@
     box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
   }
 
-  .table-row:nth-child(odd) {
-    background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
-  }
+  .table-row:nth-child(odd) { background: var(--surface); }
 
   .table-row > div {
     display: flex;
@@ -396,7 +394,5 @@
     font-size: 0.9375rem;
   }
 
-  [data-theme="dark"] .table-row {
-    background: linear-gradient(135deg, var(--surface) 0%, rgba(26, 32, 46, 0.98) 100%);
-  }
+  [data-theme="dark"] .table-row { background: var(--surface); }
 }

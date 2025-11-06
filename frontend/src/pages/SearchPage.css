@@ -212,7 +212,7 @@
 }
 
 .result-card {
-  background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+  background: var(--surface);
   border-radius: 18px;
   padding: 1.15rem 1.25rem;
   display: flex;

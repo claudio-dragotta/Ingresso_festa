@@ -162,7 +162,7 @@
 .stat-card {
   text-align: center;
   padding: 1.25rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+  background: var(--surface);
   backdrop-filter: blur(20px);
   border: 1.5px solid var(--border);
   border-radius: 16px;
@@ -274,7 +274,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+  background: var(--surface);
   border: 2px solid transparent;
   border-radius: 16px;
   padding: 0.9rem 1.1rem;
@@ -288,9 +288,7 @@
   transform: translateY(-2px);
 }
 
-[data-theme="dark"] .search-box {
-  background: linear-gradient(135deg, rgba(26, 32, 46, 0.95), rgba(26, 32, 46, 0.85));
-}
+[data-theme="dark"] .search-box { background: var(--surface); }
 
 .search-icon {
   width: 22px;
@@ -489,7 +487,7 @@
 
 /* Table */
 .table-container {
-  background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+  background: var(--surface);
   backdrop-filter: blur(20px);
   border-radius: 18px;
   overflow: hidden;
@@ -497,9 +495,7 @@
   border: 1.5px solid var(--border);
 }
 
-[data-theme="dark"] .table-container {
-  background: linear-gradient(135deg, var(--surface) 0%, rgba(26, 32, 46, 0.98) 100%);
-}
+[data-theme="dark"] .table-container { background: var(--surface); }
 
 .tshirts-table {
   width: 100%;
@@ -797,7 +793,7 @@
   .tshirts-table tbody tr {
     display: flex;
     flex-direction: column;
-    background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+    background: var(--surface);
     border: 1.5px solid var(--border);
     border-radius: 16px;
     padding: 1rem;
@@ -842,7 +838,5 @@
     display: none;
   }
 
-  [data-theme="dark"] .tshirts-table tbody tr {
-    background: linear-gradient(135deg, var(--surface) 0%, rgba(26, 32, 46, 0.98) 100%);
-  }
+  [data-theme="dark"] .tshirts-table tbody tr { background: var(--surface); }
 }
