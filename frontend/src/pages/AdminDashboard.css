@@ -537,7 +537,8 @@
 
 /* Table - Ultra moderna con glassmorphism */
 .table-container {
-  background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+  /* Use a neutral themed surface background (no brightening towards bottom) */
+  background: var(--surface);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 18px;
@@ -610,7 +611,8 @@
 .invitees-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 [data-theme="dark"] .table-container {
-  background: linear-gradient(135deg, var(--surface) 0%, rgba(26, 32, 46, 0.98) 100%);
+  /* Keep same solid surface in dark too for consistency */
+  background: var(--surface);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -950,7 +952,8 @@
   .invitees-table tbody tr {
     display: flex;
     flex-direction: column;
-    background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+    /* Solid themed surface to avoid bright white in dark mode */
+    background: var(--surface);
     border: 1.5px solid var(--border);
     border-radius: 16px;
     padding: 1rem;
@@ -1062,7 +1065,8 @@
   }
 
   [data-theme="dark"] .invitees-table tbody tr {
-    background: linear-gradient(135deg, var(--surface) 0%, rgba(26, 32, 46, 0.98) 100%);
+    /* Match mobile row background to themed surface */
+    background: var(--surface);
   }
 
   [data-theme="dark"] .invitees-table tbody tr.entered {
@@ -1075,12 +1079,17 @@
 /* Container con scroll orizzontale se necessario */
 .data-table-container {
   /* Allinea il contenitore alla tabella Magliette (.table-container) */
-  background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+  background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: 18px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.06);
   overflow: hidden;
   width: 100%;
+}
+
+[data-theme="dark"] .data-table-container {
+  background: var(--surface);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* wrapper opzionale non obbligatorio */
@@ -1147,7 +1156,7 @@
   .data-table tbody tr {
     display: flex;
     flex-direction: column;
-    background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+    background: var(--surface);
     border: 1.5px solid var(--border);
     border-radius: 16px;
     padding: 1rem;
