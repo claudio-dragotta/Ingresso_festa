@@ -60,6 +60,47 @@ export default function AdminDashboard() {
     refetchInterval: 10000,
   });
 
+  // Analisi duplicati lato client (anche tra Paganti e Green)
+  type LocalDupGroup = { key: string; count: number; crossList: boolean; items: Invitee[] };
+  const [localDupGroups, setLocalDupGroups] = useState<LocalDupGroup[] | null>(null);
+  const [localDupSummary, setLocalDupSummary] = useState<{ total: number; crossList: number } | null>(null);
+
+  const analyzeDuplicates = () => {
+    if (!invitees || invitees.length === 0) {
+      setLocalDupGroups([]);
+      setLocalDupSummary({ total: 0, crossList: 0 });
+      return;
+    }
+    const norm = (s: string) => s
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+    const map = new Map<string, Invitee[]>();
+    for (const inv of invitees) {
+      const key = `${norm(inv.lastName)}|${norm(inv.firstName)}`;
+      const arr = map.get(key) ?? [];
+      arr.push(inv);
+      map.set(key, arr);
+    }
+    const groups: LocalDupGroup[] = [];
+    for (const [key, items] of map.entries()) {
+      if (items.length > 1) {
+        const hasPaganti = items.some(i => i.listType === "PAGANTE");
+        const hasGreen = items.some(i => i.listType === "GREEN");
+        groups.push({ key, count: items.length, crossList: hasPaganti && hasGreen, items: items.sort((a, b) => a.listType.localeCompare(b.listType)) });
+      }
+    }
+    groups.sort((a, b) => Number(b.crossList) - Number(a.crossList) || b.count - a.count);
+    setLocalDupGroups(groups);
+    setLocalDupSummary({ total: groups.length, crossList: groups.filter(g => g.crossList).length });
+    setShowDupHint(false);
+    setTimeout(() => {
+      duplicatesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  };
+
   // Filtra per tipo
   const pagantiList = invitees.filter((inv) => inv.listType === "PAGANTE");
   const greenList = invitees.filter((inv) => inv.listType === "GREEN");
@@ -318,6 +359,35 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      {/* Analisi duplicati lato client (trigger da pulsante) */}
+      {!isOrganizer && localDupGroups && (
+        <div className="duplicates-alert" ref={duplicatesRef}>
+          <svg viewBox="0 0 24 24" fill="currentColor" className="dup-icon">
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+          </svg>
+          <div className="dup-content">
+            <strong>Analisi duplicati (locale){localDupSummary ? ` — ${localDupSummary.total} gruppi, ${localDupSummary.crossList} cross-list` : ''}</strong>
+            {localDupGroups.length === 0 ? (
+              <div className="dup-list">Nessun duplicato trovato</div>
+            ) : (
+              <div className="dup-list">
+                {localDupGroups.map((g) => (
+                  <div key={g.key} className="dup-group">
+                    <span className="dup-title">{g.items[0]?.lastName} {g.items[0]?.firstName}</span>
+                    <span className="dup-count">×{g.count}</span>
+                    {g.crossList && <span className="dup-badge" title="Presente sia in Paganti che in Green">Cross‑list</span>}
+                    <div className="dup-items">
+                      {g.items.map((p) => (
+                        <span key={p.id} className="dup-badge">{p.listType}{p.paymentType ? ` • ${p.paymentType}` : ''}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {/* Header - sync buttons solo per admin */}
       {!isOrganizer && (
         <div className="dashboard-header">
@@ -351,6 +421,18 @@ export default function AdminDashboard() {
           title="Sincronizza e rimuovi mancanti"
         >
           Allinea (rimuovi mancanti)
+        </button>
+        <button
+          className="sync-button"
+          onClick={analyzeDuplicates}
+          title="Analizza duplicati (anche tra Paganti e Green)"
+          type="button"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          Analizza duplicati
         </button>
         <button
           className="reset-button"
