@@ -10,6 +10,7 @@ const ShuttlesPage = () => {
   const qc = useQueryClient();
   const canWrite = role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE";
   const canManageSlots = role === "ADMIN" || role === "ORGANIZER";
+  const isAdmin = role === "ADMIN";
 
   const [direction, setDirection] = useState<ShuttleDirection>("ANDATA");
   const { data: cfg } = useQuery({ queryKey: ["shuttle-config"], queryFn: fetchShuttleConfig });
@@ -92,6 +93,96 @@ const ShuttlesPage = () => {
       setSyncResult({
         success: false,
         message: err?.response?.data?.message || `Errore sincronizzazione ${direction}`,
+      });
+      setTimeout(() => setSyncResult(null), 8000);
+    },
+  });
+
+  // Sync both directions in one click
+  const syncBothMut = useMutation({
+    mutationFn: async () => {
+      const [outRes, retRes] = await Promise.all([
+        syncShuttlesFromSheets("ANDATA", false),
+        syncShuttlesFromSheets("RITORNO", false),
+      ]);
+      return { outRes, retRes };
+    },
+    onSuccess: ({ outRes, retRes }) => {
+      qc.invalidateQueries({ queryKey: ["assignments"] });
+      qc.invalidateQueries({ queryKey: ["slots"] });
+      setSyncResult({
+        success: true,
+        message: "Sincronizzazione Andata + Ritorno completata!",
+        stats: {
+          newImported: (outRes?.newImported ?? 0) + (retRes?.newImported ?? 0),
+          alreadyExists: (outRes?.alreadyExists ?? 0) + (retRes?.alreadyExists ?? 0),
+          deleted: (outRes?.deleted ?? 0) + (retRes?.deleted ?? 0),
+        },
+      });
+      setTimeout(() => setSyncResult(null), 8000);
+    },
+    onError: (err: any) => {
+      setSyncResult({
+        success: false,
+        message: err?.response?.data?.message || "Errore sincronizzazione Andata+Ritorno",
+      });
+      setTimeout(() => setSyncResult(null), 8000);
+    },
+  });
+
+  // Sync current direction with prune (mirror the sheet: remove missing)
+  const syncPruneMut = useMutation({
+    mutationFn: () => syncShuttlesFromSheets(direction, true),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["assignments"] });
+      qc.invalidateQueries({ queryKey: ["slots"] });
+      setSyncResult({
+        success: true,
+        message: `Allineamento ${direction} completato (sovrascrive)!`,
+        stats: {
+          newImported: data.newImported,
+          alreadyExists: data.alreadyExists,
+          deleted: data.deleted,
+        },
+      });
+      setTimeout(() => setSyncResult(null), 8000);
+    },
+    onError: (err: any) => {
+      setSyncResult({
+        success: false,
+        message: err?.response?.data?.message || `Errore allineamento ${direction}`,
+      });
+      setTimeout(() => setSyncResult(null), 8000);
+    },
+  });
+
+  // Sync both directions with prune
+  const syncBothPruneMut = useMutation({
+    mutationFn: async () => {
+      const [outRes, retRes] = await Promise.all([
+        syncShuttlesFromSheets("ANDATA", true),
+        syncShuttlesFromSheets("RITORNO", true),
+      ]);
+      return { outRes, retRes };
+    },
+    onSuccess: ({ outRes, retRes }) => {
+      qc.invalidateQueries({ queryKey: ["assignments"] });
+      qc.invalidateQueries({ queryKey: ["slots"] });
+      setSyncResult({
+        success: true,
+        message: "Allineamento Andata + Ritorno completato (sovrascrive)!",
+        stats: {
+          newImported: (outRes?.newImported ?? 0) + (retRes?.newImported ?? 0),
+          alreadyExists: (outRes?.alreadyExists ?? 0) + (retRes?.alreadyExists ?? 0),
+          deleted: (outRes?.deleted ?? 0) + (retRes?.deleted ?? 0),
+        },
+      });
+      setTimeout(() => setSyncResult(null), 8000);
+    },
+    onError: (err: any) => {
+      setSyncResult({
+        success: false,
+        message: err?.response?.data?.message || "Errore allineamento Andata+Ritorno",
       });
       setTimeout(() => setSyncResult(null), 8000);
     },
@@ -183,7 +274,7 @@ const ShuttlesPage = () => {
             ))}
           </select>
         </div>
-        {canWrite && (
+        {isAdmin && (
           <button
             onClick={() => syncMut.mutate()}
             disabled={syncMut.isPending}
@@ -198,6 +289,94 @@ const ShuttlesPage = () => {
               <>
                 <span>⟳</span>
                 Importa da Sheets
+              </>
+            )}
+          </button>
+        )}
+        {isAdmin && (
+          <button
+            onClick={() => {
+              if (confirm(`Allineare ${direction} al foglio? Verranno rimossi elementi non presenti nel foglio.`)) {
+                syncPruneMut.mutate();
+              }
+            }}
+            disabled={syncPruneMut.isPending}
+            className="sync-button"
+            title={`Allinea ${direction} (sovrascrive con foglio)`}
+          >
+            {syncPruneMut.isPending ? (
+              <>
+                <span style={{ animation: "spin 1s linear infinite" }}>⟳</span>
+                Allineamento...
+              </>
+            ) : (
+              <>
+                <span>⤳</span>
+                Allinea {direction}
+              </>
+            )}
+          </button>
+        )}
+        {isAdmin && (
+          <button
+            onClick={() => syncBothMut.mutate()}
+            disabled={syncBothMut.isPending}
+            className="sync-button"
+            title="Importa sia Andata che Ritorno"
+          >
+            {syncBothMut.isPending ? (
+              <>
+                <span style={{ animation: "spin 1s linear infinite" }}>⟳</span>
+                Sincronizzo A+R...
+              </>
+            ) : (
+              <>
+                <span>⟲</span>
+                Importa Andata+Ritorno
+              </>
+            )}
+          </button>
+        )}
+        {isAdmin && (
+          <button
+            onClick={() => {
+              if (confirm('Allineare Andata e Ritorno al foglio? Verranno rimossi elementi non presenti nel foglio.')) {
+                syncBothPruneMut.mutate();
+              }
+            }}
+            disabled={syncBothPruneMut.isPending}
+            className="sync-button"
+            title="Allinea Andata+Ritorno (sovrascrive)"
+          >
+            {syncBothPruneMut.isPending ? (
+              <>
+                <span style={{ animation: "spin 1s linear infinite" }}>⟳</span>
+                Allineo A+R...
+              </>
+            ) : (
+              <>
+                <span>⤴</span>
+                Allinea Andata+Ritorno
+              </>
+            )}
+          </button>
+        )}
+        {canWrite && (
+          <button
+            onClick={() => syncBothMut.mutate()}
+            disabled={syncBothMut.isPending}
+            className="sync-button"
+            title="Importa sia Andata che Ritorno"
+          >
+            {syncBothMut.isPending ? (
+              <>
+                <span style={{ animation: "spin 1s linear infinite" }}>⟳</span>
+                Sincronizzo A+R...
+              </>
+            ) : (
+              <>
+                <span>⟲</span>
+                Importa Andata+Ritorno
               </>
             )}
           </button>

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth";
-import { adminOrOrganizerOnly, shuttleWrite, shuttleAccess } from "../middleware/roles";
+import { adminOrOrganizerOnly, shuttleWrite, shuttleAccess, allowRoles } from "../middleware/roles";
 import { config } from "../config";
 import {
   listMachines,
@@ -131,7 +131,8 @@ router.delete("/assignments/:id", adminOrOrganizerOnly, async (req, res, next) =
 });
 
 // Sincronizzazione da Google Sheets
-router.post("/sync-from-sheets", adminOrOrganizerOnly, async (req, res, next) => {
+// Solo ADMIN può sincronizzare dal foglio
+router.post("/sync-from-sheets", allowRoles(["ADMIN"]), async (req, res, next) => {
   try {
     const { direction, pruneMissing } = req.body as {
       direction: ShuttleDirection;
