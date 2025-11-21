@@ -342,3 +342,46 @@ Sviluppato con ❤️ per la Festa 8 Novembre
 Per documentazione dettagliata:
 - [NUOVO_SISTEMA.md](./NUOVO_SISTEMA.md) - Backend details
 - [FRONTEND_COMPLETO.md](./FRONTEND_COMPLETO.md) - Frontend details
+
+---
+
+## Panoramica Rapida
+
+- Scopo: gestione ingressi con ruoli diversi (Admin, Ingresso), ricerca istantanea, check‑in con contatori live, import e sync da Google Sheets.
+- Backend: Node.js/TypeScript + Express + Prisma/SQLite; Frontend: React + Vite (+ TanStack Query/Router).
+- Deploy: configurabile su Render; credenziali di default presenti per sviluppo (da cambiare in produzione).
+
+## Struttura Cartelle
+
+- `backend/`
+  - `src/routes/` – API endpoints (auth, persone, sync, ecc.).
+  - `src/services/` – Logica applicativa (gestione liste, check‑in).
+  - `src/middleware/` – Autenticazione, validazioni, sicurezza.
+  - `src/lib/` – Prisma Client e util.
+  - `src/server.ts` – Entry point server.
+  - `prisma/schema.prisma` – Modello DB; `migrations/` – migrazioni.
+  - `scripts/` – Inizializzazione e util (es. utenti).
+  - `storage/data/dev.db` – DB SQLite locale per sviluppo.
+- `frontend/`
+  - `src/api/` – Client HTTP.
+  - `src/components/` – Componenti UI.
+  - `src/context/` – Stato auth/utente.
+  - `src/pages/` – `AdminDashboard`, `SearchPage`, `LoginPage`.
+
+## Azioni Possibili
+
+- Avvio sviluppo: `cd backend && npm install && npm run dev` e `cd ../frontend && npm install && npm run dev` → `http://localhost:5173`.
+- Login di prova: `admin/admin123`, `ingresso1/ingresso123` (cambiare in produzione!).
+- Import/sync Google Sheets: configurare variabili in backend (vedi README/ENV) e usare pulsante nella dashboard admin.
+- Gestione liste: aggiungi/elimina persone, check‑in, reset stato (solo Admin può ripristinare).
+
+## Siti/Strumenti Utili
+
+- Prisma ORM: https://www.prisma.io/docs
+- SQLite: https://www.sqlite.org/docs.html
+- Google Sheets API: https://developers.google.com/sheets/api
+- Express: https://expressjs.com
+- React: https://react.dev • Vite: https://vitejs.dev
+- TanStack Query: https://tanstack.com/query/latest
+- JSON Web Tokens: https://jwt.io • bcryptjs: https://github.com/dcodeIO/bcrypt.js
+- Helmet (sicurezza): https://helmetjs.github.io
