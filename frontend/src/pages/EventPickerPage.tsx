@@ -246,7 +246,9 @@ export default function EventPickerPage() {
 
                   {createMutation.isError && (
                     <div className="form-error">
-                      Errore durante la creazione dell'evento. Riprova.
+                      {(createMutation.error as any)?.response?.data?.message
+                        ?? (createMutation.error as any)?.message
+                        ?? "Errore durante la creazione dell'evento. Riprova."}
                     </div>
                   )}
 
