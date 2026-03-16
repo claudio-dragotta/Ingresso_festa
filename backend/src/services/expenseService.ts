@@ -1,5 +1,5 @@
-import { prisma } from '../lib/prisma';
-import { ExpenseCategory } from '@prisma/client';
+import { prisma } from "../lib/prisma";
+import { ExpenseCategory } from "@prisma/client";
 
 export interface CreateExpenseDto {
   description: string;
@@ -45,10 +45,10 @@ export interface BalancesReport {
 }
 
 // Ottieni tutte le spese con opzione di filtro per categoria e intervallo date
-export const fetchExpenses = async (categoryFilter?: string, startDate?: Date, endDate?: Date) => {
-  const where: any = {};
+export const fetchExpenses = async (eventId: string, categoryFilter?: string, startDate?: Date, endDate?: Date) => {
+  const where: any = { eventId };
 
-  if (categoryFilter && categoryFilter !== 'ALL') {
+  if (categoryFilter && categoryFilter !== "ALL") {
     where.category = categoryFilter;
   }
 
@@ -61,15 +61,15 @@ export const fetchExpenses = async (categoryFilter?: string, startDate?: Date, e
   return prisma.expense.findMany({
     where,
     orderBy: [
-      { date: 'desc' },
-      { createdAt: 'desc' }
-    ]
+      { date: "desc" },
+      { createdAt: "desc" },
+    ],
   });
 };
 
 // Ottieni statistiche spese
-export const fetchExpenseStats = async (startDate?: Date, endDate?: Date): Promise<ExpenseStats> => {
-  const where: any = {};
+export const fetchExpenseStats = async (eventId: string, startDate?: Date, endDate?: Date): Promise<ExpenseStats> => {
+  const where: any = { eventId };
 
   if (startDate || endDate) {
     where.date = {};
@@ -89,32 +89,34 @@ export const fetchExpenseStats = async (startDate?: Date, endDate?: Date): Promi
     const existing = categoryMap.get(exp.category) || { amount: 0, count: 0 };
     categoryMap.set(exp.category, {
       amount: existing.amount + exp.amount,
-      count: existing.count + 1
+      count: existing.count + 1,
     });
   }
 
-  const byCategory = Array.from(categoryMap.entries()).map(([category, data]) => ({
-    category,
-    amount: data.amount,
-    count: data.count
-  })).sort((a, b) => b.amount - a.amount); // Ordina per importo decrescente
+  const byCategory = Array.from(categoryMap.entries())
+    .map(([category, data]) => ({
+      category,
+      amount: data.amount,
+      count: data.count,
+    }))
+    .sort((a, b) => b.amount - a.amount); // Ordina per importo decrescente
 
   return {
     totalAmount,
     totalCount,
-    byCategory
+    byCategory,
   };
 };
 
 // Calcola saldi per metodo di pagamento
-export const fetchBalances = async (): Promise<BalancesReport> => {
+export const fetchBalances = async (eventId: string): Promise<BalancesReport> => {
   const PRICE_PER_PERSON = 15;
-  const PAYMENT_METHODS = ['paypal', 'contanti', 'p2p', 'bonifico'];
+  const PAYMENT_METHODS = ["paypal", "contanti", "p2p", "bonifico"];
 
-  // Conta persone per metodo di pagamento (solo PAGANTI)
+  // Conta persone per metodo di pagamento (solo PAGANTI nell'evento)
   const invitees = await prisma.invitee.findMany({
-    where: { listType: 'PAGANTE' },
-    select: { paymentType: true }
+    where: { eventId, listType: "PAGANTE" },
+    select: { paymentType: true },
   });
 
   // Mappa: metodo → numero persone
@@ -130,8 +132,8 @@ export const fetchBalances = async (): Promise<BalancesReport> => {
     }
   }
 
-  // Conta spese per metodo di pagamento
-  const expenses = await prisma.expense.findMany();
+  // Conta spese per metodo di pagamento (nell'evento)
+  const expenses = await prisma.expense.findMany({ where: { eventId } });
   const expensesByMethod = new Map<string, number>();
   for (const method of PAYMENT_METHODS) {
     expensesByMethod.set(method, 0);
@@ -160,7 +162,7 @@ export const fetchBalances = async (): Promise<BalancesReport> => {
       income,
       expenses: expensesAmount,
       balance,
-      personCount
+      personCount,
     });
 
     totalIncome += income;
@@ -171,12 +173,12 @@ export const fetchBalances = async (): Promise<BalancesReport> => {
     balances,
     totalIncome,
     totalExpenses,
-    totalBalance: totalIncome - totalExpenses
+    totalBalance: totalIncome - totalExpenses,
   };
 };
 
 // Crea nuova spesa
-export const createExpense = async (data: CreateExpenseDto) => {
+export const createExpense = async (data: CreateExpenseDto, eventId: string) => {
   return prisma.expense.create({
     data: {
       description: data.description.trim(),
@@ -184,8 +186,9 @@ export const createExpense = async (data: CreateExpenseDto) => {
       category: data.category,
       paymentMethod: data.paymentMethod.toLowerCase(),
       date: data.date || new Date(),
-      notes: data.notes?.trim() || null
-    }
+      notes: data.notes?.trim() || null,
+      eventId,
+    },
   });
 };
 
@@ -202,7 +205,7 @@ export const updateExpense = async (id: string, data: UpdateExpenseDto) => {
 
   return prisma.expense.update({
     where: { id },
-    data: updateData
+    data: updateData,
   });
 };
 

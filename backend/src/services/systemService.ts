@@ -32,16 +32,17 @@ export const updateSystemStatus = async (status: EventStatus) => {
   });
 };
 
-export const getDashboardMetrics = async () => {
+export const getDashboardMetrics = async (eventId: string) => {
   const [total, entered, notEntered, pagantiTotal, greenTotal] = await Promise.all([
-    prisma.invitee.count(),
-    prisma.invitee.count({ where: { hasEntered: true } }),
-    prisma.invitee.count({ where: { hasEntered: false } }),
-    prisma.invitee.count({ where: { listType: 'PAGANTE' } }),
-    prisma.invitee.count({ where: { listType: 'GREEN' } }),
+    prisma.invitee.count({ where: { eventId } }),
+    prisma.invitee.count({ where: { eventId, hasEntered: true } }),
+    prisma.invitee.count({ where: { eventId, hasEntered: false } }),
+    prisma.invitee.count({ where: { eventId, listType: "PAGANTE" } }),
+    prisma.invitee.count({ where: { eventId, listType: "GREEN" } }),
   ]);
 
-  const capacity = await prisma.systemConfig.findFirst();
+  // Recupera lo stato dell'evento direttamente dalla tabella Event
+  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { status: true } });
 
   return {
     total,
@@ -49,6 +50,6 @@ export const getDashboardMetrics = async () => {
     notEntered,
     pagantiTotal,
     greenTotal,
-    eventStatus: capacity?.eventStatus ?? "ACTIVE",
+    eventStatus: event?.status ?? "ACTIVE",
   };
 };

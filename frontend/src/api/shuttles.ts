@@ -13,7 +13,7 @@ export interface ShuttleMachine {
 export interface ShuttleSlot {
   id: string;
   direction: ShuttleDirection;
-  time: string; // HH:mm
+  time: string;
   capacity: number;
   occupancy?: number;
 }
@@ -29,8 +29,8 @@ export interface ShuttleAssignment {
   machine: ShuttleMachine;
 }
 
-export const fetchShuttleConfig = async () => {
-  const res = await apiClient.get("/shuttles/config");
+export const fetchShuttleConfig = async (eventId: string) => {
+  const res = await apiClient.get(`/events/${eventId}/shuttles/config`);
   return res.data as {
     machines: ShuttleMachine[];
     slotCapacity: number;
@@ -41,32 +41,32 @@ export const fetchShuttleConfig = async () => {
   };
 };
 
-export const fetchSlots = async (direction: ShuttleDirection) => {
-  const res = await apiClient.get<ShuttleSlot[]>("/shuttles/slots", { params: { direction } });
+export const fetchSlots = async (eventId: string, direction: ShuttleDirection) => {
+  const res = await apiClient.get<ShuttleSlot[]>(`/events/${eventId}/shuttles/slots`, { params: { direction } });
   return res.data;
 };
 
-export const fetchAssignments = async (params: { direction?: ShuttleDirection; time?: string; machineId?: string }) => {
-  const res = await apiClient.get<ShuttleAssignment[]>("/shuttles/assignments", { params });
+export const fetchAssignments = async (eventId: string, params: { direction?: ShuttleDirection; time?: string; machineId?: string }) => {
+  const res = await apiClient.get<ShuttleAssignment[]>(`/events/${eventId}/shuttles/assignments`, { params });
   return res.data;
 };
 
-export const createAssignment = async (payload: { direction: ShuttleDirection; time: string; machineId: string; inviteeId?: string; fullName?: string; }) => {
-  const res = await apiClient.post<ShuttleAssignment>("/shuttles/assignments", payload);
+export const createAssignment = async (eventId: string, payload: { direction: ShuttleDirection; time: string; machineId: string; inviteeId?: string; fullName?: string; }) => {
+  const res = await apiClient.post<ShuttleAssignment>(`/events/${eventId}/shuttles/assignments`, payload);
   return res.data;
 };
 
-export const updateAssignmentStatus = async (id: string, status: ShuttleBoardStatus) => {
-  const res = await apiClient.patch<ShuttleAssignment>(`/shuttles/assignments/${id}`, { status });
+export const updateAssignmentStatus = async (eventId: string, id: string, status: ShuttleBoardStatus) => {
+  const res = await apiClient.patch<ShuttleAssignment>(`/events/${eventId}/shuttles/assignments/${id}`, { status });
   return res.data;
 };
 
-export const deleteAssignment = async (id: string) => {
-  await apiClient.delete(`/shuttles/assignments/${id}`);
+export const deleteAssignment = async (eventId: string, id: string) => {
+  await apiClient.delete(`/events/${eventId}/shuttles/assignments/${id}`);
 };
 
-export const deleteSlot = async (direction: ShuttleDirection, time: string) => {
-  await apiClient.delete(`/shuttles/slots/${direction}/${encodeURIComponent(time)}`);
+export const deleteSlot = async (eventId: string, direction: ShuttleDirection, time: string) => {
+  await apiClient.delete(`/events/${eventId}/shuttles/slots/${direction}/${encodeURIComponent(time)}`);
 };
 
 export interface SyncFromSheetsResult {
@@ -77,11 +77,10 @@ export interface SyncFromSheetsResult {
   deleted: number;
 }
 
-export const syncShuttlesFromSheets = async (direction: ShuttleDirection, pruneMissing = false): Promise<SyncFromSheetsResult> => {
-  const res = await apiClient.post<SyncFromSheetsResult>("/shuttles/sync-from-sheets", {
+export const syncShuttlesFromSheets = async (eventId: string, direction: ShuttleDirection, pruneMissing = false): Promise<SyncFromSheetsResult> => {
+  const res = await apiClient.post<SyncFromSheetsResult>(`/events/${eventId}/shuttles/sync-from-sheets`, {
     direction,
     pruneMissing,
   });
   return res.data;
 };
-

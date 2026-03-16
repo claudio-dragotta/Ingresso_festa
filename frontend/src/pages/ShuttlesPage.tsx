@@ -3,30 +3,32 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ShuttleAssignment, ShuttleDirection, ShuttleMachine, ShuttleSlot } from "../api/shuttles";
 import { createAssignment, fetchAssignments, fetchShuttleConfig, fetchSlots, updateAssignmentStatus, syncShuttlesFromSheets, deleteSlot } from "../api/shuttles";
 import { useAuth } from "../context/AuthContext";
+import { useEvent } from "../context/EventContext";
 import "./ShuttlesPage.css";
 
 const ShuttlesPage = () => {
   const { role } = useAuth();
+  const { currentEvent } = useEvent();
+  const eventId = currentEvent!.id;
   const qc = useQueryClient();
   const canWrite = role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE";
   const canManageSlots = role === "ADMIN" || role === "ORGANIZER";
   const isAdmin = role === "ADMIN";
 
   const [direction, setDirection] = useState<ShuttleDirection>("ANDATA");
-  const { data: cfg } = useQuery({ queryKey: ["shuttle-config"], queryFn: fetchShuttleConfig });
-  const { data: slots = [] } = useQuery<ShuttleSlot[]>({ queryKey: ["slots", direction], queryFn: () => fetchSlots(direction) });
+  const { data: cfg } = useQuery({ queryKey: ["shuttle-config", eventId], queryFn: () => fetchShuttleConfig(eventId) });
+  const { data: slots = [] } = useQuery<ShuttleSlot[]>({ queryKey: ["slots", eventId, direction], queryFn: () => fetchSlots(eventId, direction) });
 
   const [selectedTime, setSelectedTime] = useState<string | "ALL">("ALL");
   useEffect(() => { setSelectedTime("ALL"); }, [direction]);
 
   const { data: assignments = [] } = useQuery<ShuttleAssignment[]>({
-    queryKey: ["assignments", direction, selectedTime],
-    queryFn: () => fetchAssignments({ direction, time: selectedTime === "ALL" ? undefined : selectedTime }),
+    queryKey: ["assignments", eventId, direction, selectedTime],
+    queryFn: () => fetchAssignments(eventId, { direction, time: selectedTime === "ALL" ? undefined : selectedTime }),
   });
 
   const machines: ShuttleMachine[] = useMemo(() => cfg?.machines ?? [], [cfg]);
   const times = useMemo(() => {
-    // Estrai orari unici e ordina cronologicamente con gestione post-mezzanotte
     const toMinutes = (t: string) => {
       const [h, m] = t.split(":").map(Number);
       return (h * 60) + m;
@@ -34,8 +36,6 @@ const ShuttlesPage = () => {
 
     const uniqueTimes = Array.from(new Set(slots.map((s) => s.time)));
 
-    // Usa una "ancora" per ruotare l'ordinamento in modo che gli orari dopo mezzanotte
-    // (es. 00:30) vengano dopo quelli serali (es. 22:10).
     const anchorTime = direction === "ANDATA" ? cfg?.outbound?.from : cfg?.return?.from;
     const anchorMinutes = anchorTime ? toMinutes(anchorTime) : 0;
 
@@ -43,30 +43,27 @@ const ShuttlesPage = () => {
       const am = toMinutes(a);
       const bm = toMinutes(b);
       if (anchorTime) {
-        // Ruota rispetto all'ancora: ordina per distanza crescente dall'ancora
         const ka = (am - anchorMinutes + 1440) % 1440;
         const kb = (bm - anchorMinutes + 1440) % 1440;
         return ka - kb;
       }
-      // Fallback: ordinamento naturale per minuti
       return am - bm;
     });
   }, [slots, cfg, direction]);
 
   const toggleMut = useMutation({
-    mutationFn: (a: ShuttleAssignment) => updateAssignmentStatus(a.id, a.status === "BOARDED" ? "PENDING" : "BOARDED"),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["assignments"] }),
+    mutationFn: (a: ShuttleAssignment) => updateAssignmentStatus(eventId, a.id, a.status === "BOARDED" ? "PENDING" : "BOARDED"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["assignments", eventId] }),
   });
 
   const addMut = useMutation({
-    mutationFn: (payload: { direction: ShuttleDirection; time: string; machineId: string; fullName: string }) => createAssignment(payload),
+    mutationFn: (payload: { direction: ShuttleDirection; time: string; machineId: string; fullName: string }) => createAssignment(eventId, payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["assignments"] });
-      qc.invalidateQueries({ queryKey: ["slots"] });
+      qc.invalidateQueries({ queryKey: ["assignments", eventId] });
+      qc.invalidateQueries({ queryKey: ["slots", eventId] });
     },
   });
 
-  // Mutation per sincronizzazione da Google Sheets
   const [syncResult, setSyncResult] = useState<{
     success: boolean;
     message: string;
@@ -74,10 +71,10 @@ const ShuttlesPage = () => {
   } | null>(null);
 
   const syncMut = useMutation({
-    mutationFn: () => syncShuttlesFromSheets(direction, false),
+    mutationFn: () => syncShuttlesFromSheets(eventId, direction, false),
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["assignments"] });
-      qc.invalidateQueries({ queryKey: ["slots"] });
+      qc.invalidateQueries({ queryKey: ["assignments", eventId] });
+      qc.invalidateQueries({ queryKey: ["slots", eventId] });
       setSyncResult({
         success: true,
         message: `Sincronizzazione ${direction} completata!`,
@@ -98,18 +95,17 @@ const ShuttlesPage = () => {
     },
   });
 
-  // Sync both directions in one click
   const syncBothMut = useMutation({
     mutationFn: async () => {
       const [outRes, retRes] = await Promise.all([
-        syncShuttlesFromSheets("ANDATA", false),
-        syncShuttlesFromSheets("RITORNO", false),
+        syncShuttlesFromSheets(eventId, "ANDATA", false),
+        syncShuttlesFromSheets(eventId, "RITORNO", false),
       ]);
       return { outRes, retRes };
     },
     onSuccess: ({ outRes, retRes }) => {
-      qc.invalidateQueries({ queryKey: ["assignments"] });
-      qc.invalidateQueries({ queryKey: ["slots"] });
+      qc.invalidateQueries({ queryKey: ["assignments", eventId] });
+      qc.invalidateQueries({ queryKey: ["slots", eventId] });
       setSyncResult({
         success: true,
         message: "Sincronizzazione Andata + Ritorno completata!",
@@ -130,12 +126,11 @@ const ShuttlesPage = () => {
     },
   });
 
-  // Sync current direction with prune (mirror the sheet: remove missing)
   const syncPruneMut = useMutation({
-    mutationFn: () => syncShuttlesFromSheets(direction, true),
+    mutationFn: () => syncShuttlesFromSheets(eventId, direction, true),
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["assignments"] });
-      qc.invalidateQueries({ queryKey: ["slots"] });
+      qc.invalidateQueries({ queryKey: ["assignments", eventId] });
+      qc.invalidateQueries({ queryKey: ["slots", eventId] });
       setSyncResult({
         success: true,
         message: `Allineamento ${direction} completato (sovrascrive)!`,
@@ -156,18 +151,17 @@ const ShuttlesPage = () => {
     },
   });
 
-  // Sync both directions with prune
   const syncBothPruneMut = useMutation({
     mutationFn: async () => {
       const [outRes, retRes] = await Promise.all([
-        syncShuttlesFromSheets("ANDATA", true),
-        syncShuttlesFromSheets("RITORNO", true),
+        syncShuttlesFromSheets(eventId, "ANDATA", true),
+        syncShuttlesFromSheets(eventId, "RITORNO", true),
       ]);
       return { outRes, retRes };
     },
     onSuccess: ({ outRes, retRes }) => {
-      qc.invalidateQueries({ queryKey: ["assignments"] });
-      qc.invalidateQueries({ queryKey: ["slots"] });
+      qc.invalidateQueries({ queryKey: ["assignments", eventId] });
+      qc.invalidateQueries({ queryKey: ["slots", eventId] });
       setSyncResult({
         success: true,
         message: "Allineamento Andata + Ritorno completato (sovrascrive)!",
@@ -189,10 +183,10 @@ const ShuttlesPage = () => {
   });
 
   const deleteSlotMut = useMutation({
-    mutationFn: (time: string) => deleteSlot(direction, time),
+    mutationFn: (time: string) => deleteSlot(eventId, direction, time),
     onSuccess: (_, time) => {
-      qc.invalidateQueries({ queryKey: ["slots"] });
-      qc.invalidateQueries({ queryKey: ["assignments"] });
+      qc.invalidateQueries({ queryKey: ["slots", eventId] });
+      qc.invalidateQueries({ queryKey: ["assignments", eventId] });
       setSyncResult({
         success: true,
         message: `Slot ${time} eliminato con successo`,
@@ -208,7 +202,6 @@ const ShuttlesPage = () => {
     },
   });
 
-  // Form stato locale
   const [newName, setNewName] = useState("");
   const [newMachine, setNewMachine] = useState<string>("");
   const [newTime, setNewTime] = useState<string>("");
@@ -221,7 +214,6 @@ const ShuttlesPage = () => {
     const filterByTime = selectedTime === "ALL" ? assignments : assignments.filter(a => a.slot.time === selectedTime);
     const map = new Map<string, Map<string, ShuttleAssignment[]>>();
 
-    // Initialize: for each machine, create a map of time -> assignments[]
     for (const m of machines) {
       const timeMap = new Map<string, ShuttleAssignment[]>();
       for (const t of times) {
@@ -230,7 +222,6 @@ const ShuttlesPage = () => {
       map.set(m.id, timeMap);
     }
 
-    // Fill with actual assignments
     for (const a of filterByTime) {
       const timeMap = map.get(a.machineId);
       if (timeMap) {

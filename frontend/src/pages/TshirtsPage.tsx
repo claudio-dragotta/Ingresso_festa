@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
+import { useEvent } from "../context/EventContext";
 import {
   fetchTshirts,
   fetchTshirtStats,
@@ -18,11 +19,12 @@ import "./TshirtsPage.css";
 
 export default function TshirtsPage() {
   const { isAdmin, role } = useAuth();
+  const { currentEvent } = useEvent();
+  const eventId = currentEvent!.id;
   const queryClient = useQueryClient();
 
-  // ORGANIZER può vedere tutte le magliette in SOLA LETTURA
   const canViewAll = isAdmin || role === 'ORGANIZER';
-  const canModify = isAdmin; // Solo ADMIN può modificare/eliminare/aggiungere
+  const canModify = isAdmin;
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,48 +37,42 @@ export default function TshirtsPage() {
     type: ""
   });
 
-  // Query per magliette (admin/organizer: tutte, entrance/shuttle: PR e Vincenti + ricerca)
   const { data: tshirts = [], isLoading } = useQuery<Tshirt[]>({
-    queryKey: ["tshirts", canViewAll ? "all" : searchQuery],
-    queryFn: () => fetchTshirts(searchQuery.length >= 2 ? searchQuery : undefined),
+    queryKey: ["tshirts", eventId, canViewAll ? "all" : searchQuery],
+    queryFn: () => fetchTshirts(eventId, searchQuery.length >= 2 ? searchQuery : undefined),
     refetchInterval: canViewAll ? 30000 : false
   });
 
-  // Query per statistiche (solo admin)
   const { data: stats } = useQuery<TshirtStats>({
-    queryKey: ["tshirts", "stats"],
-    queryFn: fetchTshirtStats,
+    queryKey: ["tshirts", "stats", eventId],
+    queryFn: () => fetchTshirtStats(eventId),
     enabled: isAdmin,
     refetchInterval: isAdmin ? 30000 : false
   });
 
-  // Mutation per creare maglietta
   const createMutation = useMutation({
-    mutationFn: createTshirt,
+    mutationFn: (data: TshirtInput) => createTshirt(eventId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tshirts"] });
+      queryClient.invalidateQueries({ queryKey: ["tshirts", eventId] });
       setShowAddForm(false);
       setFormData({ firstName: "", lastName: "", size: "M", type: "" });
     }
   });
 
-  // Mutation per toggle consegna
   const toggleMutation = useMutation({
-    mutationFn: toggleTshirtReceived,
+    mutationFn: (id: string) => toggleTshirtReceived(eventId, id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tshirts"] });
+      queryClient.invalidateQueries({ queryKey: ["tshirts", eventId] });
     }
   });
 
-  // Mutation per eliminare
   const deleteMutation = useMutation({
-    mutationFn: deleteTshirt,
+    mutationFn: (id: string) => deleteTshirt(eventId, id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tshirts"] });
+      queryClient.invalidateQueries({ queryKey: ["tshirts", eventId] });
     }
   });
 
-  // Mutation per sync
   const [notice, setNotice] = useState<{
     kind: 'sync' | 'align' | 'reset';
     success: boolean;
@@ -85,10 +81,10 @@ export default function TshirtsPage() {
   } | null>(null);
 
   const syncMutation = useMutation({
-    mutationFn: () => syncTshirts(),
+    mutationFn: () => syncTshirts(eventId),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["tshirts"] });
-      queryClient.invalidateQueries({ queryKey: ["tshirts", "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["tshirts", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["tshirts", "stats", eventId] });
       setNotice({ kind: 'sync', success: true, title: 'Sincronizzazione completata!', body: `${data.newImported} nuove importate, ${data.alreadyExists} già presenti` });
     },
     onError: (err: any) => setNotice({ kind: 'sync', success: false, title: 'Errore sincronizzazione', body: err?.message || 'Errore imprevisto' })
@@ -97,38 +93,36 @@ export default function TshirtsPage() {
   const alignMutation = useMutation({
     mutationFn: async () => {
       const [people, tshirtsRes] = await Promise.all([
-        syncGoogleSheets({ pruneMissing: true }),
-        syncTshirts({ pruneMissing: true }),
+        syncGoogleSheets(eventId, { pruneMissing: true }),
+        syncTshirts(eventId, { pruneMissing: true }),
       ]);
       return { people, tshirts: tshirtsRes } as any;
     },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["tshirts"] });
-      queryClient.invalidateQueries({ queryKey: ["tshirts", "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["tshirts", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["tshirts", "stats", eventId] });
       setNotice({ kind: 'align', success: true, title: 'Allineamento completato!', body: `Magliette: +${data.tshirts.newImported} nuove, ${data.tshirts.alreadyExists} già presenti. Invitati: +${data.people.newImported}/${data.people.totalFromSheet} (mancanti rimossi)` });
     },
     onError: (err: any) => setNotice({ kind: 'align', success: false, title: 'Errore allineamento', body: err?.message || 'Errore imprevisto' })
   });
 
   const resetAllMutation = useMutation({
-    mutationFn: resetAndReimport,
+    mutationFn: () => resetAndReimport(eventId),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["tshirts"] });
-      queryClient.invalidateQueries({ queryKey: ["tshirts", "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["tshirts", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["tshirts", "stats", eventId] });
       setNotice({ kind: 'reset', success: true, title: 'Reset + Reimport completato!', body: `Reset: ${data.reset.deletedInvitees} invitati, ${data.reset.deletedLogs} log, ${data.reset.deletedTshirts} magliette. Import: +${data.import.newImported} invitati, +${data.tshirts.newImported} magliette` });
     },
     onError: (err: any) => setNotice({ kind: 'reset', success: false, title: 'Errore reset/reimport', body: err?.message || 'Errore imprevisto' })
   });
 
-  // Mutation aggiornamento taglia/tipologia
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Pick<Tshirt, 'size' | 'type'>> }) => updateTshirt(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<Pick<Tshirt, 'size' | 'type'>> }) => updateTshirt(eventId, id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tshirts"] });
+      queryClient.invalidateQueries({ queryKey: ["tshirts", eventId] });
     }
   });
 
-  // Capitalizza automaticamente
   const capitalizeWords = (str: string): string => {
     return str
       .split(' ')
@@ -160,7 +154,6 @@ export default function TshirtsPage() {
     }
   };
 
-  // Filtra client-side per admin/organizer, server-side per entrance/shuttle
   const filteredTshirts = canViewAll && searchQuery.trim()
     ? tshirts.filter((t) => {
         const query = searchQuery.toLowerCase();
@@ -182,7 +175,6 @@ export default function TshirtsPage() {
 
   return (
     <div className="tshirts-page">
-      {/* Header con sync button (solo admin) */}
       <div className="tshirts-header">
         <div className="tshirt-title" aria-label="Pagina Magliette">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -237,7 +229,6 @@ export default function TshirtsPage() {
         )}
       </div>
 
-      {/* Banner risultato azioni (sync/allinea/reset) */}
       {notice && (
         <div className={`sync-result ${notice.success ? 'success' : 'error'}`}>
           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -254,7 +245,6 @@ export default function TshirtsPage() {
         </div>
       )}
 
-      {/* Statistiche (solo admin) */}
       {isAdmin && stats && (
         <div className="stats-container">
           <div className="stat-card">
@@ -272,7 +262,6 @@ export default function TshirtsPage() {
         </div>
       )}
 
-      {/* Statistiche per taglia (solo admin) */}
       {isAdmin && stats && Object.keys(stats.bySizeAndType).length > 0 && (
         <div className="size-stats">
           <h3>Statistiche per Taglia</h3>
@@ -300,7 +289,6 @@ export default function TshirtsPage() {
         </div>
       )}
 
-      {/* Barra ricerca */}
       <div className="search-container">
         <div className="search-box">
           <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -324,7 +312,6 @@ export default function TshirtsPage() {
         </div>
       </div>
 
-      {/* Pulsante Aggiungi (solo admin) */}
       {isAdmin && (
         <div className="actions-bar">
           <button className="add-button" onClick={() => setShowAddForm(!showAddForm)}>
@@ -336,7 +323,6 @@ export default function TshirtsPage() {
         </div>
       )}
 
-      {/* Form aggiunta (solo admin) */}
       {isAdmin && showAddForm && (
         <div className="add-form-container">
           <form className="add-form" onSubmit={handleSubmit}>
@@ -383,7 +369,6 @@ export default function TshirtsPage() {
                   <option value="L">L</option>
                   <option value="XL">XL</option>
                   <option value="2XL">2XL</option>
-                  
                 </select>
               </div>
 
@@ -414,7 +399,6 @@ export default function TshirtsPage() {
         </div>
       )}
 
-      {/* Lista magliette */}
       <div className="tshirts-list">
         {isLoading ? (
           <div className="loading-state">
@@ -470,7 +454,6 @@ export default function TshirtsPage() {
                           <option value="L">L</option>
                           <option value="XL">XL</option>
                           <option value="2XL">2XL</option>
-
                         </select>
                       ) : (
                         <span className="size-badge">{tshirt.size}</span>

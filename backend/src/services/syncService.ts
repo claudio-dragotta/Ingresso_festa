@@ -1,9 +1,8 @@
-import { logger } from '../logger';
-import { fetchAndParseGoogleSheets, ParsedPerson } from './googleSheetsService';
-import { syncTshirtsFromGoogleSheets } from './tshirtService';
-import { createInvitee } from './inviteeService';
+import { logger } from "../logger";
+import { fetchAndParseGoogleSheets, ParsedPerson } from "./googleSheetsService";
+import { syncTshirtsFromGoogleSheets } from "./tshirtService";
 import { ListType } from "@prisma/client";
-import { prisma } from '../lib/prisma';
+import { prisma } from "../lib/prisma";
 
 /**
  * Sync Service
@@ -28,15 +27,17 @@ export interface SyncResult {
 /**
  * Sincronizza entrambi i Google Sheets (PAGANTI e GREEN) con il database
  * - Legge tutte le persone dai fogli
- * - Controlla se esistono già nel database (per nome+cognome)
+ * - Controlla se esistono già nel database (per nome+cognome nell'evento)
  * - Crea nuovi invitati per chi non esiste
  *
+ * @param eventId ID dell'evento per cui sincronizzare
+ * @param options Opzioni di sincronizzazione
  * @returns Risultato dettagliato della sincronizzazione
  */
-export async function syncGoogleSheetToDatabase(options?: { pruneMissing?: boolean }): Promise<SyncResult> {
+export async function syncGoogleSheetToDatabase(eventId: string, options?: { pruneMissing?: boolean }): Promise<SyncResult> {
   const startTime = Date.now();
 
-  logger.info('🔄 Avvio sincronizzazione Google Sheets (PAGANTI + GREEN)...');
+  logger.info("🔄 Avvio sincronizzazione Google Sheets (PAGANTI + GREEN)...");
 
   const result: SyncResult = {
     success: false,
@@ -53,26 +54,27 @@ export async function syncGoogleSheetToDatabase(options?: { pruneMissing?: boole
 
   try {
     // 1. Leggi e parsa entrambi i fogli Google
+    // TODO: per-event Google Sheets integration - usare event.googleSheetId in un follow-up
     const persons = await fetchAndParseGoogleSheets();
     result.totalFromSheet = persons.length;
 
     if (persons.length === 0) {
-      logger.warn('Nessuna persona trovata nei Google Sheets');
+      logger.warn("Nessuna persona trovata nei Google Sheets");
       result.success = true;
       result.duration = Date.now() - startTime;
       return result;
     }
 
-    const pagantiCount = persons.filter(p => p.listType === 'PAGANTE').length;
-    const greenCount = persons.filter(p => p.listType === 'GREEN').length;
+    const pagantiCount = persons.filter(p => p.listType === "PAGANTE").length;
+    const greenCount = persons.filter(p => p.listType === "GREEN").length;
     logger.info(`📋 Trovate ${persons.length} persone (${pagantiCount} PAGANTI, ${greenCount} GREEN)`);
 
     // 2. Per ogni persona, verifica se esiste già e importa se nuova
     const sheetKeys = new Set<string>();
     const norm = (s: string) => s
-      .normalize('NFC')
-      .replace(/\u00A0/g, ' ') // NBSP -> space
-      .replace(/\s+/g, ' ')
+      .normalize("NFC")
+      .replace(/\u00A0/g, " ") // NBSP -> space
+      .replace(/\s+/g, " ")
       .trim()
       .toLowerCase();
     const makeKey = (fn: string, ln: string) => `${norm(ln)}|${norm(fn)}`;
@@ -80,11 +82,11 @@ export async function syncGoogleSheetToDatabase(options?: { pruneMissing?: boole
     for (const person of persons) {
       try {
         sheetKeys.add(makeKey(person.firstName, person.lastName));
-        const imported = await importPersonIfNotExists(person);
+        const imported = await importPersonIfNotExists(person, eventId);
 
         if (imported) {
           result.newImported++;
-          if (person.listType === 'PAGANTE') {
+          if (person.listType === "PAGANTE") {
             result.breakdown.paganti.imported++;
           } else {
             result.breakdown.green.imported++;
@@ -92,7 +94,7 @@ export async function syncGoogleSheetToDatabase(options?: { pruneMissing?: boole
           logger.info(`✅ Importato ${person.listType}: ${person.lastName} ${person.firstName}`);
         } else {
           result.alreadyExists++;
-          if (person.listType === 'PAGANTE') {
+          if (person.listType === "PAGANTE") {
             result.breakdown.paganti.exists++;
           } else {
             result.breakdown.green.exists++;
@@ -108,7 +110,10 @@ export async function syncGoogleSheetToDatabase(options?: { pruneMissing?: boole
 
     // 3. Opzionale: elimina dal DB gli invitati non più presenti nei fogli (prune)
     if (options?.pruneMissing) {
-      const all = await prisma.invitee.findMany({ select: { id: true, firstName: true, lastName: true } });
+      const all = await prisma.invitee.findMany({
+        where: { eventId },
+        select: { id: true, firstName: true, lastName: true },
+      });
       const toDelete = all.filter(inv => !sheetKeys.has(makeKey(inv.firstName, inv.lastName)));
       if (toDelete.length > 0) {
         // elimina in batch
@@ -129,9 +134,8 @@ export async function syncGoogleSheetToDatabase(options?: { pruneMissing?: boole
     );
 
     return result;
-
   } catch (error: any) {
-    logger.error('❌ Errore sincronizzazione Google Sheets:', error);
+    logger.error("❌ Errore sincronizzazione Google Sheets:", error);
     result.errors.push(error.message);
     result.duration = Date.now() - startTime;
     return result;
@@ -139,17 +143,18 @@ export async function syncGoogleSheetToDatabase(options?: { pruneMissing?: boole
 }
 
 /**
- * Importa una persona se non esiste già nel database
- * Controllo duplicati: firstName + lastName (case-insensitive)
+ * Importa una persona se non esiste già nel database per questo evento
+ * Controllo duplicati: firstName + lastName (case-insensitive) all'interno dell'evento
  *
  * @returns true se importato, false se già esistente
  */
-async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
+export async function importPersonIfNotExists(person: ParsedPerson, eventId: string): Promise<boolean> {
   const { firstName, lastName, listType, paymentType } = person;
 
   // Cerca se esiste già (controllo case-insensitive manuale)
   // SQLite non supporta mode: 'insensitive', quindi recuperiamo tutti e filtriamo in memoria
   const allInvitees = await prisma.invitee.findMany({
+    where: { eventId },
     select: {
       id: true,
       firstName: true,
@@ -160,9 +165,9 @@ async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
   });
 
   const norm = (s: string) => s
-    .normalize('NFC')
-    .replace(/\u00A0/g, ' ')
-    .replace(/\s+/g, ' ')
+    .normalize("NFC")
+    .replace(/\u00A0/g, " ")
+    .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
 
@@ -172,11 +177,11 @@ async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
 
   if (existing) {
     // Se esiste e la sorgente attuale è PAGANTE ma in DB è GREEN, promuovi a PAGANTE
-    if (listType === 'PAGANTE' && existing.listType === 'GREEN') {
+    if (listType === "PAGANTE" && existing.listType === "GREEN") {
       await prisma.invitee.update({
         where: { id: existing.id },
         data: {
-          listType: 'PAGANTE',
+          listType: "PAGANTE",
           paymentType: paymentType ?? existing.paymentType ?? null,
         },
       });
@@ -187,11 +192,12 @@ async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
   // Non esiste -> crea nuovo invitato (senza scrivere su Google Sheets)
   await prisma.invitee.create({
     data: {
-      firstName: (firstName || '').trim().replace(/\s+/g, ' '),
-      lastName: lastName.trim().replace(/\s+/g, ' '),
+      firstName: (firstName || "").trim().replace(/\s+/g, " "),
+      lastName: lastName.trim().replace(/\s+/g, " "),
       listType: listType as ListType,
-      paymentType: listType === 'PAGANTE' ? (paymentType ?? null) : null,
+      paymentType: listType === "PAGANTE" ? (paymentType ?? null) : null,
       hasEntered: false,
+      eventId,
     },
   });
 
@@ -204,12 +210,12 @@ async function importPersonIfNotExists(person: ParsedPerson): Promise<boolean> {
 let syncIntervalId: NodeJS.Timeout | null = null;
 
 /**
- * Avvia la sincronizzazione automatica periodica
+ * Avvia la sincronizzazione automatica periodica per tutti gli eventi attivi
  * @param intervalMinutes Intervallo in minuti (default: 10)
  */
 export function startAutoSync(intervalMinutes: number = 10): void {
   if (syncIntervalId) {
-    logger.warn('Auto-sync già attivo, non avvio duplicato');
+    logger.warn("Auto-sync già attivo, non avvio duplicato");
     return;
   }
 
@@ -217,28 +223,36 @@ export function startAutoSync(intervalMinutes: number = 10): void {
 
   logger.info(`🚀 Avvio auto-sync Google Sheets ogni ${intervalMinutes} minuti`);
 
-  // Prima sincronizzazione immediata (persone + magliette)
-  (async () => {
-    try {
-      await syncGoogleSheetToDatabase();
-    } catch (error) {
-      logger.error('Errore prima sincronizzazione persone:', { error });
-    }
-    try {
-      await syncTshirtsFromGoogleSheets();
-      logger.info('🔄 Sincronizzazione iniziale magliette completata');
-    } catch (error) {
-      logger.error('Errore prima sincronizzazione magliette:', { error });
-    }
-  })();
-
-  // Poi ogni X minuti (persone + magliette)
-  syncIntervalId = setInterval(() => {
-    syncGoogleSheetToDatabase().catch(error => {
-      logger.error('Errore sincronizzazione automatica persone:', { error });
+  // Helper per sincronizzare tutti gli eventi attivi
+  const syncAllActiveEvents = async () => {
+    const activeEvents = await prisma.event.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true },
     });
-    syncTshirtsFromGoogleSheets().catch(error => {
-      logger.error('Errore sincronizzazione automatica magliette:', { error });
+
+    for (const event of activeEvents) {
+      try {
+        await syncGoogleSheetToDatabase(event.id);
+      } catch (error) {
+        logger.error(`Errore sincronizzazione persone evento ${event.id}:`, { error });
+      }
+      try {
+        await syncTshirtsFromGoogleSheets(event.id);
+      } catch (error) {
+        logger.error(`Errore sincronizzazione magliette evento ${event.id}:`, { error });
+      }
+    }
+  };
+
+  // Prima sincronizzazione immediata
+  syncAllActiveEvents().catch(error => {
+    logger.error("Errore prima sincronizzazione:", { error });
+  });
+
+  // Poi ogni X minuti
+  syncIntervalId = setInterval(() => {
+    syncAllActiveEvents().catch(error => {
+      logger.error("Errore sincronizzazione automatica:", { error });
     });
   }, intervalMs);
 }
@@ -250,7 +264,7 @@ export function stopAutoSync(): void {
   if (syncIntervalId) {
     clearInterval(syncIntervalId);
     syncIntervalId = null;
-    logger.info('🛑 Auto-sync Google Sheets fermato');
+    logger.info("🛑 Auto-sync Google Sheets fermato");
   }
 }
 

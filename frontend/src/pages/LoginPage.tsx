@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useEvent } from "../context/EventContext";
 import "./LoginPage.css";
 
 const LoginPage = () => {
-  const { login, isAuthenticated, isAdmin } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+  const { currentEvent } = useEvent();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -18,9 +20,9 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(isAdmin ? "/dashboard" : "/search", { replace: true });
+      navigate(currentEvent ? "/" : "/select-event", { replace: true });
     }
-  }, [isAuthenticated, isAdmin, navigate]);
+  }, [isAuthenticated, currentEvent, navigate]);
 
   // Prefill username if user asked to remember it
   useEffect(() => {

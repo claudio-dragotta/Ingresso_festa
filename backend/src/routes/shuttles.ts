@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { authenticate } from "../middleware/auth";
 import { adminOrOrganizerOnly, shuttleWrite, shuttleAccess, allowRoles } from "../middleware/roles";
 import { config } from "../config";
 import {
@@ -16,17 +15,17 @@ import {
   syncShuttlesFromGoogleSheets,
 } from "../services/shuttleService";
 import { ShuttleBoardStatus, ShuttleDirection } from "@prisma/client";
+import { EventRequest } from "../middleware/eventAccess";
 
 const router = Router();
 
-// All routes authenticated
-router.use(authenticate);
+// All routes already authenticated by parent router
 router.use(shuttleAccess);
 
-// GET /api/shuttles/config
-router.get("/config", async (req, res, next) => {
+// GET /shuttles/config
+router.get("/config", async (req: EventRequest, res, next) => {
   try {
-    const machines = await listMachines();
+    const machines = await listMachines(req.eventId!);
     res.json({
       machines,
       slotCapacity: config.shuttle.slotCapacity,
@@ -39,24 +38,24 @@ router.get("/config", async (req, res, next) => {
 });
 
 // Machines
-router.get("/machines", async (_req, res, next) => {
-  try { res.json(await listMachines()); } catch (e) { next(e); }
+router.get("/machines", async (req: EventRequest, res, next) => {
+  try { res.json(await listMachines(req.eventId!)); } catch (e) { next(e); }
 });
-router.post("/machines", adminOrOrganizerOnly, async (req, res, next) => {
+router.post("/machines", adminOrOrganizerOnly, async (req: EventRequest, res, next) => {
   try {
     const { name, color } = req.body as { name?: string; color?: string };
-    const m = await createMachine(name ?? "", color);
+    const m = await createMachine(name ?? "", color, req.eventId!);
     res.status(201).json(m);
   } catch (e) { next(e); }
 });
-router.patch("/machines/:id", adminOrOrganizerOnly, async (req, res, next) => {
+router.patch("/machines/:id", adminOrOrganizerOnly, async (req: EventRequest, res, next) => {
   try {
     const { id } = req.params;
     const m = await updateMachine(id, req.body as any);
     res.json(m);
   } catch (e) { next(e); }
 });
-router.delete("/machines/:id", adminOrOrganizerOnly, async (req, res, next) => {
+router.delete("/machines/:id", adminOrOrganizerOnly, async (req: EventRequest, res, next) => {
   try {
     const { id } = req.params;
     await deleteMachine(id);
@@ -65,24 +64,24 @@ router.delete("/machines/:id", adminOrOrganizerOnly, async (req, res, next) => {
 });
 
 // Slots
-router.get("/slots", async (req, res, next): Promise<void> => {
+router.get("/slots", async (req: EventRequest, res, next): Promise<void> => {
   try {
     const direction = (req.query.direction as ShuttleDirection) ?? "ANDATA";
     if (direction !== "ANDATA" && direction !== "RITORNO") { res.status(400).json({ message: "Direzione non valida" }); return; }
-    const slots = await listSlots(direction);
+    const slots = await listSlots(direction, req.eventId!);
     res.json(slots);
   } catch (e) { next(e); }
 });
 
 // Elimina slot (solo Admin o Organizzatore)
-router.delete("/slots/:direction/:time", adminOrOrganizerOnly, async (req, res, next): Promise<void> => {
+router.delete("/slots/:direction/:time", adminOrOrganizerOnly, async (req: EventRequest, res, next): Promise<void> => {
   try {
     const { direction, time } = req.params;
     if (direction !== "ANDATA" && direction !== "RITORNO") {
       res.status(400).json({ message: "Direzione non valida" });
       return;
     }
-    await deleteSlot(direction as ShuttleDirection, decodeURIComponent(time), true);
+    await deleteSlot(direction as ShuttleDirection, decodeURIComponent(time), req.eventId!, true);
     res.json({ message: `Slot ${time} eliminato con successo` });
   } catch (e) {
     next(e);
@@ -90,29 +89,29 @@ router.delete("/slots/:direction/:time", adminOrOrganizerOnly, async (req, res, 
 });
 
 // Assignments
-router.get("/assignments", async (req, res, next): Promise<void> => {
+router.get("/assignments", async (req: EventRequest, res, next): Promise<void> => {
   try {
     const direction = req.query.direction as ShuttleDirection | undefined;
     const time = req.query.time as string | undefined;
     const machineId = req.query.machineId as string | undefined;
     if (direction && direction !== "ANDATA" && direction !== "RITORNO") { res.status(400).json({ message: "Direzione non valida" }); return; }
-    const list = await listAssignments({ direction, time, machineId });
+    const list = await listAssignments({ direction, time, machineId }, req.eventId!);
     res.json(list);
   } catch (e) { next(e); }
 });
 
 // Creazione assegnazioni: solo Admin o Organizzatore
-router.post("/assignments", adminOrOrganizerOnly, async (req, res, next) => {
+router.post("/assignments", adminOrOrganizerOnly, async (req: EventRequest, res, next) => {
   try {
     const { direction, time, machineId, inviteeId, fullName } = req.body as {
       direction: ShuttleDirection; time: string; machineId: string; inviteeId?: string; fullName?: string;
     };
-    const created = await createAssignment({ direction, time, machineId, inviteeId, fullName });
+    const created = await createAssignment({ direction, time, machineId, inviteeId, fullName }, req.eventId!);
     res.status(201).json(created);
   } catch (e) { next(e); }
 });
 
-router.patch("/assignments/:id", shuttleWrite, async (req, res, next) => {
+router.patch("/assignments/:id", shuttleWrite, async (req: EventRequest, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body as { status: ShuttleBoardStatus };
@@ -122,7 +121,7 @@ router.patch("/assignments/:id", shuttleWrite, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.delete("/assignments/:id", adminOrOrganizerOnly, async (req, res, next) => {
+router.delete("/assignments/:id", adminOrOrganizerOnly, async (req: EventRequest, res, next) => {
   try {
     const { id } = req.params;
     await deleteAssignment(id);
@@ -132,7 +131,7 @@ router.delete("/assignments/:id", adminOrOrganizerOnly, async (req, res, next) =
 
 // Sincronizzazione da Google Sheets
 // Solo ADMIN può sincronizzare dal foglio
-router.post("/sync-from-sheets", allowRoles(["ADMIN"]), async (req, res, next) => {
+router.post("/sync-from-sheets", allowRoles(["ADMIN"]), async (req: EventRequest, res, next) => {
   try {
     const { direction, pruneMissing } = req.body as {
       direction: ShuttleDirection;
@@ -144,7 +143,7 @@ router.post("/sync-from-sheets", allowRoles(["ADMIN"]), async (req, res, next) =
       return;
     }
 
-    const result = await syncShuttlesFromGoogleSheets(direction, pruneMissing ?? false);
+    const result = await syncShuttlesFromGoogleSheets(direction, req.eventId!, pruneMissing ?? false);
 
     res.json({
       message: `Sincronizzazione ${direction} completata`,

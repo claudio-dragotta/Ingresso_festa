@@ -1,36 +1,35 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { syncGoogleSheetToDatabase, isAutoSyncActive } from '../services/syncService';
-import { syncTshirtsFromGoogleSheets } from '../services/tshirtService';
-import { testGoogleSheetsConnection } from '../services/googleSheetsService';
-import { authenticate } from '../middleware/auth';
-import { adminOnly } from '../middleware/adminOnly';
-import { logger } from '../logger';
-import { prisma } from '../lib/prisma';
+import { Router, Response, NextFunction } from "express";
+import { syncGoogleSheetToDatabase, isAutoSyncActive } from "../services/syncService";
+import { syncTshirtsFromGoogleSheets } from "../services/tshirtService";
+import { testGoogleSheetsConnection } from "../services/googleSheetsService";
+import { adminOnly } from "../middleware/adminOnly";
+import { logger } from "../logger";
+import { prisma } from "../lib/prisma";
+import { EventRequest } from "../middleware/eventAccess";
 
 const router = Router();
 
 /**
- * POST /api/sync/google-sheets
+ * POST /sync/google-sheets
  *
  * Sincronizzazione manuale da Google Sheets
  * Legge il foglio configurato e importa nuove persone
  */
 router.post(
-  '/google-sheets',
-  authenticate,
+  "/google-sheets",
   adminOnly,
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: EventRequest, res: Response, next: NextFunction) => {
     try {
-      logger.info('🔄 Richiesta sincronizzazione manuale Google Sheets');
+      logger.info("🔄 Richiesta sincronizzazione manuale Google Sheets");
 
       const pruneMissing = Boolean((req.body as any)?.pruneMissing);
-      const result = await syncGoogleSheetToDatabase({ pruneMissing });
+      const result = await syncGoogleSheetToDatabase(req.eventId!, { pruneMissing });
 
       res.json({
         success: result.success,
         message: result.success
           ? `Sincronizzazione completata: ${result.newImported} nuovi importati, ${result.alreadyExists} già presenti`
-          : 'Sincronizzazione fallita',
+          : "Sincronizzazione fallita",
         data: {
           totalFromSheet: result.totalFromSheet,
           newImported: result.newImported,
@@ -47,23 +46,22 @@ router.post(
 );
 
 /**
- * GET /api/sync/status
+ * GET /sync/status
  *
  * Verifica stato sincronizzazione automatica
  */
 router.get(
-  '/status',
-  authenticate,
+  "/status",
   adminOnly,
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: EventRequest, res: Response, next: NextFunction) => {
     try {
       const autoSyncActive = isAutoSyncActive();
 
       res.json({
         autoSyncEnabled: autoSyncActive,
         message: autoSyncActive
-          ? 'Sincronizzazione automatica attiva'
-          : 'Sincronizzazione automatica non attiva',
+          ? "Sincronizzazione automatica attiva"
+          : "Sincronizzazione automatica non attiva",
       });
     } catch (error) {
       next(error);
@@ -72,25 +70,24 @@ router.get(
 );
 
 /**
- * GET /api/sync/test-connection
+ * GET /sync/test-connection
  *
  * Test connessione a Google Sheets (diagnostica)
  */
 router.get(
-  '/test-connection',
-  authenticate,
+  "/test-connection",
   adminOnly,
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: EventRequest, res: Response, next: NextFunction) => {
     try {
-      logger.info('🧪 Test connessione Google Sheets');
+      logger.info("🧪 Test connessione Google Sheets");
 
       const connected = await testGoogleSheetsConnection();
 
       res.json({
         success: connected,
         message: connected
-          ? 'Connessione Google Sheets OK'
-          : 'Impossibile connettersi a Google Sheets - controlla configurazione',
+          ? "Connessione Google Sheets OK"
+          : "Impossibile connettersi a Google Sheets - controlla configurazione",
       });
     } catch (error) {
       next(error);
@@ -98,23 +95,25 @@ router.get(
   }
 );
 
-export default router;
-
-// POST /api/sync/reset-and-reimport - Admin only
+// POST /sync/reset-and-reimport - Admin only
 router.post(
-  '/reset-and-reimport',
-  authenticate,
+  "/reset-and-reimport",
   adminOnly,
-  async (_req: Request, res: Response, next: NextFunction) => {
+  async (req: EventRequest, res: Response, next: NextFunction) => {
     try {
-      logger.warn('⚠️ Reset INVITATI + LOG + TSHIRTS e reimport da Google Sheets');
-      const deletedLogs = await prisma.checkInLog.deleteMany({});
-      const deletedInvitees = await prisma.invitee.deleteMany({});
-      const deletedTshirts = await prisma.tshirt.deleteMany({});
-      const peopleImport = await syncGoogleSheetToDatabase();
-      const tshirtImport = await syncTshirtsFromGoogleSheets();
+      logger.warn("⚠️ Reset INVITATI + LOG + TSHIRTS e reimport da Google Sheets");
+      const eventId = req.eventId!;
+      const deletedLogs = await prisma.checkInLog.deleteMany({ where: { eventId } });
+      const deletedInvitees = await prisma.invitee.deleteMany({ where: { eventId } });
+      const deletedTshirts = await prisma.tshirt.deleteMany({ where: { eventId } });
+      const peopleImport = await syncGoogleSheetToDatabase(eventId);
+      const tshirtImport = await syncTshirtsFromGoogleSheets(eventId);
       return res.json({
-        reset: { deletedInvitees: deletedInvitees.count, deletedLogs: deletedLogs.count, deletedTshirts: deletedTshirts.count },
+        reset: {
+          deletedInvitees: deletedInvitees.count,
+          deletedLogs: deletedLogs.count,
+          deletedTshirts: deletedTshirts.count,
+        },
         import: peopleImport,
         tshirts: tshirtImport,
       });
@@ -123,3 +122,5 @@ router.post(
     }
   }
 );
+
+export default router;

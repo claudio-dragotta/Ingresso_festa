@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/AppLayout";
 import LoginPage from "./pages/LoginPage";
+import EventPickerPage from "./pages/EventPickerPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import SearchPage from "./pages/SearchPage";
 import UsersPage from "./pages/UsersPage";
@@ -9,9 +10,19 @@ import TshirtsPage from "./pages/TshirtsPage";
 import ExpensesPage from "./pages/ExpensesPage";
 import ShuttlesPage from "./pages/ShuttlesPage";
 import { useAuth } from "./context/AuthContext";
+import { useEvent } from "./context/EventContext";
+
+const EventGuard = ({ children }: { children: React.ReactNode }) => {
+  const { currentEvent } = useEvent();
+  if (!currentEvent) {
+    return <Navigate to="/select-event" replace />;
+  }
+  return <>{children}</>;
+};
 
 const App = () => {
   const { isAdmin, isAuthenticated, role } = useAuth();
+  const { currentEvent } = useEvent();
   const canSeeShuttles = role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE";
   const canSeeDashboard = role === "ADMIN" || role === "ORGANIZER";
   const isShuttle = role === "SHUTTLE";
@@ -20,13 +31,22 @@ const App = () => {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route
+        path="/select-event"
         element={
           <ProtectedRoute>
-            <AppLayout />
+            <EventPickerPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        element={
+          <ProtectedRoute>
+            <EventGuard>
+              <AppLayout />
+            </EventGuard>
           </ProtectedRoute>
         }
       >
-        {/* Admin e Organizer hanno accesso alla dashboard (organizer in sola lettura) */}
         <Route path="/dashboard" element={canSeeDashboard ? <AdminDashboard /> : <Navigate to="/search" replace />} />
         {isAdmin && <Route path="/users" element={<UsersPage />} />}
         {isAdmin && <Route path="/expenses" element={<ExpensesPage />} />}
@@ -34,16 +54,19 @@ const App = () => {
         {canSeeShuttles && <Route path="/shuttles" element={<ShuttlesPage />} />}
         {!isShuttle && <Route path="/tshirts" element={<TshirtsPage />} />}
 
-        {/* Redirect basato sul ruolo */}
         <Route
           path="/"
           element={
             isAuthenticated ? (
-              <Navigate to={
-                isAdmin || role === "ORGANIZER" ? "/dashboard" :
-                role === "SHUTTLE" ? "/shuttles" :
-                "/search"
-              } replace />
+              currentEvent ? (
+                <Navigate to={
+                  isAdmin || role === "ORGANIZER" ? "/dashboard" :
+                  role === "SHUTTLE" ? "/shuttles" :
+                  "/search"
+                } replace />
+              ) : (
+                <Navigate to="/select-event" replace />
+              )
             ) : (
               <Navigate to="/login" replace />
             )

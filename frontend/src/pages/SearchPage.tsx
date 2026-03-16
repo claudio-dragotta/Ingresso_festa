@@ -3,15 +3,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Invitee, Stats } from "../api/invitees";
 import { searchInvitees, fetchStats, checkInPerson } from "../api/invitees";
 import { useAuth } from "../context/AuthContext";
+import { useEvent } from "../context/EventContext";
 import "./SearchPage.css";
 
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const { isAdmin, role } = useAuth();
+  const { currentEvent } = useEvent();
+  const eventId = currentEvent!.id;
   const queryClient = useQueryClient();
 
-  // Debounce della ricerca
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
@@ -20,47 +22,40 @@ export default function SearchPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Fetch statistiche
   const { data: stats } = useQuery<Stats>({
-    queryKey: ["stats"],
-    queryFn: fetchStats,
-    refetchInterval: 5000, // Aggiorna ogni 5 secondi
+    queryKey: ["stats", eventId],
+    queryFn: () => fetchStats(eventId),
+    refetchInterval: 5000,
   });
 
-  // Fetch risultati ricerca
   const { data: results = [], isLoading } = useQuery<Invitee[]>({
-    queryKey: ["search", debouncedQuery],
-    queryFn: () => searchInvitees(debouncedQuery),
+    queryKey: ["search", eventId, debouncedQuery],
+    queryFn: () => searchInvitees(eventId, debouncedQuery),
     enabled: debouncedQuery.length >= 2,
   });
 
-  // Mutation per check-in
   const checkInMutation = useMutation({
     mutationFn: ({ id, adminOverride }: { id: string; adminOverride: boolean }) =>
-      checkInPerson(id, adminOverride),
+      checkInPerson(eventId, id, adminOverride),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["search"] });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      queryClient.invalidateQueries({ queryKey: ["search", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
     },
   });
 
   const handleCheckIn = (person: Invitee) => {
-    // Solo admin può rimettere come "non entrato"
     const adminOverride = isAdmin && person.hasEntered;
     checkInMutation.mutate({ id: person.id, adminOverride });
   };
 
   const canClick = (person: Invitee) => {
-    // Admin può sempre cliccare (anche per rimettere non entrato)
     if (isAdmin) return true;
-    // ENTRANCE e ORGANIZER possono marcare entrata solo se non ancora entrato
     if (role === 'ENTRANCE' || role === 'ORGANIZER') return !person.hasEntered;
     return false;
   };
 
   return (
     <div className="search-page">
-      {/* Header con statistiche - sempre visibile */}
       <div className="stats-header">
         <div className="stat-card paganti">
           <div className="stat-label">Paganti</div>
@@ -76,7 +71,6 @@ export default function SearchPage() {
         </div>
       </div>
 
-      {/* Barra di ricerca - sempre visibile */}
       <div className="search-container">
         <div className="search-box">
           <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -109,7 +103,6 @@ export default function SearchPage() {
         )}
       </div>
 
-      {/* Risultati */}
       <div className="results-container">
         {isLoading && debouncedQuery.length >= 2 && (
           <div className="loading-state">

@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createUser, deleteUser, fetchUsers, setUserActive, fetchUserLogs, type User, type UserRole, type UserLogsResponse } from "../api/auth";
+import { createUser, deleteUser, fetchUsers, setUserActive, fetchUserLogs, fetchUserEventAccesses, type User, type UserRole, type UserLogsResponse } from "../api/auth";
+import { listEvents } from "../api/events";
+import { assignUserToEvent, removeUserFromEvent } from "../api/events";
 import "./UsersPage.css";
 
 const TOKEN_STORAGE_KEY = "ingresso-festa-token";
@@ -21,10 +23,35 @@ export default function UsersPage() {
   const qc = useQueryClient();
   const { data: users = [], isLoading } = useQuery<User[]>({ queryKey: ["users"], queryFn: fetchUsers });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [drawerTab, setDrawerTab] = useState<"logs" | "feste">("logs");
+
   const { data: selectedLogs } = useQuery<UserLogsResponse>({
     queryKey: ["user-logs", selectedUser?.id],
     queryFn: () => fetchUserLogs(selectedUser!.id),
-    enabled: !!selectedUser,
+    enabled: !!selectedUser && drawerTab === "logs",
+  });
+
+  const { data: allEvents = [] } = useQuery({
+    queryKey: ["events"],
+    queryFn: listEvents,
+    enabled: !!selectedUser && drawerTab === "feste",
+  });
+
+  const { data: userAccesses = [], refetch: refetchAccesses } = useQuery({
+    queryKey: ["user-event-accesses", selectedUser?.id],
+    queryFn: () => fetchUserEventAccesses(selectedUser!.id),
+    enabled: !!selectedUser && drawerTab === "feste",
+  });
+
+  const assignMut = useMutation({
+    mutationFn: ({ eventId, role }: { eventId: string; role: string }) =>
+      assignUserToEvent(eventId, selectedUser!.id, role),
+    onSuccess: () => refetchAccesses(),
+  });
+
+  const removeMut = useMutation({
+    mutationFn: (eventId: string) => removeUserFromEvent(eventId, selectedUser!.id),
+    onSuccess: () => refetchAccesses(),
   });
 
   const [newUser, setNewUser] = useState({ username: "", password: "", role: "ENTRANCE" as UserRole });
@@ -166,45 +193,89 @@ export default function UsersPage() {
                 <path d="M20 21v-2a4 4 0 00-4-4h-8a4 4 0 00-4 4v2"/>
                 <circle cx="12" cy="7" r="4"/>
               </svg>
-              <h3>Attività: {selectedUser.username}</h3>
+              <h3>{selectedUser.username}</h3>
             </div>
-            <button className="close-btn" onClick={() => setSelectedUser(null)} aria-label="Chiudi">×</button>
+            <button className="close-btn" onClick={() => { setSelectedUser(null); setDrawerTab("logs"); }} aria-label="Chiudi">×</button>
           </div>
 
-          <div className="drawer-stats">
-            <div className="stat">
-              <span className="label">Ingressi autorizzati</span>
-              <span className="value">{selectedLogs?.enteredCount ?? 0}</span>
-            </div>
-            <div className="stat">
-              <span className="label">Log totali</span>
-              <span className="value">{selectedLogs?.total ?? 0}</span>
-            </div>
-          </div>
-
-          <div className="logs-list">
-            {selectedLogs?.logs?.length ? (
-              selectedLogs.logs.map((log) => (
-                <div key={log.id} className="log-row">
-                  <div className={`badge outcome ${log.outcome.toLowerCase()}`}>{log.outcome}</div>
-                  <div className="person">
-                    {log.invitee ? (
-                      <>
-                        <strong>{log.invitee.lastName} {log.invitee.firstName}</strong>
-                        <span className="meta">{log.invitee.listType}{log.invitee.paymentType ? ` • ${log.invitee.paymentType}` : ''}</span>
-                      </>
-                    ) : (
-                      <em>N/D</em>
-                    )}
-                  </div>
-                  <div className="message">{log.message || ''}</div>
-                  <div className="time">{new Date(log.createdAt).toLocaleString()}</div>
-                </div>
-              ))
-            ) : (
-              <div className="empty">Nessun log</div>
+          <div className="drawer-tabs">
+            <button className={drawerTab === "logs" ? "tab active" : "tab"} onClick={() => setDrawerTab("logs")}>Attività</button>
+            {selectedUser.role !== "ADMIN" && (
+              <button className={drawerTab === "feste" ? "tab active" : "tab"} onClick={() => setDrawerTab("feste")}>Accesso Feste</button>
             )}
           </div>
+
+          {drawerTab === "logs" && (
+            <>
+              <div className="drawer-stats">
+                <div className="stat">
+                  <span className="label">Ingressi autorizzati</span>
+                  <span className="value">{selectedLogs?.enteredCount ?? 0}</span>
+                </div>
+                <div className="stat">
+                  <span className="label">Log totali</span>
+                  <span className="value">{selectedLogs?.total ?? 0}</span>
+                </div>
+              </div>
+              <div className="logs-list">
+                {selectedLogs?.logs?.length ? (
+                  selectedLogs.logs.map((log) => (
+                    <div key={log.id} className="log-row">
+                      <div className={`badge outcome ${log.outcome.toLowerCase()}`}>{log.outcome}</div>
+                      <div className="person">
+                        {log.invitee ? (
+                          <>
+                            <strong>{log.invitee.lastName} {log.invitee.firstName}</strong>
+                            <span className="meta">{log.invitee.listType}{log.invitee.paymentType ? ` • ${log.invitee.paymentType}` : ''}</span>
+                          </>
+                        ) : (
+                          <em>N/D</em>
+                        )}
+                      </div>
+                      <div className="message">{log.message || ''}</div>
+                      <div className="time">{new Date(log.createdAt).toLocaleString()}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty">Nessun log</div>
+                )}
+              </div>
+            </>
+          )}
+
+          {drawerTab === "feste" && (
+            <div className="event-access-list">
+              {allEvents.length === 0 ? (
+                <div className="empty">Nessuna festa disponibile</div>
+              ) : (
+                allEvents.map((event) => {
+                  const access = userAccesses.find((a) => a.eventId === event.id);
+                  return (
+                    <div key={event.id} className="event-access-row">
+                      <div className="event-access-name">{event.name}</div>
+                      <select
+                        value={access?.role ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "") {
+                            if (access) removeMut.mutate(event.id);
+                          } else {
+                            assignMut.mutate({ eventId: event.id, role: val });
+                          }
+                        }}
+                        disabled={assignMut.isPending || removeMut.isPending}
+                      >
+                        <option value="">— Nessun accesso —</option>
+                        <option value="ENTRANCE">Ingresso</option>
+                        <option value="ORGANIZER">Organizzatore</option>
+                        <option value="SHUTTLE">Navetta</option>
+                      </select>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

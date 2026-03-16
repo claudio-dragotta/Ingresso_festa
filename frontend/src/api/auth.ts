@@ -74,3 +74,17 @@ export const fetchUserLogs = async (userId: string): Promise<UserLogsResponse> =
   const response = await apiClient.get<UserLogsResponse>(`/auth/users/${userId}/logs`);
   return response.data;
 };
+
+export interface UserEventAccess {
+  id: string;
+  userId: string;
+  eventId: string;
+  role: UserRole;
+  event: { id: string; name: string; date?: string | null; status: string };
+}
+
+// GET /users/:id/event-accesses - Feste a cui l'utente ha accesso
+export const fetchUserEventAccesses = async (userId: string): Promise<UserEventAccess[]> => {
+  const response = await apiClient.get<UserEventAccess[]>(`/users/${userId}/event-accesses`);
+  return response.data;
+};

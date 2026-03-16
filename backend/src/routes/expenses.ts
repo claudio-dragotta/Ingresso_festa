@@ -1,24 +1,25 @@
-import { Router } from 'express';
-import { isAdmin } from '../middleware/auth';
-import * as expenseService from '../services/expenseService';
-import { ExpenseCategory } from '@prisma/client';
+import { Router } from "express";
+import * as expenseService from "../services/expenseService";
+import { ExpenseCategory } from "@prisma/client";
+import { EventRequest } from "../middleware/eventAccess";
+import { adminOnly } from "../middleware/adminOnly";
 
 const router = Router();
 
-const VALID_PAYMENT_METHODS = ['paypal', 'contanti', 'p2p', 'bonifico'];
+const VALID_PAYMENT_METHODS = ["paypal", "contanti", "p2p", "bonifico"];
 
-// GET /api/expenses/balances - Saldi per metodo pagamento (solo admin)
-router.get('/balances', isAdmin, async (req, res) => {
+// GET /expenses/balances - Saldi per metodo pagamento (solo admin)
+router.get("/balances", adminOnly, async (req: EventRequest, res) => {
   try {
-    const balances = await expenseService.fetchBalances();
+    const balances = await expenseService.fetchBalances(req.eventId!);
     res.json(balances);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// GET /api/expenses - Lista spese (solo admin)
-router.get('/', isAdmin, async (req, res) => {
+// GET /expenses - Lista spese (solo admin)
+router.get("/", adminOnly, async (req: EventRequest, res) => {
   try {
     const { category, startDate, endDate } = req.query;
 
@@ -26,6 +27,7 @@ router.get('/', isAdmin, async (req, res) => {
     const end = endDate ? new Date(endDate as string) : undefined;
 
     const expenses = await expenseService.fetchExpenses(
+      req.eventId!,
       category as string | undefined,
       start,
       end
@@ -37,15 +39,15 @@ router.get('/', isAdmin, async (req, res) => {
   }
 });
 
-// GET /api/expenses/stats - Statistiche spese (solo admin)
-router.get('/stats', isAdmin, async (req, res) => {
+// GET /expenses/stats - Statistiche spese (solo admin)
+router.get("/stats", adminOnly, async (req: EventRequest, res) => {
   try {
     const { startDate, endDate } = req.query;
 
     const start = startDate ? new Date(startDate as string) : undefined;
     const end = endDate ? new Date(endDate as string) : undefined;
 
-    const stats = await expenseService.fetchExpenseStats(start, end);
+    const stats = await expenseService.fetchExpenseStats(req.eventId!, start, end);
 
     res.json(stats);
   } catch (error: any) {
@@ -53,14 +55,14 @@ router.get('/stats', isAdmin, async (req, res) => {
   }
 });
 
-// GET /api/expenses/:id - Singola spesa (solo admin)
-router.get('/:id', isAdmin, async (req, res) => {
+// GET /expenses/:id - Singola spesa (solo admin)
+router.get("/:id", adminOnly, async (req: EventRequest, res) => {
   try {
     const { id } = req.params;
     const expense = await expenseService.fetchExpenseById(id);
 
     if (!expense) {
-      return res.status(404).json({ error: 'Spesa non trovata' });
+      return res.status(404).json({ error: "Spesa non trovata" });
     }
 
     return res.json(expense);
@@ -69,36 +71,39 @@ router.get('/:id', isAdmin, async (req, res) => {
   }
 });
 
-// POST /api/expenses - Crea nuova spesa (solo admin)
-router.post('/', isAdmin, async (req, res) => {
+// POST /expenses - Crea nuova spesa (solo admin)
+router.post("/", adminOnly, async (req: EventRequest, res) => {
   try {
     const { description, amount, category, paymentMethod, date, notes } = req.body;
 
     // Validazione
     if (!description || !amount || !category || !paymentMethod) {
-      return res.status(400).json({ error: 'Descrizione, importo, categoria e metodo pagamento sono obbligatori' });
+      return res.status(400).json({ error: "Descrizione, importo, categoria e metodo pagamento sono obbligatori" });
     }
 
     if (amount <= 0) {
-      return res.status(400).json({ error: 'L\'importo deve essere maggiore di zero' });
+      return res.status(400).json({ error: "L'importo deve essere maggiore di zero" });
     }
 
     if (!Object.values(ExpenseCategory).includes(category)) {
-      return res.status(400).json({ error: 'Categoria non valida' });
+      return res.status(400).json({ error: "Categoria non valida" });
     }
 
     if (!VALID_PAYMENT_METHODS.includes(paymentMethod.toLowerCase())) {
-      return res.status(400).json({ error: 'Metodo di pagamento non valido. Usa: paypal, contanti, p2p, bonifico' });
+      return res.status(400).json({ error: "Metodo di pagamento non valido. Usa: paypal, contanti, p2p, bonifico" });
     }
 
-    const expense = await expenseService.createExpense({
-      description,
-      amount: parseFloat(amount),
-      category,
-      paymentMethod,
-      date: date ? new Date(date) : undefined,
-      notes
-    });
+    const expense = await expenseService.createExpense(
+      {
+        description,
+        amount: parseFloat(amount),
+        category,
+        paymentMethod,
+        date: date ? new Date(date) : undefined,
+        notes,
+      },
+      req.eventId!
+    );
 
     return res.status(201).json(expense);
   } catch (error: any) {
@@ -106,25 +111,25 @@ router.post('/', isAdmin, async (req, res) => {
   }
 });
 
-// PATCH /api/expenses/:id - Aggiorna spesa (solo admin)
-router.patch('/:id', isAdmin, async (req, res) => {
+// PATCH /expenses/:id - Aggiorna spesa (solo admin)
+router.patch("/:id", adminOnly, async (req: EventRequest, res) => {
   try {
     const { id } = req.params;
     const { description, amount, category, paymentMethod, date, notes } = req.body;
 
     // Validazione importo se presente
     if (amount !== undefined && amount <= 0) {
-      return res.status(400).json({ error: 'L\'importo deve essere maggiore di zero' });
+      return res.status(400).json({ error: "L'importo deve essere maggiore di zero" });
     }
 
     // Validazione categoria se presente
     if (category !== undefined && !Object.values(ExpenseCategory).includes(category)) {
-      return res.status(400).json({ error: 'Categoria non valida' });
+      return res.status(400).json({ error: "Categoria non valida" });
     }
 
     // Validazione metodo pagamento se presente
     if (paymentMethod !== undefined && !VALID_PAYMENT_METHODS.includes(paymentMethod.toLowerCase())) {
-      return res.status(400).json({ error: 'Metodo di pagamento non valido. Usa: paypal, contanti, p2p, bonifico' });
+      return res.status(400).json({ error: "Metodo di pagamento non valido. Usa: paypal, contanti, p2p, bonifico" });
     }
 
     const updateData: any = {};
@@ -139,22 +144,22 @@ router.patch('/:id', isAdmin, async (req, res) => {
 
     return res.json(expense);
   } catch (error: any) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Spesa non trovata' });
+    if (error.code === "P2025") {
+      return res.status(404).json({ error: "Spesa non trovata" });
     }
     return res.status(500).json({ error: error.message });
   }
 });
 
-// DELETE /api/expenses/:id - Elimina spesa (solo admin)
-router.delete('/:id', isAdmin, async (req, res) => {
+// DELETE /expenses/:id - Elimina spesa (solo admin)
+router.delete("/:id", adminOnly, async (req: EventRequest, res) => {
   try {
     const { id } = req.params;
     await expenseService.deleteExpense(id);
-    return res.json({ message: 'Spesa eliminata con successo' });
+    return res.json({ message: "Spesa eliminata con successo" });
   } catch (error: any) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Spesa non trovata' });
+    if (error.code === "P2025") {
+      return res.status(404).json({ error: "Spesa non trovata" });
     }
     return res.status(500).json({ error: error.message });
   }

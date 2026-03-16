@@ -1,15 +1,19 @@
 import { Router } from "express";
-import { authenticate } from "../middleware/auth";
-import { adminOnly } from "../middleware/adminOnly";
 import { getDashboardMetrics } from "../services/systemService";
+import { EventRequest } from "../middleware/eventAccess";
 
 const router = Router();
 
-router.use(authenticate, adminOnly);
-
-router.get("/metrics", async (_req, res, next) => {
+router.get("/metrics", async (req: EventRequest, res, next) => {
   try {
-    const metrics = await getDashboardMetrics();
+    // Richiede almeno ORGANIZER o ADMIN per il dashboard
+    const eventRole = req.eventRole;
+    const globalRole = (req as any).user?.role;
+    if (globalRole !== "ADMIN" && eventRole !== "ADMIN" && eventRole !== "ORGANIZER") {
+      return res.status(403).json({ message: "Accesso non consentito" });
+    }
+
+    const metrics = await getDashboardMetrics(req.eventId!);
     return res.json(metrics);
   } catch (error) {
     return next(error);

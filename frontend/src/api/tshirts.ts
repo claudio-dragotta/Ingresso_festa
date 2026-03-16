@@ -32,47 +32,41 @@ export interface SyncResult {
   alreadyExists: number;
 }
 
-// GET /api/tshirts - Ottieni lista magliette (con ricerca opzionale)
-export const fetchTshirts = async (search?: string): Promise<Tshirt[]> => {
+export const fetchTshirts = async (eventId: string, search?: string): Promise<Tshirt[]> => {
   const params = search ? { search } : {};
-  const response = await apiClient.get<Tshirt[]>("/tshirts", { params });
+  const response = await apiClient.get<Tshirt[]>(`/events/${eventId}/tshirts`, { params });
   return response.data;
 };
 
-// GET /api/tshirts/stats - Statistiche magliette (solo admin)
-export const fetchTshirtStats = async (): Promise<TshirtStats> => {
-  const response = await apiClient.get<TshirtStats>("/tshirts/stats");
+export const fetchTshirtStats = async (eventId: string): Promise<TshirtStats> => {
+  const response = await apiClient.get<TshirtStats>(`/events/${eventId}/tshirts/stats`);
   return response.data;
 };
 
-// POST /api/tshirts - Crea nuova maglietta (solo admin)
-export const createTshirt = async (data: TshirtInput): Promise<Tshirt> => {
-  const response = await apiClient.post<Tshirt>("/tshirts", data);
+export const createTshirt = async (eventId: string, data: TshirtInput): Promise<Tshirt> => {
+  const response = await apiClient.post<Tshirt>(`/events/${eventId}/tshirts`, data);
   return response.data;
 };
 
-// PATCH /api/tshirts/:id/toggle - Toggle consegna maglietta
-export const toggleTshirtReceived = async (id: string): Promise<Tshirt> => {
-  const response = await apiClient.patch<Tshirt>(`/tshirts/${id}/toggle`);
+export const toggleTshirtReceived = async (eventId: string, id: string): Promise<Tshirt> => {
+  const response = await apiClient.patch<Tshirt>(`/events/${eventId}/tshirts/${id}/toggle`);
   return response.data;
 };
 
-// DELETE /api/tshirts/:id - Elimina maglietta (solo admin)
-export const deleteTshirt = async (id: string): Promise<void> => {
-  await apiClient.delete(`/tshirts/${id}`);
+export const deleteTshirt = async (eventId: string, id: string): Promise<void> => {
+  await apiClient.delete(`/events/${eventId}/tshirts/${id}`);
 };
 
-// POST /api/tshirts/sync - Sincronizza magliette da Google Sheets (solo admin)
-export const syncTshirts = async (opts?: { pruneMissing?: boolean }): Promise<SyncResult> => {
-  const response = await apiClient.post<SyncResult>("/tshirts/sync", opts ?? {});
+export const syncTshirts = async (eventId: string, opts?: { pruneMissing?: boolean }): Promise<SyncResult> => {
+  const response = await apiClient.post<SyncResult>(`/events/${eventId}/tshirts/sync`, opts ?? {});
   return response.data;
 };
 
-// PATCH /api/tshirts/:id - Aggiorna taglia e/o tipologia (solo admin)
 export const updateTshirt = async (
+  eventId: string,
   id: string,
   data: Partial<Pick<Tshirt, 'size' | 'type'>>
 ): Promise<Tshirt> => {
-  const response = await apiClient.patch<Tshirt>(`/tshirts/${id}`, data);
+  const response = await apiClient.patch<Tshirt>(`/events/${eventId}/tshirts/${id}`, data);
   return response.data;
 };

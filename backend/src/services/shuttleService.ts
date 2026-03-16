@@ -34,23 +34,23 @@ export const generateTimes = (from: string, to: string, step: number): string[] 
   return out;
 };
 
-export const ensureShuttleSetup = async () => {
+export const ensureShuttleSetup = async (eventId: string) => {
   const step = config.shuttle.stepMinutes;
   const timesOut = generateTimes(config.shuttle.outbound.from, config.shuttle.outbound.to, step);
   const timesRet = generateTimes(config.shuttle.return.from, config.shuttle.return.to, step);
 
   for (const t of timesOut) {
     await prisma.shuttleSlot.upsert({
-      where: { direction_time: { direction: "ANDATA", time: t } },
+      where: { direction_time_eventId: { direction: "ANDATA", time: t, eventId } },
       update: {},
-      create: { direction: "ANDATA", time: t, capacity: config.shuttle.slotCapacity },
+      create: { direction: "ANDATA", time: t, capacity: config.shuttle.slotCapacity, eventId },
     });
   }
   for (const t of timesRet) {
     await prisma.shuttleSlot.upsert({
-      where: { direction_time: { direction: "RITORNO", time: t } },
+      where: { direction_time_eventId: { direction: "RITORNO", time: t, eventId } },
       update: {},
-      create: { direction: "RITORNO", time: t, capacity: config.shuttle.slotCapacity },
+      create: { direction: "RITORNO", time: t, capacity: config.shuttle.slotCapacity, eventId },
     });
   }
 
@@ -58,18 +58,19 @@ export const ensureShuttleSetup = async () => {
     const trimmed = name.trim();
     if (!trimmed) continue;
     await prisma.shuttleMachine.upsert({
-      where: { name: trimmed },
+      where: { name_eventId: { name: trimmed, eventId } },
       update: { active: true },
-      create: { name: trimmed },
+      create: { name: trimmed, eventId },
     });
   }
 };
 
-export const listMachines = async () => prisma.shuttleMachine.findMany({ orderBy: { name: "asc" } });
+export const listMachines = async (eventId: string) =>
+  prisma.shuttleMachine.findMany({ where: { eventId }, orderBy: { name: "asc" } });
 
-export const createMachine = async (name: string, color?: string) => {
+export const createMachine = async (name: string, color: string | undefined, eventId: string) => {
   if (!name?.trim()) throw new AppError("Nome macchina obbligatorio", 400);
-  return prisma.shuttleMachine.create({ data: { name: name.trim(), color } });
+  return prisma.shuttleMachine.create({ data: { name: name.trim(), color, eventId } });
 };
 
 export const updateMachine = async (id: string, data: { name?: string; color?: string; active?: boolean }) => {
@@ -82,10 +83,10 @@ export const deleteMachine = async (id: string) => {
   await prisma.shuttleMachine.delete({ where: { id } });
 };
 
-export const deleteSlot = async (direction: ShuttleDirection, time: string, syncWithSheets = true) => {
+export const deleteSlot = async (direction: ShuttleDirection, time: string, eventId: string, syncWithSheets = true) => {
   // Trova lo slot
   const slot = await prisma.shuttleSlot.findUnique({
-    where: { direction_time: { direction, time } },
+    where: { direction_time_eventId: { direction, time, eventId } },
   });
 
   if (!slot) {
@@ -105,7 +106,7 @@ export const deleteSlot = async (direction: ShuttleDirection, time: string, sync
   // Sincronizza con Google Sheets (elimina colonna)
   if (syncWithSheets) {
     try {
-      const { deleteShuttleSlotFromSheet } = await import('./googleSheetsService');
+      const { deleteShuttleSlotFromSheet } = await import("./googleSheetsService");
       await deleteShuttleSlotFromSheet(direction, time);
       logger.info(`Slot ${direction} ${time} eliminato anche da Google Sheets`);
     } catch (error: any) {
@@ -117,8 +118,8 @@ export const deleteSlot = async (direction: ShuttleDirection, time: string, sync
   logger.info(`Slot ${direction} ${time} eliminato con successo`);
 };
 
-export const listSlots = async (direction: ShuttleDirection) => {
-  const slots = await prisma.shuttleSlot.findMany({ where: { direction } });
+export const listSlots = async (direction: ShuttleDirection, eventId: string) => {
+  const slots = await prisma.shuttleSlot.findMany({ where: { direction, eventId } });
 
   // Ordina cronologicamente gestendo il passaggio mezzanotte
   // Orari dopo mezzanotte (00:00 - 06:00) vengono trattati come giorno dopo
@@ -138,13 +139,16 @@ export const listSlots = async (direction: ShuttleDirection) => {
   const counts = await prisma.shuttleAssignment.groupBy({
     by: ["slotId"],
     _count: { slotId: true },
-    where: { slot: { direction } },
+    where: { slot: { direction, eventId } },
   });
   const countMap = new Map(counts.map((c) => [c.slotId, c._count.slotId]));
   return sortedSlots.map((s) => ({ ...s, occupancy: countMap.get(s.id) ?? 0 }));
 };
 
-export const listAssignments = async (params: { direction?: ShuttleDirection; time?: string; machineId?: string }) => {
+export const listAssignments = async (
+  params: { direction?: ShuttleDirection; time?: string; machineId?: string },
+  eventId: string
+) => {
   const { direction, time, machineId } = params;
   return prisma.shuttleAssignment.findMany({
     where: {
@@ -152,6 +156,7 @@ export const listAssignments = async (params: { direction?: ShuttleDirection; ti
       slot: {
         direction: direction,
         time: time,
+        eventId,
       },
     },
     include: { invitee: true, slot: true, machine: true },
@@ -159,17 +164,22 @@ export const listAssignments = async (params: { direction?: ShuttleDirection; ti
   });
 };
 
-export const createAssignment = async (data: {
-  direction: ShuttleDirection;
-  time: string;
-  machineId: string;
-  inviteeId?: string;
-  fullName?: string;
-}) => {
+export const createAssignment = async (
+  data: {
+    direction: ShuttleDirection;
+    time: string;
+    machineId: string;
+    inviteeId?: string;
+    fullName?: string;
+  },
+  eventId: string
+) => {
   const { direction, time, machineId, inviteeId, fullName } = data;
   if (!inviteeId && !fullName) throw new AppError("Specificare inviteeId o fullName", 400);
 
-  const slot = await prisma.shuttleSlot.findUnique({ where: { direction_time: { direction, time } } });
+  const slot = await prisma.shuttleSlot.findUnique({
+    where: { direction_time_eventId: { direction, time, eventId } },
+  });
   if (!slot) throw new AppError("Fascia oraria non trovata", 404);
 
   const machine = await prisma.shuttleMachine.findUnique({ where: { id: machineId } });
@@ -187,7 +197,7 @@ export const createAssignment = async (data: {
   // Optional: prevent double booking per direction for same invitee
   if (inviteeId) {
     const existsSameDirection = await prisma.shuttleAssignment.findFirst({
-      where: { inviteeId, slot: { direction } },
+      where: { inviteeId, slot: { direction, eventId } },
       select: { id: true },
     });
     if (existsSameDirection) throw new AppError("Persona già assegnata per questa direzione", 409);
@@ -204,7 +214,7 @@ export const createAssignment = async (data: {
   });
 
   // Export automatico verso Google Sheets (in background, non blocca l'operazione)
-  exportAssignmentToGoogleSheets(created.id, 'create').catch((err) =>
+  exportAssignmentToGoogleSheets(created.id, "create").catch((err) =>
     logger.error(`Errore export assegnazione ${created.id} verso Sheets:`, err)
   );
 
@@ -232,7 +242,7 @@ export const deleteAssignment = async (id: string) => {
   // Export verso Sheets PRIMA di eliminare (così abbiamo ancora i dati)
   // Facciamo await ma catchiamo gli errori per non bloccare l'operazione
   try {
-    await exportAssignmentToGoogleSheets(id, 'delete');
+    await exportAssignmentToGoogleSheets(id, "delete");
   } catch (err: any) {
     logger.error(`Errore export delete assegnazione ${id} verso Sheets:`, err?.message || err);
     // Continuiamo comunque con il delete dall'app
@@ -253,13 +263,13 @@ function parseFullName(fullName: string): { firstName: string; lastName: string 
   const parts = fullName.trim().split(/\s+/);
 
   if (parts.length === 1) {
-    return { firstName: '', lastName: parts[0] };
+    return { firstName: "", lastName: parts[0] };
   }
 
   // Assumiamo che l'ultima parola sia il nome, il resto cognome
   // (come nel parser esistente per invitati)
   const firstName = parts.pop()!;
-  const lastName = parts.join(' ');
+  const lastName = parts.join(" ");
 
   return { firstName, lastName };
 }
@@ -268,11 +278,13 @@ function parseFullName(fullName: string): { firstName: string; lastName: string 
  * Importa le assegnazioni navette da Google Sheets
  * Crea slot, macchine e assegnazioni se non esistono
  * @param direction "ANDATA" o "RITORNO"
+ * @param eventId ID dell'evento
  * @param pruneMissing Se true, rimuove assegnazioni non più presenti su Sheets
  * @returns Statistiche import
  */
 export async function syncShuttlesFromGoogleSheets(
   direction: ShuttleDirection,
+  eventId: string,
   pruneMissing = false
 ): Promise<{
   newImported: number;
@@ -283,6 +295,7 @@ export async function syncShuttlesFromGoogleSheets(
   logger.info(`Inizio sincronizzazione navette ${direction} da Google Sheets`);
 
   // Leggi dati da Google Sheets
+  // TODO: per-event Google Sheets integration - usare event.googleSheetId in un follow-up
   const sheetAssignments = await readShuttlesSheet(direction);
 
   logger.info(`Lette ${sheetAssignments.length} assegnazioni da Google Sheets`);
@@ -299,9 +312,10 @@ export async function syncShuttlesFromGoogleSheets(
       // 1. Assicurati che lo slot esista
       const slot = await prisma.shuttleSlot.upsert({
         where: {
-          direction_time: {
+          direction_time_eventId: {
             direction,
             time: sheetAssignment.slotTime,
+            eventId,
           },
         },
         update: {},
@@ -309,14 +323,15 @@ export async function syncShuttlesFromGoogleSheets(
           direction,
           time: sheetAssignment.slotTime,
           capacity: config.shuttle.slotCapacity,
+          eventId,
         },
       });
 
       // 2. Assicurati che la macchina esista
       const machine = await prisma.shuttleMachine.upsert({
-        where: { name: sheetAssignment.machineName },
+        where: { name_eventId: { name: sheetAssignment.machineName, eventId } },
         update: { active: true },
-        create: { name: sheetAssignment.machineName, active: true },
+        create: { name: sheetAssignment.machineName, active: true, eventId },
       });
 
       // 3. Controlla se l'assegnazione esiste già
@@ -356,7 +371,7 @@ export async function syncShuttlesFromGoogleSheets(
   if (pruneMissing) {
     const allDbAssignments = await prisma.shuttleAssignment.findMany({
       where: {
-        slot: { direction },
+        slot: { direction, eventId },
       },
       select: { id: true },
     });
@@ -388,7 +403,7 @@ export async function syncShuttlesFromGoogleSheets(
  * @returns Posizione cella { row, col } o null se non trovata
  */
 async function findShuttleCellPosition(
-  direction: 'ANDATA' | 'RITORNO',
+  direction: "ANDATA" | "RITORNO",
   machineName: string,
   slotTime: string,
   fullName?: string
@@ -414,9 +429,9 @@ async function findShuttleCellPosition(
 
   // Mappa macchine → range righe
   const machineRowRanges: Record<string, { startRow: number; endRow: number }> = {
-    'MACCHINA 1': { startRow: 2, endRow: 5 },
-    'MACCHINA 2': { startRow: 6, endRow: 9 },
-    'MACCHINA 3': { startRow: 10, endRow: 13 },
+    "MACCHINA 1": { startRow: 2, endRow: 5 },
+    "MACCHINA 2": { startRow: 6, endRow: 9 },
+    "MACCHINA 3": { startRow: 10, endRow: 13 },
   };
 
   const rowRange = machineRowRanges[machineName];
@@ -457,7 +472,7 @@ async function findShuttleCellPosition(
  */
 export async function exportAssignmentToGoogleSheets(
   assignmentId: string,
-  action: 'create' | 'delete'
+  action: "create" | "delete"
 ): Promise<void> {
   const assignment = await prisma.shuttleAssignment.findUnique({
     where: { id: assignmentId },
@@ -471,10 +486,10 @@ export async function exportAssignmentToGoogleSheets(
     throw new AppError("Assegnazione non trovata", 404);
   }
 
-  const direction = assignment.slot.direction === 'ANDATA' ? 'ANDATA' : 'RITORNO';
+  const direction = assignment.slot.direction === "ANDATA" ? "ANDATA" : "RITORNO";
 
   try {
-    if (action === 'create') {
+    if (action === "create") {
       // Trova una cella disponibile per questa macchina e time
       const cellPos = await findShuttleCellPosition(
         direction,
@@ -495,7 +510,7 @@ export async function exportAssignmentToGoogleSheets(
       logger.info(
         `Esportata assegnazione ${assignment.fullName} su Sheets: ${cellPos.col}${cellPos.row}`
       );
-    } else if (action === 'delete') {
+    } else if (action === "delete") {
       // Trova la cella con questo nome specifico
       const cellPos = await findShuttleCellPosition(
         direction,
@@ -512,15 +527,14 @@ export async function exportAssignmentToGoogleSheets(
       }
 
       // Svuota la cella
-      await updateShuttleCellInGoogleSheet(direction, cellPos, '');
+      await updateShuttleCellInGoogleSheet(direction, cellPos, "");
 
       logger.info(
         `Eliminata assegnazione ${assignment.fullName} da Sheets: ${cellPos.col}${cellPos.row}`
       );
     }
   } catch (error: any) {
-    logger.error(`Errore export assegnazione verso Sheets:`, error.message);
+    logger.error("Errore export assegnazione verso Sheets:", error.message);
     // Non facciamo throw per evitare di bloccare l'operazione principale
   }
 }
-

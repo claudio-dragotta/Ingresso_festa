@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
+import { useEvent } from "../context/EventContext";
 import type { Invitee, InviteeInput, ListType } from "../api/invitees";
 import {
   fetchInvitees,
@@ -19,6 +20,8 @@ import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
   const { role } = useAuth();
+  const { currentEvent } = useEvent();
+  const eventId = currentEvent!.id;
   const isOrganizer = role === 'ORGANIZER';
 
   const duplicatesRef = useRef<HTMLDivElement | null>(null);
@@ -40,27 +43,23 @@ export default function AdminDashboard() {
 
   const queryClient = useQueryClient();
 
-  // Fetch invitees
   const { data: invitees = [], isLoading } = useQuery<Invitee[]>({
-    queryKey: ["invitees"],
-    queryFn: fetchInvitees,
+    queryKey: ["invitees", eventId],
+    queryFn: () => fetchInvitees(eventId),
   });
 
-  // Stats per contatore affidabile (evita discrepanze client)
   const { data: stats } = useQuery<Stats>({
-    queryKey: ["stats"],
-    queryFn: fetchStats,
+    queryKey: ["stats", eventId],
+    queryFn: () => fetchStats(eventId),
     refetchInterval: 5000,
   });
 
-  // Duplicati
   const { data: duplicates = [] } = useQuery<DuplicateGroup[]>({
-    queryKey: ["invitees", "duplicates"],
-    queryFn: fetchDuplicateInvitees,
+    queryKey: ["invitees", "duplicates", eventId],
+    queryFn: () => fetchDuplicateInvitees(eventId),
     refetchInterval: 10000,
   });
 
-  // Analisi duplicati lato client (anche tra Paganti e Green)
   type LocalDupGroup = { key: string; count: number; crossList: boolean; items: Invitee[] };
   const [localDupGroups, setLocalDupGroups] = useState<LocalDupGroup[] | null>(null);
   const [localDupSummary, setLocalDupSummary] = useState<{ total: number; crossList: number } | null>(null);
@@ -101,7 +100,6 @@ export default function AdminDashboard() {
     }, 0);
   };
 
-  // Filtra per tipo
   const pagantiList = invitees.filter((inv) => inv.listType === "PAGANTE");
   const greenList = invitees.filter((inv) => inv.listType === "GREEN");
 
@@ -116,7 +114,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Filtra in base alla ricerca
   const filteredList = currentList.filter((inv) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
@@ -134,7 +131,6 @@ export default function AdminDashboard() {
     return aVal.localeCompare(bVal, "it", { sensitivity: "base", numeric: true }) * dir;
   });
 
-  // Se si passa alla tab GREEN e si stava ordinando per pagamento, torna a cognome
   useEffect(() => {
     if (activeTab === "green" && sortBy === "paymentType") {
       setSortBy("lastName");
@@ -142,25 +138,22 @@ export default function AdminDashboard() {
     }
   }, [activeTab]);
 
-  // Mutation per creare invitato
   const createMutation = useMutation({
-    mutationFn: createInvitee,
+    mutationFn: (payload: InviteeInput | InviteeInput[]) => createInvitee(eventId, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invitees"] });
+      queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
       setFormData({
         firstName: "",
         lastName: "",
         listType: activeTab === "paganti" ? "PAGANTE" : "GREEN",
         paymentType: "",
       });
-      // Metti il focus su "Nome" per inserimenti consecutivi
       setTimeout(() => {
         firstNameInputRef.current?.focus();
       }, 0);
     },
   });
 
-  // Quando apro il form, metti il focus su "Nome"
   useEffect(() => {
     if (showAddForm) {
       setTimeout(() => {
@@ -169,7 +162,6 @@ export default function AdminDashboard() {
     }
   }, [showAddForm]);
 
-  // Mostra un avviso quando ci sono duplicati all'apertura o dopo sync
   useEffect(() => {
     if (!hasShownDupHintRef.current && duplicates.length > 0) {
       hasShownDupHintRef.current = true;
@@ -177,9 +169,6 @@ export default function AdminDashboard() {
       setTimeout(() => setShowDupHint(false), 6000);
     }
   }, [duplicates.length]);
-
-  // Mostra l'hint anche immediatamente dopo una sincronizzazione completata
-  // (dichiarato nuovamente dopo la definizione di syncMutation per evitare ordine di riferimento)
 
   const scrollToDuplicates = () => {
     const el = duplicatesRef.current;
@@ -190,37 +179,32 @@ export default function AdminDashboard() {
     }
   };
 
-  // (rimosso) eliminazione singolo invitato dalla tabella
-
-  // Mutation per check-in
   const checkInMutation = useMutation({
     mutationFn: ({ id, adminOverride }: { id: string; adminOverride: boolean }) =>
-      checkInPerson(id, adminOverride),
+      checkInPerson(eventId, id, adminOverride),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invitees"] });
+      queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
     },
   });
 
-  // Mutation per sync Google Sheets
   const syncMutation = useMutation({
-    mutationFn: (opts?: { pruneMissing?: boolean }) => syncGoogleSheets(opts),
+    mutationFn: (opts?: { pruneMissing?: boolean }) => syncGoogleSheets(eventId, opts),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invitees"] });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
-      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates"] });
+      queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates", eventId] });
     },
   });
 
   const resetMutation = useMutation({
-    mutationFn: resetAndReimport,
+    mutationFn: () => resetAndReimport(eventId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invitees"] });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
-      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates"] });
+      queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates", eventId] });
     },
   });
 
-  // Mostra hint duplicati quando una sync termina e risultano duplicati
   useEffect(() => {
     if (syncMutation.data && duplicates.length > 0) {
       setShowDupHint(true);
@@ -228,25 +212,23 @@ export default function AdminDashboard() {
     }
   }, [syncMutation.data, duplicates.length]);
 
-  // Duplicates actions
   const promoteMut = useMutation({
-    mutationFn: (key: string) => promoteDuplicateGroup(key),
+    mutationFn: (key: string) => promoteDuplicateGroup(eventId, key),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates"] });
-      queryClient.invalidateQueries({ queryKey: ["invitees"] });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
     },
   });
   const keepOneMut = useMutation({
-    mutationFn: ({ key, keepId }: { key: string; keepId: string }) => keepOneDuplicate(key, keepId),
+    mutationFn: ({ key, keepId }: { key: string; keepId: string }) => keepOneDuplicate(eventId, key, keepId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates"] });
-      queryClient.invalidateQueries({ queryKey: ["invitees"] });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
     },
   });
 
-  // Funzione per capitalizzare la prima lettera di ogni parola
   const capitalizeWords = (str: string): string => {
     return str
       .split(' ')
@@ -274,11 +256,8 @@ export default function AdminDashboard() {
     checkInMutation.mutate({ id: person.id, adminOverride: true });
   };
 
-  // (rimosso) azione elimina per riga
-
   return (
     <div className="admin-dashboard">
-      {/* Duplicati solo per admin */}
       {!isOrganizer && duplicates.length > 0 && (
         <div className="duplicates-alert" ref={duplicatesRef}>
           <svg viewBox="0 0 24 24" fill="currentColor" className="dup-icon">
@@ -319,7 +298,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-      {/* Hint che appare quando ci sono duplicati dopo refresh/sync */}
       {!isOrganizer && showDupHint && duplicates.length > 0 && (
         <div className="dup-hint" role="status">
           <div className="dup-hint-left">
@@ -359,7 +337,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-      {/* Analisi duplicati lato client (trigger da pulsante) */}
       {!isOrganizer && localDupGroups && (
         <div className="duplicates-alert" ref={duplicatesRef}>
           <svg viewBox="0 0 24 24" fill="currentColor" className="dup-icon">
@@ -388,7 +365,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-      {/* Header - sync buttons solo per admin */}
       {!isOrganizer && (
         <div className="dashboard-header">
           <button
@@ -460,7 +436,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Sync Result */}
       {syncMutation.data && (
         <div className={`sync-result ${syncMutation.data.success ? "success" : "error"}`}>
           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -497,7 +472,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Tabs */}
       <div className="tabs">
         <button
           className={`tab ${activeTab === "paganti" ? "active" : ""}`}
@@ -527,7 +501,6 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      {/* Add Button - admin sempre, organizer solo su GREEN */}
       {(!isOrganizer || (isOrganizer && activeTab === "green")) && (
         <div className="actions-bar">
           <button className="add-button" onClick={() => setShowAddForm(!showAddForm)}>
@@ -548,7 +521,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Search Bar */}
       <div className="search-container">
         <div className="search-box">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="search-icon">
@@ -574,7 +546,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Add Form - admin sempre, organizer solo su GREEN */}
       {showAddForm && (!isOrganizer || (isOrganizer && activeTab === "green")) && (
         <div className="add-form-container">
           <form className="add-form" onSubmit={handleSubmit} autoComplete="off">
@@ -591,7 +562,6 @@ export default function AdminDashboard() {
                   value={formData.firstName}
                   onChange={(e) => {
                     const value = e.target.value;
-                    // Capitalizza automaticamente mentre si scrive
                     const capitalized = value
                       .split(' ')
                       .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : '')
@@ -609,7 +579,6 @@ export default function AdminDashboard() {
                   value={formData.lastName}
                   onChange={(e) => {
                     const value = e.target.value;
-                    // Capitalizza automaticamente mentre si scrive
                     const capitalized = value
                       .split(' ')
                       .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : '')
@@ -657,7 +626,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Lista */}
       <div className="invitees-list">
         {isLoading ? (
           <div className="loading-state">

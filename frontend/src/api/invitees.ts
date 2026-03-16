@@ -8,8 +8,8 @@ export interface Invitee {
   firstName: string;
   lastName: string;
   listType: ListType;
-  paymentType?: string | null; // Solo per PAGANTE: bonifico, paypal, contanti, p2p
-  hasEntered: boolean; // true = entrato (rosso), false = non entrato (verde)
+  paymentType?: string | null;
+  hasEntered: boolean;
   checkedInAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -82,80 +82,67 @@ export interface ResetReimportResponse {
   tshirts: SyncResult;
 }
 
-// GET /invitees - Lista tutti gli invitati
-export const fetchInvitees = async () => {
-  const response = await apiClient.get<Invitee[]>("/invitees");
+export const fetchInvitees = async (eventId: string) => {
+  const response = await apiClient.get<Invitee[]>(`/events/${eventId}/invitees`);
   return response.data;
 };
 
-// GET /invitees/search?q=query - Ricerca invitati
-export const searchInvitees = async (query: string) => {
-  const response = await apiClient.get<Invitee[]>(`/invitees/search?q=${encodeURIComponent(query)}`);
+export const searchInvitees = async (eventId: string, query: string) => {
+  const response = await apiClient.get<Invitee[]>(`/events/${eventId}/invitees/search?q=${encodeURIComponent(query)}`);
   return response.data;
 };
 
-// GET /invitees/stats - Statistiche per i contatori
-export const fetchStats = async () => {
-  const response = await apiClient.get<Stats>("/invitees/stats");
+export const fetchStats = async (eventId: string) => {
+  const response = await apiClient.get<Stats>(`/events/${eventId}/invitees/stats`);
   return response.data;
 };
 
-// POST /invitees - Crea nuovo invitato (o array di invitati)
-export const createInvitee = async (payload: InviteeInput | InviteeInput[]) => {
-  const response = await apiClient.post<Invitee | Invitee[]>("/invitees", payload);
+export const createInvitee = async (eventId: string, payload: InviteeInput | InviteeInput[]) => {
+  const response = await apiClient.post<Invitee | Invitee[]>(`/events/${eventId}/invitees`, payload);
   return response.data;
 };
 
-// POST /invitees/upload - Upload file (Excel/CSV)
-export const uploadInviteesFile = async (file: File) => {
+export const uploadInviteesFile = async (eventId: string, file: File) => {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await apiClient.post("/invitees/upload", formData, {
+  const response = await apiClient.post(`/events/${eventId}/invitees/upload`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data as { imported: number; skipped: number; total: number };
 };
 
-// POST /invitees/:id/checkin - Marca come entrato/non entrato
-export const checkInPerson = async (inviteeId: string, adminOverride: boolean = false) => {
-  const response = await apiClient.post<Invitee>(`/invitees/${inviteeId}/checkin`, { adminOverride });
+export const checkInPerson = async (eventId: string, inviteeId: string, adminOverride: boolean = false) => {
+  const response = await apiClient.post<Invitee>(`/events/${eventId}/invitees/${inviteeId}/checkin`, { adminOverride });
   return response.data;
 };
 
-// PATCH /invitees/:id/reset - Reset check-in (solo admin)
-export const resetInviteeCheckIn = async (inviteeId: string) => {
-  const response = await apiClient.patch<Invitee>(`/invitees/${inviteeId}/reset`);
+export const resetInviteeCheckIn = async (eventId: string, inviteeId: string) => {
+  const response = await apiClient.patch<Invitee>(`/events/${eventId}/invitees/${inviteeId}/reset`);
   return response.data;
 };
 
-// DELETE /invitees/:id - Elimina invitato (solo admin)
-export const deleteInvitee = async (inviteeId: string) => {
-  await apiClient.delete(`/invitees/${inviteeId}`);
+export const deleteInvitee = async (eventId: string, inviteeId: string) => {
+  await apiClient.delete(`/events/${eventId}/invitees/${inviteeId}`);
 };
 
-// GET /dashboard/metrics - Metriche dashboard
-export const fetchMetrics = async () => {
-  const response = await apiClient.get<DashboardMetrics>("/dashboard/metrics");
+export const fetchMetrics = async (eventId: string) => {
+  const response = await apiClient.get<DashboardMetrics>(`/events/${eventId}/dashboard/metrics`);
   return response.data;
 };
 
-// GET /settings/state - Configurazione sistema
-export const fetchSystemConfig = async () => {
-  const response = await apiClient.get<SystemConfig | null>("/settings/state");
+export const fetchSystemConfig = async (eventId: string) => {
+  const response = await apiClient.get<SystemConfig | null>(`/events/${eventId}/settings/state`);
   return response.data;
 };
 
-// PATCH /settings/state - Aggiorna stato evento
-export const updateEventStatus = async (status: EventStatus) => {
-  const response = await apiClient.patch<SystemConfig>("/settings/state", { status });
+export const updateEventStatus = async (eventId: string, status: EventStatus) => {
+  const response = await apiClient.patch<SystemConfig>(`/events/${eventId}/settings/state`, { status });
   return response.data;
 };
 
-// POST /sync/google-sheets - Sincronizza con Google Sheets
-export const syncGoogleSheets = async (opts?: { pruneMissing?: boolean }) => {
-  const response = await apiClient.post<any>("/sync/google-sheets", opts ?? {});
+export const syncGoogleSheets = async (eventId: string, opts?: { pruneMissing?: boolean }) => {
+  const response = await apiClient.post<any>(`/events/${eventId}/sync/google-sheets`, opts ?? {});
   const raw = response.data as any;
-  // Backend può rispondere sia piatto (SyncResult) sia annidato in { data, success, message }
   if (raw && typeof raw === 'object' && raw.data && typeof raw.data === 'object') {
     const flat: SyncResult = {
       success: Boolean(raw.success ?? raw.data.success ?? false),
@@ -171,24 +158,22 @@ export const syncGoogleSheets = async (opts?: { pruneMissing?: boolean }) => {
   return raw as SyncResult;
 };
 
-// POST /sync/reset-and-reimport - Reset DB invitati + reimport da Google Sheets (admin)
-export const resetAndReimport = async () => {
-  const response = await apiClient.post<ResetReimportResponse>("/sync/reset-and-reimport");
+export const resetAndReimport = async (eventId: string) => {
+  const response = await apiClient.post<ResetReimportResponse>(`/events/${eventId}/sync/reset-and-reimport`);
   return response.data;
 };
 
-// GET /invitees/duplicates - Gruppi di duplicati (solo admin)
-export const fetchDuplicateInvitees = async () => {
-  const response = await apiClient.get<DuplicateGroup[]>("/invitees/duplicates");
+export const fetchDuplicateInvitees = async (eventId: string) => {
+  const response = await apiClient.get<DuplicateGroup[]>(`/events/${eventId}/invitees/duplicates`);
   return response.data;
 };
 
-export const promoteDuplicateGroup = async (key: string, paymentType?: string) => {
-  const response = await apiClient.post<{ updated: number }>("/invitees/duplicates/promote", { key, paymentType });
+export const promoteDuplicateGroup = async (eventId: string, key: string, paymentType?: string) => {
+  const response = await apiClient.post<{ updated: number }>(`/events/${eventId}/invitees/duplicates/promote`, { key, paymentType });
   return response.data;
 };
 
-export const keepOneDuplicate = async (key: string, keepId: string) => {
-  const response = await apiClient.post<{ deleted: number }>("/invitees/duplicates/keep-one", { key, keepId });
+export const keepOneDuplicate = async (eventId: string, key: string, keepId: string) => {
+  const response = await apiClient.post<{ deleted: number }>(`/events/${eventId}/invitees/duplicates/keep-one`, { key, keepId });
   return response.data;
 };

@@ -9,12 +9,10 @@ import { ensureSystemConfig } from "./services/systemService";
 import { ensureDefaultAdmin } from "./services/authService";
 import { sqlInjectionProtection } from "./middleware/sqlInjectionProtection";
 import router from "./routes";
-import { ensureShuttleSetup } from "./services/shuttleService";
-
 export const createApp = async () => {
   await ensureSystemConfig();
   await ensureDefaultAdmin();
-  await ensureShuttleSetup();
+  // ensureShuttleSetup is now per-event and called when an event is accessed
 
   const app = express();
 

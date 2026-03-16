@@ -1,29 +1,46 @@
 import { Router } from "express";
-import { authenticate } from "../middleware/auth";
 import { adminOnly } from "../middleware/adminOnly";
-import { getSystemConfig, updateSystemStatus } from "../services/systemService";
+import { getEvent, updateEvent } from "../services/eventService";
+import { EventRequest } from "../middleware/eventAccess";
 
 const router = Router();
 
-router.use(authenticate, adminOnly);
-
-router.get("/state", async (_req, res, next) => {
+// GET /settings/state - Ottieni stato della festa corrente
+router.get("/state", adminOnly, async (req: EventRequest, res, next) => {
   try {
-    const config = await getSystemConfig();
-    return res.json(config);
+    const event = await getEvent(req.eventId!);
+    return res.json({
+      eventName: event.name,
+      eventStatus: event.status,
+      date: event.date,
+      modules: event.modules,
+      googleSheetId: event.googleSheetId,
+    });
   } catch (error) {
     return next(error);
   }
 });
 
-router.patch("/state", async (req, res, next) => {
+// PATCH /settings/state - Aggiorna stato della festa corrente
+router.patch("/state", adminOnly, async (req: EventRequest, res, next) => {
   try {
-    const { status } = req.body;
-    if (!status) {
-      return res.status(400).json({ message: "Stato richiesto" });
+    const { status, name } = req.body;
+    if (!status && !name) {
+      return res.status(400).json({ message: "Almeno uno tra stato e nome è richiesto" });
     }
-    const updated = await updateSystemStatus(status);
-    return res.json(updated);
+
+    const updated = await updateEvent(req.eventId!, {
+      ...(status ? { status } : {}),
+      ...(name ? { name } : {}),
+    });
+
+    return res.json({
+      eventName: updated.name,
+      eventStatus: updated.status,
+      date: updated.date,
+      modules: updated.modules,
+      googleSheetId: updated.googleSheetId,
+    });
   } catch (error) {
     return next(error);
   }

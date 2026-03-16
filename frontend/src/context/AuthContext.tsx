@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { loginRequest, type UserRole } from "../api/auth";
-import { setAuthToken } from "../api/client";
+import { setAuthToken, EVENT_STORAGE_KEY } from "../api/client";
 
 interface AuthContextValue {
   token: string | null;
@@ -49,6 +49,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = () => {
     setToken(null);
     setRole(null);
+    localStorage.removeItem(EVENT_STORAGE_KEY);
   };
 
   const value = useMemo(

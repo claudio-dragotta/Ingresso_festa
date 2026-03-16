@@ -20,24 +20,25 @@ export interface TshirtStats {
 // Capitalizza la prima lettera di ogni parola
 const capitalizeWords = (str: string): string => {
   return str
-    .split(' ')
+    .split(" ")
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
+    .join(" ");
 };
 
 // Ottieni tutte le magliette
-export const fetchTshirts = async () => {
+export const fetchTshirts = async (eventId: string) => {
   return prisma.tshirt.findMany({
+    where: { eventId },
     orderBy: [
-      { lastName: 'asc' },
-      { firstName: 'asc' }
-    ]
+      { lastName: "asc" },
+      { firstName: "asc" },
+    ],
   });
 };
 
 // Ottieni statistiche magliette
-export const fetchTshirtStats = async (): Promise<TshirtStats> => {
-  const all = await prisma.tshirt.findMany();
+export const fetchTshirtStats = async (eventId: string): Promise<TshirtStats> => {
+  const all = await prisma.tshirt.findMany({ where: { eventId } });
 
   const total = all.length;
   const received = all.filter(t => t.hasReceived).length;
@@ -63,7 +64,7 @@ export const fetchTshirtStats = async (): Promise<TshirtStats> => {
 };
 
 // Crea una nuova maglietta
-export const createTshirt = async (data: TshirtInput) => {
+export const createTshirt = async (data: TshirtInput, eventId: string) => {
   // Capitalizza nome e cognome
   const firstName = capitalizeWords(data.firstName.trim());
   const lastName = capitalizeWords(data.lastName.trim());
@@ -73,15 +74,17 @@ export const createTshirt = async (data: TshirtInput) => {
       firstName,
       lastName,
       size: data.size.toUpperCase(),
-      type: data.type
-    }
+      type: data.type,
+      eventId,
+    },
   });
 
   // Scrivi anche su Google Sheets (best-effort)
+  // TODO: per-event Google Sheets integration - usare event.googleSheetId in un follow-up
   try {
     await writeTshirtToGoogleSheet(created.firstName, created.lastName, created.size, created.type);
   } catch (err: any) {
-    logger.error('Errore scrittura nuova maglietta su Google Sheets:', err.message);
+    logger.error("Errore scrittura nuova maglietta su Google Sheets:", err.message);
   }
 
   return created;
@@ -100,8 +103,8 @@ export const toggleTshirtReceived = async (id: string) => {
     where: { id },
     data: {
       hasReceived: newStatus,
-      receivedAt: newStatus ? new Date() : null
-    }
+      receivedAt: newStatus ? new Date() : null,
+    },
   });
 };
 
@@ -122,7 +125,7 @@ export const updateTshirt = async (id: string, data: { size?: string; type?: str
     where: { id },
     data: {
       ...(nextSize ? { size: nextSize } : {}),
-      ...(typeof nextType === 'string' ? { type: nextType } : {}),
+      ...(typeof nextType === "string" ? { type: nextType } : {}),
     },
   });
 
@@ -138,30 +141,31 @@ export const updateTshirt = async (id: string, data: { size?: string; type?: str
       newType: updated.type,
     });
   } catch (err: any) {
-    logger.error('Errore sync aggiornamento maglietta su Google Sheets:', err.message);
+    logger.error("Errore sync aggiornamento maglietta su Google Sheets:", err.message);
   }
 
   return updated;
 };
 
 // Ottieni tutte le magliette PR e Vincenti (per utenti ENTRANCE)
-export const fetchTshirtsForEntrance = async () => {
+export const fetchTshirtsForEntrance = async (eventId: string) => {
   const allTshirts = await prisma.tshirt.findMany({
+    where: { eventId },
     orderBy: [
-      { lastName: 'asc' },
-      { firstName: 'asc' }
-    ]
+      { lastName: "asc" },
+      { firstName: "asc" },
+    ],
   });
 
   // Filtra per tipo (PR o Vincitore)
   return allTshirts.filter(t => {
-    const typeLower = (t.type || '').toString().trim().toLowerCase();
-    return typeLower === 'pr' || typeLower === 'vincitore' || typeLower === 'vincente';
+    const typeLower = (t.type || "").toString().trim().toLowerCase();
+    return typeLower === "pr" || typeLower === "vincitore" || typeLower === "vincente";
   });
 };
 
 // Cerca magliette per nome/cognome (per utenti ENTRANCE - solo PR e Vincitore)
-export const searchTshirtsForEntrance = async (query: string) => {
+export const searchTshirtsForEntrance = async (query: string, eventId: string) => {
   const normalizedQuery = query.trim().toLowerCase();
 
   if (normalizedQuery.length < 2) {
@@ -170,18 +174,19 @@ export const searchTshirtsForEntrance = async (query: string) => {
 
   // Prendi tutte le magliette e filtra manualmente (SQLite non supporta case-insensitive contains)
   const allTshirts = await prisma.tshirt.findMany({
+    where: { eventId },
     orderBy: [
-      { lastName: 'asc' },
-      { firstName: 'asc' }
-    ]
+      { lastName: "asc" },
+      { firstName: "asc" },
+    ],
   });
 
   // Filtra per tipo (PR o Vincitore) e per nome/cognome
   return allTshirts.filter(t => {
     // Normalizza tipologia eliminando spazi extra
-    const typeLower = (t.type || '').toString().trim().toLowerCase();
+    const typeLower = (t.type || "").toString().trim().toLowerCase();
     // Consenti SOLO PR o VINCITORE/VINCENTE (no match parziali come "comprare altre")
-    const matchesType = typeLower === 'pr' || typeLower === 'vincitore' || typeLower === 'vincente';
+    const matchesType = typeLower === "pr" || typeLower === "vincitore" || typeLower === "vincente";
     const matchesSearch =
       t.firstName.toLowerCase().includes(normalizedQuery) ||
       t.lastName.toLowerCase().includes(normalizedQuery);
@@ -191,7 +196,7 @@ export const searchTshirtsForEntrance = async (query: string) => {
 };
 
 // Cerca tutte le magliette per admin
-export const searchTshirts = async (query: string) => {
+export const searchTshirts = async (query: string, eventId: string) => {
   const normalizedQuery = query.trim().toLowerCase();
 
   if (normalizedQuery.length < 2) {
@@ -199,10 +204,11 @@ export const searchTshirts = async (query: string) => {
   }
 
   const allTshirts = await prisma.tshirt.findMany({
+    where: { eventId },
     orderBy: [
-      { lastName: 'asc' },
-      { firstName: 'asc' }
-    ]
+      { lastName: "asc" },
+      { firstName: "asc" },
+    ],
   });
 
   return allTshirts.filter(t =>
@@ -212,8 +218,9 @@ export const searchTshirts = async (query: string) => {
 };
 
 // Sincronizza magliette da Google Sheets
-export const syncTshirtsFromGoogleSheets = async (opts?: { pruneMissing?: boolean }) => {
-  logger.info('Inizio sincronizzazione magliette da Google Sheets');
+// TODO: per-event Google Sheets integration - usare event.googleSheetId in un follow-up
+export const syncTshirtsFromGoogleSheets = async (eventId: string, opts?: { pruneMissing?: boolean }) => {
+  logger.info("Inizio sincronizzazione magliette da Google Sheets");
 
   try {
     // Leggi dal foglio Google
@@ -226,13 +233,15 @@ export const syncTshirtsFromGoogleSheets = async (opts?: { pruneMissing?: boolea
     for (const sheetTshirt of sheetTshirts) {
       const key = `${sheetTshirt.lastName}|${sheetTshirt.firstName}|${sheetTshirt.size}`.toLowerCase();
       sheetKeys.add(key);
-      // Cerca se esiste già (stesso nome, cognome, taglia)
+
+      // Cerca se esiste già (stesso nome, cognome, taglia) nell'evento
       const existing = await prisma.tshirt.findFirst({
         where: {
+          eventId,
           firstName: sheetTshirt.firstName,
           lastName: sheetTshirt.lastName,
-          size: sheetTshirt.size
-        }
+          size: sheetTshirt.size,
+        },
       });
 
       if (existing) {
@@ -241,7 +250,7 @@ export const syncTshirtsFromGoogleSheets = async (opts?: { pruneMissing?: boolea
         if (existing.type !== sheetTshirt.type) {
           await prisma.tshirt.update({
             where: { id: existing.id },
-            data: { type: sheetTshirt.type }
+            data: { type: sheetTshirt.type },
           });
         }
       } else {
@@ -251,8 +260,9 @@ export const syncTshirtsFromGoogleSheets = async (opts?: { pruneMissing?: boolea
             firstName: sheetTshirt.firstName,
             lastName: sheetTshirt.lastName,
             size: sheetTshirt.size,
-            type: sheetTshirt.type
-          }
+            type: sheetTshirt.type,
+            eventId,
+          },
         });
         newImported++;
       }
@@ -260,7 +270,10 @@ export const syncTshirtsFromGoogleSheets = async (opts?: { pruneMissing?: boolea
 
     // Rimuovi mancanti se richiesto
     if (opts?.pruneMissing) {
-      const all = await prisma.tshirt.findMany({ select: { id: true, firstName: true, lastName: true, size: true } });
+      const all = await prisma.tshirt.findMany({
+        where: { eventId },
+        select: { id: true, firstName: true, lastName: true, size: true },
+      });
       let deleted = 0;
       for (const t of all) {
         const key = `${t.lastName}|${t.firstName}|${t.size}`.toLowerCase();
@@ -277,11 +290,10 @@ export const syncTshirtsFromGoogleSheets = async (opts?: { pruneMissing?: boolea
     return {
       success: true,
       newImported,
-      alreadyExists
+      alreadyExists,
     };
-
   } catch (error: any) {
-    logger.error('Errore sincronizzazione magliette:', error.message);
+    logger.error("Errore sincronizzazione magliette:", error.message);
     throw new AppError(`Errore sincronizzazione magliette: ${error.message}`, 500);
   }
 };
@@ -292,7 +304,7 @@ export const writeTshirtToSheets = async (firstName: string, lastName: string, s
     await writeTshirtToGoogleSheet(firstName, lastName, size, type);
     logger.info(`Maglietta scritta su Google Sheets: ${lastName} ${firstName}`);
   } catch (error: any) {
-    logger.error('Errore scrittura maglietta su Google Sheets:', error.message);
+    logger.error("Errore scrittura maglietta su Google Sheets:", error.message);
     throw new AppError(`Errore scrittura su Google Sheets: ${error.message}`, 500);
   }
 };

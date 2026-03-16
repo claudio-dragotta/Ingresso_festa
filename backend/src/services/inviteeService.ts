@@ -24,9 +24,10 @@ const normalizedKey = (firstName: string, lastName: string) => `${normalizeText(
 const buildFullName = (firstName: string, lastName: string) =>
   `${normalize(firstName)} ${normalize(lastName)}`.trim();
 
-export const createInvitee = async (input: InviteeInput) => {
-  // Controllo duplicati PRIMA di creare
+export const createInvitee = async (input: InviteeInput, eventId: string) => {
+  // Controllo duplicati PRIMA di creare (solo all'interno dello stesso evento)
   const allInvitees = await prisma.invitee.findMany({
+    where: { eventId },
     select: {
       id: true,
       firstName: true,
@@ -49,34 +50,39 @@ export const createInvitee = async (input: InviteeInput) => {
       firstName: normalize(input.firstName),
       lastName: normalize(input.lastName),
       listType: input.listType,
-      paymentType: input.listType === 'PAGANTE' ? input.paymentType?.trim().toLowerCase() : null,
+      paymentType: input.listType === "PAGANTE" ? input.paymentType?.trim().toLowerCase() : null,
       hasEntered: false,
+      eventId,
     },
   });
 
   // Sincronizza con Google Sheets (scrittura bidirezionale)
+  // TODO: per-event Google Sheets integration - usare event.googleSheetId in un follow-up
   try {
     const fullName = `${normalize(input.lastName)} ${normalize(input.firstName)}`;
     await writeToGoogleSheet(
       fullName,
       input.listType,
-      input.listType === 'PAGANTE' ? input.paymentType : undefined
+      input.listType === "PAGANTE" ? input.paymentType : undefined
     );
     logger.info(`✅ Scritto su Google Sheets: ${fullName} (${input.listType})`);
   } catch (error: any) {
     // Non blocchiamo l'operazione se la scrittura su Google Sheets fallisce
     // L'invitato è già stato creato nel DB
     logger.error(`⚠️  Errore scrittura Google Sheets per ${normalize(input.lastName)} ${normalize(input.firstName)}:`, error.message);
-    logger.warn('L\'invitato è stato creato nel DB ma non sincronizzato su Google Sheets');
+    logger.warn("L'invitato è stato creato nel DB ma non sincronizzato su Google Sheets");
   }
 
   return invitee;
 };
 
-export const createInviteesBulk = async (inputs: InviteeInput[]) => {
+export const createInviteesBulk = async (inputs: InviteeInput[], eventId: string) => {
   const results = [];
   for (const input of inputs) {
-    const allInvitees = await prisma.invitee.findMany({ select: { id: true, firstName: true, lastName: true } });
+    const allInvitees = await prisma.invitee.findMany({
+      where: { eventId },
+      select: { id: true, firstName: true, lastName: true },
+    });
     const targetKey = normalizedKey(input.firstName, input.lastName);
     const existing = allInvitees.find((inv) => normalizedKey(inv.firstName, inv.lastName) === targetKey);
 
@@ -85,15 +91,16 @@ export const createInviteesBulk = async (inputs: InviteeInput[]) => {
       continue;
     }
 
-    const created = await createInvitee(input);
+    const created = await createInvitee(input, eventId);
     results.push(created);
   }
 
   return results;
 };
 
-export const listInvitees = async () => {
+export const listInvitees = async (eventId: string) => {
   const invitees = await prisma.invitee.findMany({
+    where: { eventId },
     orderBy: [
       { lastName: "asc" },
       { firstName: "asc" },
@@ -102,8 +109,9 @@ export const listInvitees = async () => {
   return invitees;
 };
 
-export const searchInvitees = async (query: string) => {
+export const searchInvitees = async (query: string, eventId: string) => {
   const invitees = await prisma.invitee.findMany({
+    where: { eventId },
     orderBy: [
       { lastName: "asc" },
       { firstName: "asc" },
@@ -120,22 +128,49 @@ export const searchInvitees = async (query: string) => {
   );
 };
 
-export const markCheckIn = async (inviteeId: string, adminOverride: boolean = false, performedByUserId?: string | null) => {
-  const systemConfig = await prisma.systemConfig.findFirst();
-  if (!systemConfig || systemConfig.eventStatus === "LOCKED") {
+export const markCheckIn = async (
+  inviteeId: string,
+  adminOverride: boolean = false,
+  performedByUserId?: string | null,
+  eventId?: string
+) => {
+  // Recupera l'invitato per determinare l'eventId se non fornito
+  const inviteeForEvent = await prisma.invitee.findUnique({
+    where: { id: inviteeId },
+    select: { id: true, eventId: true },
+  });
+
+  const resolvedEventId = eventId ?? inviteeForEvent?.eventId;
+
+  if (!resolvedEventId) {
+    await prisma.checkInLog.create({
+      data: {
+        outcome: "BLOCKED",
+        message: "Evento non trovato",
+        inviteeId,
+        userId: performedByUserId ?? undefined,
+      },
+    });
+    throw new AppError("Evento non trovato", 404);
+  }
+
+  // Controlla lo stato dell'evento
+  const event = await prisma.event.findUnique({ where: { id: resolvedEventId } });
+  if (!event || event.status === "LOCKED") {
     await prisma.checkInLog.create({
       data: {
         outcome: "BLOCKED",
         message: "Sistema bloccato",
         inviteeId,
+        eventId: resolvedEventId,
         userId: performedByUserId ?? undefined,
       },
     });
-    throw new AppError("Sistema bloccato", 423, { status: systemConfig?.eventStatus ?? "LOCKED" });
+    throw new AppError("Sistema bloccato", 423, { status: event?.status ?? "LOCKED" });
   }
 
-  if (systemConfig.eventStatus === "PAUSED") {
-    throw new AppError("Registrazioni momentaneamente sospese", 423, { status: systemConfig.eventStatus });
+  if (event.status === "PAUSED") {
+    throw new AppError("Registrazioni momentaneamente sospese", 423, { status: event.status });
   }
 
   const invitee = await prisma.invitee.findUnique({ where: { id: inviteeId } });
@@ -144,6 +179,7 @@ export const markCheckIn = async (inviteeId: string, adminOverride: boolean = fa
       data: {
         outcome: "BLOCKED",
         message: "Invitato non trovato",
+        eventId: resolvedEventId,
         userId: performedByUserId ?? undefined,
       },
     });
@@ -155,6 +191,7 @@ export const markCheckIn = async (inviteeId: string, adminOverride: boolean = fa
     await prisma.checkInLog.create({
       data: {
         invitee: { connect: { id: invitee.id } },
+        event: { connect: { id: resolvedEventId } },
         outcome: "DUPLICATE",
         message: "Già entrato",
         ...(performedByUserId ? { user: { connect: { id: performedByUserId } } } : {}),
@@ -179,6 +216,7 @@ export const markCheckIn = async (inviteeId: string, adminOverride: boolean = fa
   await prisma.checkInLog.create({
     data: {
       invitee: { connect: { id: invitee.id } },
+      event: { connect: { id: resolvedEventId } },
       outcome: "SUCCESS",
       message: newState ? "Ingresso autorizzato" : "Reimpostato come non entrato",
       ...(performedByUserId ? { user: { connect: { id: performedByUserId } } } : {}),
@@ -204,12 +242,12 @@ export const deleteInvitee = async (inviteeId: string) => {
 };
 
 // Statistiche per i contatori
-export const getStats = async () => {
+export const getStats = async (eventId: string) => {
   const [pagantiTotal, pagantiEntered, greenTotal, greenEntered] = await Promise.all([
-    prisma.invitee.count({ where: { listType: 'PAGANTE' } }),
-    prisma.invitee.count({ where: { listType: 'PAGANTE', hasEntered: true } }),
-    prisma.invitee.count({ where: { listType: 'GREEN' } }),
-    prisma.invitee.count({ where: { listType: 'GREEN', hasEntered: true } }),
+    prisma.invitee.count({ where: { eventId, listType: "PAGANTE" } }),
+    prisma.invitee.count({ where: { eventId, listType: "PAGANTE", hasEntered: true } }),
+    prisma.invitee.count({ where: { eventId, listType: "GREEN" } }),
+    prisma.invitee.count({ where: { eventId, listType: "GREEN", hasEntered: true } }),
   ]);
 
   return {
@@ -231,8 +269,9 @@ export const getStats = async () => {
   };
 };
 
-export const getDuplicateInviteeGroups = async () => {
+export const getDuplicateInviteeGroups = async (eventId: string) => {
   const invitees = await prisma.invitee.findMany({
+    where: { eventId },
     orderBy: [
       { lastName: "asc" },
       { firstName: "asc" },
@@ -254,17 +293,19 @@ export const getDuplicateInviteeGroups = async () => {
   return duplicates;
 };
 
-export const promoteDuplicateGroupToPagante = async (key: string, paymentType?: string) => {
-  const invitees = await prisma.invitee.findMany();
+export const promoteDuplicateGroupToPagante = async (key: string, paymentType?: string, eventId?: string) => {
+  const whereClause: any = {};
+  if (eventId) whereClause.eventId = eventId;
+  const invitees = await prisma.invitee.findMany({ where: whereClause });
   const target = invitees.filter((inv) => normalizedKey(inv.firstName, inv.lastName) === key);
   if (target.length === 0) return { updated: 0 };
   let updated = 0;
   for (const inv of target) {
-    if (inv.listType !== 'PAGANTE' || (paymentType && inv.paymentType !== paymentType)) {
+    if (inv.listType !== "PAGANTE" || (paymentType && inv.paymentType !== paymentType)) {
       await prisma.invitee.update({
         where: { id: inv.id },
         data: {
-          listType: 'PAGANTE',
+          listType: "PAGANTE",
           paymentType: paymentType ? paymentType.trim().toLowerCase() : inv.paymentType,
         },
       });
@@ -274,8 +315,10 @@ export const promoteDuplicateGroupToPagante = async (key: string, paymentType?: 
   return { updated };
 };
 
-export const keepOneAndDeleteOthersInGroup = async (key: string, keepId: string) => {
-  const invitees = await prisma.invitee.findMany();
+export const keepOneAndDeleteOthersInGroup = async (key: string, keepId: string, eventId?: string) => {
+  const whereClause: any = {};
+  if (eventId) whereClause.eventId = eventId;
+  const invitees = await prisma.invitee.findMany({ where: whereClause });
   const group = invitees.filter((inv) => normalizedKey(inv.firstName, inv.lastName) === key);
   if (group.length <= 1) return { deleted: 0 };
   const toDelete = group.filter((inv) => inv.id !== keepId);

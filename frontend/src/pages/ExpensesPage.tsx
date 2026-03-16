@@ -9,6 +9,7 @@ import {
   deleteExpense,
 } from "../api/expenses";
 import type { Expense, CreateExpenseDto } from "../api/expenses";
+import { useEvent } from "../context/EventContext";
 import "./ExpensesPage.css";
 
 const CATEGORIES = [
@@ -27,6 +28,8 @@ const PAYMENT_METHODS = [
 ];
 
 export default function ExpensesPage() {
+  const { currentEvent } = useEvent();
+  const eventId = currentEvent!.id;
   const queryClient = useQueryClient();
 
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
@@ -43,26 +46,22 @@ export default function ExpensesPage() {
     notes: "",
   });
 
-  // Query expenses
   const { data: expenses = [] } = useQuery<Expense[]>({
-    queryKey: ["expenses", categoryFilter],
+    queryKey: ["expenses", eventId, categoryFilter],
     queryFn: () =>
-      fetchExpenses(categoryFilter !== "ALL" ? { category: categoryFilter } : undefined),
+      fetchExpenses(eventId, categoryFilter !== "ALL" ? { category: categoryFilter } : undefined),
   });
 
-  // Query stats
   const { data: stats } = useQuery({
-    queryKey: ["expenses-stats"],
-    queryFn: () => fetchExpenseStats(),
+    queryKey: ["expenses-stats", eventId],
+    queryFn: () => fetchExpenseStats(eventId),
   });
 
-  // Query balances
   const { data: balances, error: balancesError, isLoading: balancesLoading } = useQuery({
-    queryKey: ["expenses-balances"],
-    queryFn: () => fetchBalances(),
+    queryKey: ["expenses-balances", eventId],
+    queryFn: () => fetchBalances(eventId),
   });
 
-  // Debug: mostra errori e dati
   if (balancesError) {
     console.error("Errore caricamento balances:", balancesError);
   }
@@ -70,38 +69,35 @@ export default function ExpensesPage() {
     console.log("Balances caricati:", balances);
   }
 
-  // Mutation: create
   const createMutation = useMutation({
-    mutationFn: createExpense,
+    mutationFn: (data: CreateExpenseDto) => createExpense(eventId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["expenses"] });
-      queryClient.invalidateQueries({ queryKey: ["expenses-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["expenses-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["expenses", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["expenses-stats", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["expenses-balances", eventId] });
       setShowAddForm(false);
       resetForm();
     },
   });
 
-  // Mutation: update
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateExpenseDto> }) =>
-      updateExpense(id, data),
+      updateExpense(eventId, id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["expenses"] });
-      queryClient.invalidateQueries({ queryKey: ["expenses-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["expenses-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["expenses", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["expenses-stats", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["expenses-balances", eventId] });
       setEditingExpense(null);
       resetForm();
     },
   });
 
-  // Mutation: delete
   const deleteMutation = useMutation({
-    mutationFn: deleteExpense,
+    mutationFn: (id: string) => deleteExpense(eventId, id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["expenses"] });
-      queryClient.invalidateQueries({ queryKey: ["expenses-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["expenses-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["expenses", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["expenses-stats", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["expenses-balances", eventId] });
     },
   });
 
@@ -179,12 +175,9 @@ export default function ExpensesPage() {
     return PAYMENT_METHODS.find((m) => m.value === method.toLowerCase())?.emoji || "💰";
   };
 
-  // Filtra spese in base alla ricerca e alla categoria
   const filteredExpenses = expenses.filter((exp) => {
-    // Filtro categoria
     const matchesCategory = categoryFilter === "ALL" || exp.category === categoryFilter;
 
-    // Filtro ricerca
     const matchesSearch = !searchQuery.trim() || (() => {
       const query = searchQuery.toLowerCase();
       return (
@@ -206,7 +199,6 @@ export default function ExpensesPage() {
           <p className="subtitle">Traccia tutte le spese della festa</p>
         </header>
 
-        {/* Balances by Payment Method */}
         {balancesLoading && (
           <div className="loading-state">
             <div className="spinner"></div>
@@ -215,12 +207,12 @@ export default function ExpensesPage() {
         )}
         {balancesError && (
           <div className="error-state" style={{padding: "1rem", background: "#fee2e2", border: "1px solid #ef4444", borderRadius: "8px", marginBottom: "1rem"}}>
-            <p style={{color: "#991b1b", margin: 0}}>⚠️ Errore caricamento saldi. Verifica di essere loggato come admin.</p>
+            <p style={{color: "#991b1b", margin: 0}}>Errore caricamento saldi. Verifica di essere loggato come admin.</p>
           </div>
         )}
         {balances && balances.totalIncome === 0 && (
           <div className="warning-state" style={{padding: "1rem", background: "#fef3c7", border: "1px solid #f59e0b", borderRadius: "8px", marginBottom: "1rem"}}>
-            <p style={{color: "#92400e", margin: 0}}>⚠️ Nessun pagante trovato o i metodi di pagamento non sono impostati. Assicurati che i paganti abbiano un metodo di pagamento selezionato (PayPal, Contanti, P2P, Bonifico).</p>
+            <p style={{color: "#92400e", margin: 0}}>Nessun pagante trovato o i metodi di pagamento non sono impostati. Assicurati che i paganti abbiano un metodo di pagamento selezionato (PayPal, Contanti, P2P, Bonifico).</p>
           </div>
         )}
         {balances && (
@@ -275,7 +267,6 @@ export default function ExpensesPage() {
           </div>
         )}
 
-        {/* Statistics Cards */}
         {stats && (
           <div className="stats-grid">
             <div className="stat-card total">
@@ -306,7 +297,6 @@ export default function ExpensesPage() {
           </div>
         )}
 
-        {/* Category Breakdown */}
         {stats && stats.byCategory.length > 0 && (
           <div className="category-breakdown">
             <h2>Spese per Categoria</h2>
@@ -325,7 +315,6 @@ export default function ExpensesPage() {
           </div>
         )}
 
-        {/* Add Expense Button */}
         <div className="actions">
           <button
             className="btn-primary"
@@ -338,7 +327,6 @@ export default function ExpensesPage() {
           </button>
         </div>
 
-        {/* Add/Edit Form */}
         {showAddForm && (
           <div className="add-form-card">
             <h3>{editingExpense ? "Modifica Spesa" : "Nuova Spesa"}</h3>
@@ -447,7 +435,6 @@ export default function ExpensesPage() {
           </div>
         )}
 
-        {/* Search Bar */}
         <div className="search-container">
           <div className="search-box">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="search-icon">
@@ -473,7 +460,6 @@ export default function ExpensesPage() {
           </div>
         </div>
 
-        {/* Filter */}
         <div className="filter-section">
           <label>Filtra per categoria:</label>
           <select
@@ -490,7 +476,6 @@ export default function ExpensesPage() {
           </select>
         </div>
 
-        {/* Expenses List */}
         <div className="expenses-list">
           <h2>Lista Spese</h2>
           {expenses.length === 0 ? (

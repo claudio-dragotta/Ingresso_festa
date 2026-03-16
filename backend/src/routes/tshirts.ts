@@ -11,54 +11,54 @@ import {
   syncTshirtsFromGoogleSheets,
   writeTshirtToSheets,
   updateTshirt,
-  type TshirtInput
+  type TshirtInput,
 } from "../services/tshirtService";
-import { authenticate } from "../middleware/auth";
 import { allowRoles } from "../middleware/roles";
 import { adminOnly } from "../middleware/adminOnly";
+import { EventRequest } from "../middleware/eventAccess";
 
 const router = Router();
 
-// GET /api/tshirts - Ottieni lista magliette (Admin: tutte, Entrance: solo PR e Vincitore)
-router.get("/", authenticate, allowRoles(['ADMIN','ORGANIZER','ENTRANCE']), async (req, res, next) => {
+// GET /tshirts - Ottieni lista magliette (Admin: tutte, Entrance: solo PR e Vincitore)
+router.get("/", allowRoles(["ADMIN", "ORGANIZER", "ENTRANCE"]), async (req: EventRequest, res, next) => {
   try {
     const userRole = (req as any).user?.role;
     const query = req.query.search as string | undefined;
 
     if (query && query.length >= 2) {
       // Ricerca
-      const results = (userRole === 'ADMIN' || userRole === 'ORGANIZER')
-        ? await searchTshirts(query)
-        : await searchTshirtsForEntrance(query);
+      const results = (userRole === "ADMIN" || userRole === "ORGANIZER")
+        ? await searchTshirts(query, req.eventId!)
+        : await searchTshirtsForEntrance(query, req.eventId!);
       return res.json(results);
     }
 
     // Lista completa
-    if (userRole === 'ADMIN' || userRole === 'ORGANIZER') {
-      const tshirts = await fetchTshirts();
+    if (userRole === "ADMIN" || userRole === "ORGANIZER") {
+      const tshirts = await fetchTshirts(req.eventId!);
       return res.json(tshirts);
     }
 
     // Per utenti ENTRANCE e SHUTTLE, restituisci solo magliette PR e Vincenti
-    const tshirtsForEntrance = await fetchTshirtsForEntrance();
+    const tshirtsForEntrance = await fetchTshirtsForEntrance(req.eventId!);
     return res.json(tshirtsForEntrance);
   } catch (error) {
     return next(error);
   }
 });
 
-// GET /api/tshirts/stats - Statistiche magliette (solo admin)
-router.get("/stats", authenticate, adminOnly, async (req, res, next) => {
+// GET /tshirts/stats - Statistiche magliette (solo admin)
+router.get("/stats", adminOnly, async (req: EventRequest, res, next) => {
   try {
-    const stats = await fetchTshirtStats();
+    const stats = await fetchTshirtStats(req.eventId!);
     return res.json(stats);
   } catch (error) {
     return next(error);
   }
 });
 
-// POST /api/tshirts - Crea nuova maglietta (solo admin)
-router.post("/", authenticate, adminOnly, async (req, res, next) => {
+// POST /tshirts - Crea nuova maglietta (solo admin)
+router.post("/", adminOnly, async (req: EventRequest, res, next) => {
   try {
     const data: TshirtInput = req.body;
 
@@ -66,16 +66,16 @@ router.post("/", authenticate, adminOnly, async (req, res, next) => {
       return res.status(400).json({ message: "Nome, cognome e taglia sono obbligatori" });
     }
 
-    const tshirt = await createTshirt(data);
+    const tshirt = await createTshirt(data, req.eventId!);
     return res.status(201).json(tshirt);
   } catch (error) {
     return next(error);
   }
 });
 
-// PATCH /api/tshirts/:id/toggle - Toggle consegna maglietta
+// PATCH /tshirts/:id/toggle - Toggle consegna maglietta
 // Toggle consegna: Admin, Organizer, Entrance
-router.patch("/:id/toggle", authenticate, allowRoles(['ADMIN','ORGANIZER','ENTRANCE']), async (req, res, next) => {
+router.patch("/:id/toggle", allowRoles(["ADMIN", "ORGANIZER", "ENTRANCE"]), async (req: EventRequest, res, next) => {
   try {
     const tshirt = await toggleTshirtReceived(req.params.id);
     return res.json(tshirt);
@@ -84,8 +84,8 @@ router.patch("/:id/toggle", authenticate, allowRoles(['ADMIN','ORGANIZER','ENTRA
   }
 });
 
-// DELETE /api/tshirts/:id - Elimina maglietta (solo admin)
-router.delete("/:id", authenticate, adminOnly, async (req, res, next) => {
+// DELETE /tshirts/:id - Elimina maglietta (solo admin)
+router.delete("/:id", adminOnly, async (req: EventRequest, res, next) => {
   try {
     await deleteTshirt(req.params.id);
     return res.status(204).send();
@@ -94,11 +94,11 @@ router.delete("/:id", authenticate, adminOnly, async (req, res, next) => {
   }
 });
 
-// PATCH /api/tshirts/:id - Aggiorna taglia e/o tipologia (solo admin)
-router.patch("/:id", authenticate, adminOnly, async (req, res, next) => {
+// PATCH /tshirts/:id - Aggiorna taglia e/o tipologia (solo admin)
+router.patch("/:id", adminOnly, async (req: EventRequest, res, next) => {
   try {
     const { size, type } = req.body as { size?: string; type?: string };
-    if (!size && typeof type !== 'string') {
+    if (!size && typeof type !== "string") {
       return res.status(400).json({ message: "Nessun campo da aggiornare" });
     }
     const tshirt = await updateTshirt(req.params.id, { size, type });
@@ -108,11 +108,11 @@ router.patch("/:id", authenticate, adminOnly, async (req, res, next) => {
   }
 });
 
-// POST /api/tshirts/sync - Sincronizza magliette da Google Sheets (solo admin)
-router.post("/sync", authenticate, adminOnly, async (req, res, next) => {
+// POST /tshirts/sync - Sincronizza magliette da Google Sheets (solo admin)
+router.post("/sync", adminOnly, async (req: EventRequest, res, next) => {
   try {
     const pruneMissing = Boolean((req.body as any)?.pruneMissing);
-    const result = await syncTshirtsFromGoogleSheets({ pruneMissing });
+    const result = await syncTshirtsFromGoogleSheets(req.eventId!, { pruneMissing });
     return res.json(result);
   } catch (error) {
     return next(error);

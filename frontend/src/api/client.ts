@@ -16,9 +16,9 @@ export const setAuthToken = (token: string | null) => {
 
 export default apiClient;
 
-// Auto-logout interceptor su 401/403
 const TOKEN_STORAGE_KEY = "ingresso-festa-token";
 const ROLE_STORAGE_KEY = "ingresso-festa-role";
+export const EVENT_STORAGE_KEY = "ingresso-festa-event";
 
 apiClient.interceptors.response.use(
   (response) => response,
@@ -28,6 +28,7 @@ apiClient.interceptors.response.use(
       try {
         localStorage.removeItem(TOKEN_STORAGE_KEY);
         localStorage.removeItem(ROLE_STORAGE_KEY);
+        localStorage.removeItem(EVENT_STORAGE_KEY);
       } catch {}
       if (typeof window !== "undefined") {
         window.location.assign("/login");
@@ -37,7 +38,6 @@ apiClient.interceptors.response.use(
   },
 );
 
-// Inizializza subito l'Authorization dalle credenziali persistite
 try {
   const existing = typeof window !== "undefined" ? localStorage.getItem(TOKEN_STORAGE_KEY) : null;
   if (existing) setAuthToken(existing);

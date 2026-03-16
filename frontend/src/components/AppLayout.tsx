@@ -1,12 +1,14 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useEvent } from "../context/EventContext";
 import { useState } from "react";
 import "./AppLayout.css";
 import ThemeToggle from "./ThemeToggle";
 
 const AppLayout = () => {
   const { logout, isAdmin, role } = useAuth();
-  const showShuttles = role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE";
+  const { currentEvent, clearEvent, hasModule } = useEvent();
+  const showShuttles = (role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE") && hasModule("shuttles");
   const isShuttle = role === "SHUTTLE";
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -18,11 +20,18 @@ const AppLayout = () => {
     navigate("/login", { replace: true });
   };
 
+  const handleChangeEvent = () => {
+    clearEvent();
+    navigate("/select-event", { replace: true });
+  };
+
   const closeMobileMenu = () => {
     setMobileMenuOpen(false);
   };
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) => `nav-link${isActive ? " active" : ""}`;
+
+  const eventName = currentEvent?.name ?? "Evento";
 
   return (
     <div className="app-shell">
@@ -30,7 +39,7 @@ const AppLayout = () => {
         <div className="header-content">
           <div className="header-left">
             <NavLink to="/" className="brand" aria-label="Home">
-              <h1>Festa 8 Novembre</h1>
+              <h1>{eventName}</h1>
             </NavLink>
             <span className={`role-badge ${isAdmin ? "admin" : (role ?? "").toLowerCase()}`}>
               {role === "ADMIN" ? "Admin" : role === "ORGANIZER" ? "Organizzatore" : role === "SHUTTLE" ? "Navetta" : "Ingresso"}
@@ -60,12 +69,14 @@ const AppLayout = () => {
                   </svg>
                   Utenti
                 </NavLink>
-                <NavLink to="/expenses" className={navLinkClass}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                  </svg>
-                  Spese
-                </NavLink>
+                {hasModule("expenses") && (
+                  <NavLink to="/expenses" className={navLinkClass}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                    Spese
+                  </NavLink>
+                )}
               </>
             )}
             {!isShuttle && (
@@ -86,7 +97,7 @@ const AppLayout = () => {
                 Navette
               </NavLink>
             )}
-            {!isShuttle && (
+            {!isShuttle && hasModule("tshirts") && (
               <NavLink to="/tshirts" className={navLinkClass}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M16 3c-1.2 1-2.6 2-4 2s-2.8-1-4-2L4 6l2 2v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l2-2-4-3z"/>
@@ -95,6 +106,12 @@ const AppLayout = () => {
                 Magliette
               </NavLink>
             )}
+            <button type="button" onClick={handleChangeEvent} className="nav-link change-event-button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+              </svg>
+              Cambia
+            </button>
             <button type="button" onClick={handleLogout} className="logout-button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -160,12 +177,14 @@ const AppLayout = () => {
                   </svg>
                   <span>Utenti</span>
                 </NavLink>
-                <NavLink to="/expenses" className={navLinkClass} onClick={closeMobileMenu}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                  </svg>
-                  <span>Spese</span>
-                </NavLink>
+                {hasModule("expenses") && (
+                  <NavLink to="/expenses" className={navLinkClass} onClick={closeMobileMenu}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                    <span>Spese</span>
+                  </NavLink>
+                )}
               </>
             )}
             {showShuttles && (
@@ -186,7 +205,7 @@ const AppLayout = () => {
                 <span>Ricerca</span>
               </NavLink>
             )}
-            {!isShuttle && (
+            {!isShuttle && hasModule("tshirts") && (
               <NavLink to="/tshirts" className={navLinkClass} onClick={closeMobileMenu}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M16 3c-1.2 1-2.6 2-4 2s-2.8-1-4-2L4 6l2 2v13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l2-2-4-3z"/>
@@ -195,6 +214,16 @@ const AppLayout = () => {
                 <span>Magliette</span>
               </NavLink>
             )}
+            <button
+              type="button"
+              onClick={() => { handleChangeEvent(); closeMobileMenu(); }}
+              className="nav-link change-event-button mobile"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+              </svg>
+              <span>Cambia festa</span>
+            </button>
             <button type="button" onClick={() => { handleLogout(); closeMobileMenu(); }} className="logout-button mobile">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -215,6 +244,3 @@ const AppLayout = () => {
 };
 
 export default AppLayout;
-
-
-
