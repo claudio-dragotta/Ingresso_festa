@@ -33,13 +33,16 @@ export default function EventPickerPage() {
 
   const createMutation = useMutation({
     mutationFn: createEvent,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       setShowCreateForm(false);
       setFormName("");
       setFormDate("");
       setFormModules(["tshirts", "expenses", "shuttles"]);
-      setFormCreateSheet(true);
+      setFormCreateSheet(false);
+      if ((data as any).sheetError) {
+        alert(`Festa creata, ma il Google Sheet non è stato collegato:\n${(data as any).sheetError}\n\nPuoi collegarlo manualmente in seguito.`);
+      }
     },
   });
 
