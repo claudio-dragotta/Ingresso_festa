@@ -731,9 +731,9 @@
   gap: 0.3rem;
   padding: 0.4rem 0.85rem;
   border-radius: 999px;
-  border: 1.5px solid var(--border);
-  background: transparent;
-  color: var(--muted);
+  border: 1.5px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
   font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
@@ -742,13 +742,32 @@
 }
 
 .sheet-tab-chip:hover {
-  border-color: var(--primary, #667eea);
-  color: var(--primary, #667eea);
+  border-color: #667eea;
+  color: #667eea;
+  background: #eef2ff;
 }
 
 .sheet-tab-chip.selected {
-  background: var(--primary, #667eea);
-  border-color: var(--primary, #667eea);
+  background: #667eea;
+  border-color: #667eea;
+  color: #fff;
+}
+
+[data-theme="dark"] .sheet-tab-chip {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .sheet-tab-chip:hover {
+  border-color: #818cf8;
+  color: #818cf8;
+  background: #1e1b4b;
+}
+
+[data-theme="dark"] .sheet-tab-chip.selected {
+  background: #667eea;
+  border-color: #667eea;
   color: #fff;
 }
 
