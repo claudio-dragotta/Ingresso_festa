@@ -1,8 +1,10 @@
-# 🎉 Festa 8 Novembre - Sistema di Gestione Ingressi
+# 🎉 Ingresso Festa - Sistema di Gestione Ingressi Multi-Evento
 
-Sistema moderno per la gestione degli ingressi alla festa, con ricerca in tempo reale, sincronizzazione Google Sheets e interfacce separate per Admin e operatori all'ingresso.
+Sistema moderno per la gestione degli ingressi, invitati, navette, magliette e spese di eventi/feste. Supporta **più feste contemporaneamente**, ognuna con i propri dati e Google Sheet separati.
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue)
+- **Backend:** https://ingresso-festa-api.onrender.com
+- **Frontend:** https://ingresso-festa-web.onrender.com
+
 ![Node](https://img.shields.io/badge/node-%3E%3D20-green)
 ![TypeScript](https://img.shields.io/badge/typescript-5.6-blue)
 ![React](https://img.shields.io/badge/react-19-blue)
@@ -16,18 +18,57 @@ Sistema moderno per la gestione degli ingressi alla festa, con ricerca in tempo 
 - **Interface Moderna**: Design intuitivo e responsive
 
 ### 👑 Per gli Admin
+- **Multi-evento**: Gestisci più feste, ognuna con dati completamente separati
 - **Dashboard Completa**: Gestione totale di entrambe le liste (Paganti e Green)
 - **Aggiungi Persone**: Form semplice per inserire nuovi ospiti
-- **Sincronizzazione Google Sheets**: Importa automaticamente da due tabelle
+- **Sincronizzazione Google Sheets**: Importa automaticamente dalla lista del foglio collegato
 - **Controllo Totale**: Elimina, modifica e resetta gli stati di ingresso
 - **Statistiche Real-time**: Monitora l'andamento della festa
 
-### 🔄 Integrazione Google Sheets
+### 🔄 Integrazione Google Sheets (per evento)
+- Ogni festa ha il proprio foglio Google Sheets collegato
 - **Due Liste Separate**:
   - **Lista** (Paganti): Cognome Nome + Tipologia Pagamento
   - **GREEN**: Cognome Nome (ospiti non paganti)
+- **Tab aggiuntivi** in base ai moduli attivi: Magliette, Navette Andata, Navette Ritorno
 - **Sincronizzazione Automatica**: Ogni 10 minuti (configurabile)
 - **Sincronizzazione Manuale**: Bottone nella dashboard admin
+
+---
+
+## 📋 Setup Google Sheet per una nuova festa
+
+### 1. Crea il foglio Google Sheets
+
+1. Vai su [sheets.google.com](https://sheets.google.com) e crea un nuovo foglio (anche completamente vuoto)
+2. Clicca su **Condividi** in alto a destra
+3. Aggiungi il service account come **Editor**:
+   ```
+   ingresso-festa-sync@lista-festa-8-novembre.iam.gserviceaccount.com
+   ```
+4. Copia l'**ID del foglio** dall'URL:
+   ```
+   https://docs.google.com/spreadsheets/d/  →  ID_QUI  ←  /edit
+   ```
+
+### 2. Crea la festa nell'app
+
+1. Accedi con un account **ADMIN**
+2. Nella pagina di selezione festa, clicca **Crea nuova festa**
+3. Inserisci nome, data e seleziona i moduli attivi (Navette, Magliette, Spese)
+4. Incolla l'**ID del foglio** nel campo apposito
+5. Clicca **Crea Festa**
+
+> I tab del foglio (Lista, GREEN, Magliette, Navette Andata, Navette Ritorno) vengono configurati **automaticamente** in base ai moduli scelti.
+
+### 3. Collegare uno sheet a una festa esistente
+
+Se hai già creato una festa senza sheet, o vuoi cambiare il foglio collegato:
+
+1. Nella pagina di selezione festa, clicca l'icona **⚙️** sulla card della festa
+2. Incolla il nuovo **Google Sheet ID**
+3. Clicca **Salva Sheet ID**
+4. Clicca **Configura Tab Sheet** per aggiungere i tab mancanti al foglio
 
 ## 🚀 Quick Start
 
