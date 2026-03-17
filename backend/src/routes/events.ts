@@ -12,7 +12,9 @@ import {
   removeUserFromEvent,
   setupGoogleSheet,
   ALL_MODULES,
+  ALL_SHEET_TABS,
   EventModule,
+  SheetTab,
 } from "../services/eventService";
 import { UserRole } from "@prisma/client";
 
@@ -102,7 +104,13 @@ router.post("/:eventId/setup-sheet", requireGlobalAdmin, async (req: EventReques
     if (!event.googleSheetId) {
       return res.status(400).json({ message: "Nessun Google Sheet collegato a questa festa" });
     }
-    await setupGoogleSheet(event.googleSheetId, event.modules as EventModule[]);
+
+    // Tab selezionati dall'utente (o tutti disponibili se non specificati)
+    const requestedTabs: SheetTab[] = Array.isArray(req.body.tabs)
+      ? (req.body.tabs as string[]).filter((t) => ALL_SHEET_TABS.includes(t as SheetTab)) as SheetTab[]
+      : [...ALL_SHEET_TABS];
+
+    await setupGoogleSheet(event.googleSheetId, requestedTabs);
     return res.json({ message: "Sheet configurato correttamente" });
   } catch (error) {
     return next(error);

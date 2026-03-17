@@ -24,8 +24,8 @@ export const createEvent = async (payload: {
   return data;
 };
 
-export const setupEventSheet = async (eventId: string): Promise<void> => {
-  await apiClient.post(`/events/${eventId}/setup-sheet`);
+export const setupEventSheet = async (eventId: string, tabs: string[]): Promise<void> => {
+  await apiClient.post(`/events/${eventId}/setup-sheet`, { tabs });
 };
 
 export const updateEvent = async (

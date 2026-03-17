@@ -14,6 +14,9 @@ const STATUS_LABELS: Record<string, string> = {
   LOCKED: "Bloccata",
 };
 
+const ALL_SHEET_TABS = ["Lista", "GREEN", "Magliette", "Navette Andata", "Navette Ritorno"] as const;
+type SheetTab = (typeof ALL_SHEET_TABS)[number];
+
 export default function EventPickerPage() {
   const { isAdmin, logout } = useAuth();
   const { selectEvent } = useEvent();
@@ -30,6 +33,7 @@ export default function EventPickerPage() {
   // Stato modale impostazioni evento
   const [editingEvent, setEditingEvent] = useState<EventInfo | null>(null);
   const [editSheetId, setEditSheetId] = useState("");
+  const [selectedTabs, setSelectedTabs] = useState<SheetTab[]>([...ALL_SHEET_TABS]);
   const [setupMsg, setSetupMsg] = useState<string | null>(null);
 
   const { data: events = [], isLoading } = useQuery<EventInfo[]>({
@@ -65,7 +69,8 @@ export default function EventPickerPage() {
   });
 
   const setupSheetMutation = useMutation({
-    mutationFn: (eventId: string) => setupEventSheet(eventId),
+    mutationFn: ({ eventId, tabs }: { eventId: string; tabs: SheetTab[] }) =>
+      setupEventSheet(eventId, tabs),
     onSuccess: () => setSetupMsg("Tab e intestazioni configurati correttamente nel foglio!"),
     onError: (err: any) =>
       setSetupMsg(`Errore: ${err?.response?.data?.message ?? err.message}`),
@@ -88,6 +93,17 @@ export default function EventPickerPage() {
     setEditingEvent(event);
     setEditSheetId(event.googleSheetId ?? "");
     setSetupMsg(null);
+    // Pre-seleziona i tab in base ai moduli attivi
+    const defaultTabs: SheetTab[] = ["Lista", "GREEN"];
+    if (event.modules.includes("tshirts")) defaultTabs.push("Magliette");
+    if (event.modules.includes("shuttles")) { defaultTabs.push("Navette Andata"); defaultTabs.push("Navette Ritorno"); }
+    setSelectedTabs(defaultTabs);
+  };
+
+  const handleTabToggle = (tab: SheetTab) => {
+    setSelectedTabs((prev) =>
+      prev.includes(tab) ? prev.filter((t) => t !== tab) : [...prev, tab]
+    );
   };
 
   const handleSaveSheetId = () => {
@@ -101,7 +117,7 @@ export default function EventPickerPage() {
   const handleSetupSheet = () => {
     if (!editingEvent) return;
     setSetupMsg(null);
-    setupSheetMutation.mutate(editingEvent.id);
+    setupSheetMutation.mutate({ eventId: editingEvent.id, tabs: selectedTabs });
   };
 
   const handleModuleToggle = (module: EventModule) => {
@@ -421,19 +437,37 @@ export default function EventPickerPage() {
                 >
                   {updateSheetMutation.isPending ? "Salvataggio..." : "Salva Sheet ID"}
                 </button>
+              </div>
 
-                {editingEvent.googleSheetId && (
+              {editingEvent.googleSheetId && (
+                <div className="sheet-tabs-section">
+                  <label className="sheet-tabs-label">Tab da aggiungere al foglio</label>
+                  <div className="sheet-tabs-checkboxes">
+                    {ALL_SHEET_TABS.map((tab) => (
+                      <label key={tab} className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={selectedTabs.includes(tab)}
+                          onChange={() => handleTabToggle(tab)}
+                        />
+                        <span>{tab}</span>
+                      </label>
+                    ))}
+                  </div>
                   <button
                     type="button"
                     className="setup-sheet-button"
                     onClick={handleSetupSheet}
-                    disabled={setupSheetMutation.isPending}
-                    title="Aggiunge i tab (Lista, GREEN, Magliette, Navette) al foglio se mancanti"
+                    disabled={setupSheetMutation.isPending || selectedTabs.length === 0}
+                    title="Aggiunge i tab selezionati al foglio (salta quelli già esistenti)"
                   >
                     {setupSheetMutation.isPending ? "Configurazione..." : "Configura Tab Sheet"}
                   </button>
-                )}
-              </div>
+                  <p className="form-hint">
+                    I tab già presenti nel foglio non vengono modificati. La colonna "Tipologia Pagamento" nel tab Lista avrà un menu a tendina (paypal, contanti, p2p, bonifico).
+                  </p>
+                </div>
+              )}
 
               {setupMsg && (
                 <div className={`setup-msg ${setupMsg.startsWith("Errore") ? "form-error" : "form-success"}`}>

@@ -702,6 +702,27 @@
   margin: 0.25rem 0;
 }
 
+/* ===== SEZIONE TAB SHEET ===== */
+.sheet-tabs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.sheet-tabs-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.sheet-tabs-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
 @media (max-width: 640px) {
   .event-picker-card {
     padding: 1.75rem 1.25rem;

@@ -28,55 +28,67 @@ function getSheetsClient() {
   return google.sheets({ version: "v4", auth });
 }
 
+export const PAYMENT_TYPES = ["paypal", "contanti", "p2p", "bonifico"];
+
+export const ALL_SHEET_TABS = ["Lista", "GREEN", "Magliette", "Navette Andata", "Navette Ritorno"] as const;
+export type SheetTab = (typeof ALL_SHEET_TABS)[number];
+
 /**
  * Configura un Google Sheet esistente aggiungendo i tab e le intestazioni
- * in base ai moduli della festa. Salta i tab già esistenti.
+ * per i tab selezionati. Salta i tab già esistenti.
+ * Lista: 3 colonne con dropdown pagamento su colonna B.
  */
-export async function setupGoogleSheet(spreadsheetId: string, modules: EventModule[]): Promise<void> {
+export async function setupGoogleSheet(spreadsheetId: string, tabs: SheetTab[]): Promise<void> {
   const sheets = getSheetsClient();
 
-  // Recupera i tab esistenti
+  // Recupera i tab esistenti e i loro sheetId
   const meta = await sheets.spreadsheets.get({ spreadsheetId });
-  const existingTitles = new Set(
-    (meta.data.sheets ?? []).map((s) => s.properties?.title ?? "")
+  const existingSheets = meta.data.sheets ?? [];
+  const existingByTitle = new Map(
+    existingSheets.map((s) => [s.properties?.title ?? "", s.properties?.sheetId ?? 0])
   );
 
-  const needed: { title: string; headers: { range: string; values: string[][] } | null }[] = [
-    { title: "Lista", headers: { range: "Lista!A1:B1", values: [["Cognome Nome", "Tipologia Pagamento"]] } },
-    { title: "GREEN", headers: { range: "GREEN!A1", values: [["Cognome Nome"]] } },
-  ];
-  if (modules.includes("tshirts")) {
-    needed.push({ title: "Magliette", headers: { range: "Magliette!A1:D1", values: [["Nome", "Cognome", "Taglia", "Tipologia"]] } });
-  }
-  if (modules.includes("shuttles")) {
-    needed.push({ title: "Navette Andata", headers: null });
-    needed.push({ title: "Navette Ritorno", headers: null });
-  }
+  const TAB_DEFS: Record<SheetTab, { headers: string[] | null }> = {
+    "Lista":          { headers: ["Cognome Nome", "Tipologia Pagamento", "Check"] },
+    "GREEN":          { headers: ["Cognome Nome"] },
+    "Magliette":      { headers: ["Nome", "Cognome", "Taglia", "Tipologia"] },
+    "Navette Andata": { headers: null },
+    "Navette Ritorno":{ headers: null },
+  };
 
-  // Aggiungi solo i tab mancanti
-  const toAdd = needed.filter((n) => !existingTitles.has(n.title));
+  const toAdd = tabs.filter((t) => !existingByTitle.has(t));
+
+  // Rinomina "Sheet1" se "Lista" va aggiunto
   if (toAdd.length > 0) {
-    // Se "Lista" è tra quelli da aggiungere e il primo tab si chiama "Sheet1", rinominalo
-    const firstSheet = meta.data.sheets?.[0];
+    const firstSheet = existingSheets[0];
     const firstTitle = firstSheet?.properties?.title;
     const firstId = firstSheet?.properties?.sheetId;
     const requests: any[] = [];
 
-    for (const item of toAdd) {
-      if (item.title === "Lista" && firstTitle === "Sheet1" && firstId !== undefined) {
+    for (const tab of toAdd) {
+      if (tab === "Lista" && firstTitle === "Sheet1" && firstId !== undefined) {
         requests.push({ updateSheetProperties: { properties: { sheetId: firstId, title: "Lista" }, fields: "title" } });
       } else {
-        requests.push({ addSheet: { properties: { title: item.title } } });
+        requests.push({ addSheet: { properties: { title: tab } } });
       }
     }
 
     await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } });
   }
 
-  // Scrivi intestazioni nei tab appena aggiunti (solo se la cella A1 è vuota)
+  // Aggiorna la mappa con i nuovi sheetId
+  const metaAfter = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheetIdByTitle = new Map(
+    (metaAfter.data.sheets ?? []).map((s) => [s.properties?.title ?? "", s.properties?.sheetId ?? 0])
+  );
+
+  // Scrivi intestazioni per i tab appena aggiunti
   const headerData = toAdd
-    .filter((n) => n.headers !== null)
-    .map((n) => n.headers!);
+    .filter((t) => TAB_DEFS[t].headers !== null)
+    .map((t) => {
+      const colLetter = String.fromCharCode(64 + TAB_DEFS[t].headers!.length);
+      return { range: `${t}!A1:${colLetter}1`, values: [TAB_DEFS[t].headers!] };
+    });
 
   if (headerData.length > 0) {
     await sheets.spreadsheets.values.batchUpdate({
@@ -85,7 +97,37 @@ export async function setupGoogleSheet(spreadsheetId: string, modules: EventModu
     });
   }
 
-  logger.info(`Sheet ${spreadsheetId} configurato con moduli: ${modules.join(", ")}`);
+  // Aggiungi dropdown "Tipologia Pagamento" sulla colonna B del tab Lista (se presente nei tab richiesti)
+  if (tabs.includes("Lista") && sheetIdByTitle.has("Lista")) {
+    const listaSheetId = sheetIdByTitle.get("Lista")!;
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            setDataValidation: {
+              range: {
+                sheetId: listaSheetId,
+                startRowIndex: 1,      // dalla riga 2 in poi (riga 1 = intestazione)
+                startColumnIndex: 1,   // colonna B
+                endColumnIndex: 2,
+              },
+              rule: {
+                condition: {
+                  type: "ONE_OF_LIST",
+                  values: PAYMENT_TYPES.map((v) => ({ userEnteredValue: v })),
+                },
+                showCustomUi: true,
+                strict: false,
+              },
+            },
+          },
+        ],
+      },
+    });
+  }
+
+  logger.info(`Sheet ${spreadsheetId} configurato con tab: ${tabs.join(", ")}`);
 }
 
 // ===================== CRUD EVENTI =====================
@@ -157,10 +199,13 @@ export const createEvent = async (
     },
   });
 
-  // Se è stato fornito uno Sheet ID, configura automaticamente i tab
+  // Se è stato fornito uno Sheet ID, configura automaticamente i tab in base ai moduli
   if (googleSheetId) {
     try {
-      await setupGoogleSheet(googleSheetId, modules);
+      const tabs: SheetTab[] = ["Lista", "GREEN"];
+      if (modules.includes("tshirts")) tabs.push("Magliette");
+      if (modules.includes("shuttles")) { tabs.push("Navette Andata"); tabs.push("Navette Ritorno"); }
+      await setupGoogleSheet(googleSheetId, tabs);
     } catch (err: any) {
       logger.warn(`Impossibile configurare Sheet ${googleSheetId}: ${err.message}`);
     }
