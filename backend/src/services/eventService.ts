@@ -197,6 +197,29 @@ export const updateEvent = async (
 export const deleteEvent = async (eventId: string) => {
   const event = await prisma.event.findUnique({ where: { id: eventId } });
   if (!event) throw new AppError("Festa non trovata", 404);
+
+  // Cascade delete manuale (SQLite non ha onDelete: Cascade sulle relazioni)
+  // 1. ShuttleAssignment (dipende da ShuttleSlot e ShuttleMachine)
+  const slots = await prisma.shuttleSlot.findMany({ where: { eventId }, select: { id: true } });
+  const machines = await prisma.shuttleMachine.findMany({ where: { eventId }, select: { id: true } });
+  if (slots.length > 0) {
+    await prisma.shuttleAssignment.deleteMany({ where: { slotId: { in: slots.map(s => s.id) } } });
+  }
+  if (machines.length > 0) {
+    await prisma.shuttleAssignment.deleteMany({ where: { machineId: { in: machines.map(m => m.id) } } });
+  }
+  // 2. ShuttleSlot e ShuttleMachine
+  await prisma.shuttleSlot.deleteMany({ where: { eventId } });
+  await prisma.shuttleMachine.deleteMany({ where: { eventId } });
+  // 3. CheckInLog (ha eventId nullable)
+  await prisma.checkInLog.deleteMany({ where: { eventId } });
+  // 4. Invitees (dopo aver eliminato i CheckInLog che li referenziano)
+  await prisma.invitee.deleteMany({ where: { eventId } });
+  // 5. Tshirts, Expenses, UserEventAccess
+  await prisma.tshirt.deleteMany({ where: { eventId } });
+  await prisma.expense.deleteMany({ where: { eventId } });
+  await prisma.userEventAccess.deleteMany({ where: { eventId } });
+  // 6. Finalmente elimina l'evento
   await prisma.event.delete({ where: { id: eventId } });
 };
 

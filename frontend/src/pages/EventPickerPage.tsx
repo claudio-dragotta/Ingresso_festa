@@ -44,6 +44,7 @@ export default function EventPickerPage() {
   });
 
   const handleSelectEvent = (event: EventInfo) => {
+    queryClient.clear(); // Svuota cache per evitare che dati di altre feste rimangano visibili
     selectEvent(event);
     navigate("/", { replace: true });
   };
