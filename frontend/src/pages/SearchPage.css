@@ -227,6 +227,43 @@
   overflow: hidden;
 }
 
+.result-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.delete-person-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  flex-shrink: 0;
+}
+
+.delete-person-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.delete-person-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18);
+  transform: scale(1.05);
+}
+
+.delete-person-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .result-card::before {
   content: '';
   position: absolute;

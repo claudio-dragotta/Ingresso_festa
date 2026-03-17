@@ -601,12 +601,40 @@
 }
 
 .event-settings-modal {
-  background: var(--card-bg, #fff);
+  background: #ffffff;
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   width: 100%;
   max-width: 480px;
   overflow: hidden;
+}
+
+[data-theme="dark"] .event-settings-modal {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .event-settings-header {
+  border-bottom-color: #334155;
+}
+
+[data-theme="dark"] .event-settings-header h2 {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .sheet-tabs-section {
+  border-top-color: #334155;
+}
+
+[data-theme="dark"] .settings-info {
+  border-top-color: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] #edit-sheet-id {
+  background: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
 }
 
 .event-settings-header {

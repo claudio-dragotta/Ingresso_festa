@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Invitee, Stats } from "../api/invitees";
-import { searchInvitees, fetchStats, checkInPerson } from "../api/invitees";
+import { searchInvitees, fetchStats, checkInPerson, deleteInvitee } from "../api/invitees";
 import { useAuth } from "../context/AuthContext";
 import { useEvent } from "../context/EventContext";
 import "./SearchPage.css";
@@ -42,6 +42,19 @@ export default function SearchPage() {
       queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteInvitee(eventId, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["search", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
+    },
+  });
+
+  const handleDelete = (person: Invitee) => {
+    if (!window.confirm(`Eliminare "${person.lastName} ${person.firstName}" definitivamente?`)) return;
+    deleteMutation.mutate(person.id);
+  };
 
   const handleCheckIn = (person: Invitee) => {
     const adminOverride = isAdmin && person.hasEntered;
@@ -145,22 +158,40 @@ export default function SearchPage() {
                     </div>
                   </div>
 
-                  <button
-                    className={`status-button ${person.hasEntered ? "entered" : "not-entered"} ${
-                      !canClick(person) ? "disabled" : ""
-                    }`}
-                    onClick={() => canClick(person) && handleCheckIn(person)}
-                    disabled={checkInMutation.isPending || !canClick(person)}
-                  >
-                    <svg className="status-icon" viewBox="0 0 24 24" fill="currentColor">
-                      {person.hasEntered ? (
-                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                      ) : (
-                        <circle cx="12" cy="12" r="10"/>
-                      )}
-                    </svg>
-                    <span>{person.hasEntered ? "Entrato" : "Entra"}</span>
-                  </button>
+                  <div className="result-actions">
+                    <button
+                      className={`status-button ${person.hasEntered ? "entered" : "not-entered"} ${
+                        !canClick(person) ? "disabled" : ""
+                      }`}
+                      onClick={() => canClick(person) && handleCheckIn(person)}
+                      disabled={checkInMutation.isPending || !canClick(person)}
+                    >
+                      <svg className="status-icon" viewBox="0 0 24 24" fill="currentColor">
+                        {person.hasEntered ? (
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        ) : (
+                          <circle cx="12" cy="12" r="10"/>
+                        )}
+                      </svg>
+                      <span>{person.hasEntered ? "Entrato" : "Entra"}</span>
+                    </button>
+
+                    {isAdmin && (
+                      <button
+                        className="delete-person-btn"
+                        onClick={() => handleDelete(person)}
+                        disabled={deleteMutation.isPending}
+                        title="Elimina persona"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6"/>
+                          <path d="M19 6l-1 14H6L5 6"/>
+                          <path d="M10 11v6M14 11v6"/>
+                          <path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
