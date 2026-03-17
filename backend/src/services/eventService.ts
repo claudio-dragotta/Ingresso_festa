@@ -40,47 +40,62 @@ function getDriveClient() {
  * Restituisce l'ID del nuovo spreadsheet.
  */
 async function createGoogleSheet(eventName: string, modules: EventModule[]): Promise<string> {
+  // Step 1: crea il file Google Sheets tramite Drive API (più affidabile di sheets.create)
+  const drive = getDriveClient();
+  const fileRes = await drive.files.create({
+    requestBody: {
+      name: eventName,
+      mimeType: "application/vnd.google-apps.spreadsheet",
+    },
+    fields: "id",
+  });
+
+  const spreadsheetId = fileRes.data.id;
+  if (!spreadsheetId) throw new Error("Impossibile creare Google Sheet: ID non ricevuto");
+
+  logger.info(`File Sheets creato via Drive API: ${spreadsheetId}`);
+
+  // Step 2: aggiungi i tab e le intestazioni tramite Sheets API
   const sheets = getSheetsClient();
 
-  // Tab sempre presenti: Lista (paganti) e GREEN
   const sheetTitles = ["Lista", "GREEN"];
-
   if (modules.includes("tshirts")) sheetTitles.push("Magliette");
   if (modules.includes("shuttles")) {
     sheetTitles.push("Navette Andata");
     sheetTitles.push("Navette Ritorno");
   }
 
-  const response = await sheets.spreadsheets.create({
-    requestBody: {
-      properties: {
-        title: eventName,
-      },
-      sheets: sheetTitles.map((title) => ({
-        properties: { title },
-      })),
-    },
+  // Rinomina "Sheet1" (il tab di default) in "Lista" e aggiungi gli altri
+  const addRequests = sheetTitles.map((title, index) => {
+    if (index === 0) {
+      // Rinomina il primo tab di default
+      return {
+        updateSheetProperties: {
+          properties: { sheetId: 0, title },
+          fields: "title",
+        },
+      };
+    }
+    return { addSheet: { properties: { title } } };
   });
 
-  const spreadsheetId = response.data.spreadsheetId;
-  if (!spreadsheetId) throw new Error("Impossibile creare Google Sheet: ID non ricevuto");
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: { requests: addRequests },
+  });
 
-  // Aggiungi intestazioni ai tab
+  // Step 3: intestazioni
   const data: { range: string; values: string[][] }[] = [
     { range: "Lista!A1:B1", values: [["Cognome Nome", "Tipologia Pagamento"]] },
     { range: "GREEN!A1", values: [["Cognome Nome"]] },
   ];
-
   if (modules.includes("tshirts")) {
     data.push({ range: "Magliette!A1:D1", values: [["Nome", "Cognome", "Taglia", "Tipologia"]] });
   }
 
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId,
-    requestBody: {
-      valueInputOption: "RAW",
-      data,
-    },
+    requestBody: { valueInputOption: "RAW", data },
   });
 
   logger.info(`Creato Google Sheet "${eventName}" con ID: ${spreadsheetId}`);
