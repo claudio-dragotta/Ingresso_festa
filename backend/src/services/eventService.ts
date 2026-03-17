@@ -40,12 +40,14 @@ function getDriveClient() {
  * Restituisce l'ID del nuovo spreadsheet.
  */
 async function createGoogleSheet(eventName: string, modules: EventModule[]): Promise<string> {
-  // Step 1: crea il file Google Sheets tramite Drive API (più affidabile di sheets.create)
+  // Step 1: crea il file Google Sheets nella cartella Drive dell'utente (evita quota service account)
   const drive = getDriveClient();
+  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
   const fileRes = await drive.files.create({
     requestBody: {
       name: eventName,
       mimeType: "application/vnd.google-apps.spreadsheet",
+      ...(folderId ? { parents: [folderId] } : {}),
     },
     fields: "id",
   });
