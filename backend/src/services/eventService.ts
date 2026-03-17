@@ -17,17 +17,22 @@ function parseModules(raw: string): EventModule[] {
   }
 }
 
-function getSheetsClient() {
+function getAuthClient() {
   const credentialsJson = config.googleSheets.credentials;
   if (!credentialsJson) throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON non configurato");
   const credentials = JSON.parse(credentialsJson);
-  const auth = new google.auth.GoogleAuth({
+  return new google.auth.GoogleAuth({
     credentials,
-    scopes: [
-      "https://www.googleapis.com/auth/drive",
-    ],
+    scopes: ["https://www.googleapis.com/auth/drive"],
   });
-  return google.sheets({ version: "v4", auth });
+}
+
+function getSheetsClient() {
+  return google.sheets({ version: "v4", auth: getAuthClient() });
+}
+
+function getDriveClient() {
+  return google.drive({ version: "v3", auth: getAuthClient() });
 }
 
 /**
@@ -79,6 +84,27 @@ async function createGoogleSheet(eventName: string, modules: EventModule[]): Pro
   });
 
   logger.info(`Creato Google Sheet "${eventName}" con ID: ${spreadsheetId}`);
+
+  // Condividi con l'owner configurato (es. claudiodragotta@gmail.com)
+  const ownerEmail = process.env.GOOGLE_DRIVE_OWNER_EMAIL;
+  if (ownerEmail) {
+    try {
+      const drive = getDriveClient();
+      await drive.permissions.create({
+        fileId: spreadsheetId,
+        requestBody: {
+          type: "user",
+          role: "writer",
+          emailAddress: ownerEmail,
+        },
+        sendNotificationEmail: false,
+      });
+      logger.info(`Google Sheet condiviso con ${ownerEmail}`);
+    } catch (err: any) {
+      logger.warn(`Impossibile condividere il foglio con ${ownerEmail}: ${err.message}`);
+    }
+  }
+
   return spreadsheetId;
 }
 
