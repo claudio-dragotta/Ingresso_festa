@@ -103,15 +103,17 @@ export const deleteSlot = async (direction: ShuttleDirection, time: string, even
     where: { id: slot.id },
   });
 
-  // Sincronizza con Google Sheets (elimina colonna)
+  // Sincronizza con Google Sheets (elimina colonna) — solo se l'evento ha un foglio
   if (syncWithSheets) {
     try {
-      const { deleteShuttleSlotFromSheet } = await import("./googleSheetsService");
-      await deleteShuttleSlotFromSheet(direction, time);
-      logger.info(`Slot ${direction} ${time} eliminato anche da Google Sheets`);
+      const evSheet = await prisma.event.findUnique({ where: { id: eventId }, select: { googleSheetId: true } });
+      if (evSheet?.googleSheetId) {
+        const { deleteShuttleSlotFromSheet } = await import("./googleSheetsService");
+        await deleteShuttleSlotFromSheet(evSheet.googleSheetId, direction, time);
+        logger.info(`Slot ${direction} ${time} eliminato anche da Google Sheets`);
+      }
     } catch (error: any) {
       logger.error(`Errore eliminazione slot da Google Sheets: ${error.message}`);
-      // Non blocchiamo l'operazione se fallisce la sincronizzazione con Sheets
     }
   }
 
@@ -294,9 +296,15 @@ export async function syncShuttlesFromGoogleSheets(
 }> {
   logger.info(`Inizio sincronizzazione navette ${direction} da Google Sheets`);
 
-  // Leggi dati da Google Sheets
-  // TODO: per-event Google Sheets integration - usare event.googleSheetId in un follow-up
-  const sheetAssignments = await readShuttlesSheet(direction);
+  // Recupera il googleSheetId dell'evento — se non configurato, salta
+  const ev = await prisma.event.findUnique({ where: { id: eventId }, select: { googleSheetId: true } });
+  if (!ev?.googleSheetId) {
+    logger.info(`Evento ${eventId} senza Google Sheet — sync navette saltato`);
+    return { newImported: 0, updated: 0, alreadyExists: 0, deleted: 0 };
+  }
+
+  // Leggi dati da Google Sheets dell'evento
+  const sheetAssignments = await readShuttlesSheet(ev.googleSheetId, direction);
 
   logger.info(`Lette ${sheetAssignments.length} assegnazioni da Google Sheets`);
 
@@ -403,13 +411,14 @@ export async function syncShuttlesFromGoogleSheets(
  * @returns Posizione cella { row, col } o null se non trovata
  */
 async function findShuttleCellPosition(
+  spreadsheetId: string,
   direction: "ANDATA" | "RITORNO",
   machineName: string,
   slotTime: string,
   fullName?: string
 ): Promise<{ row: number; col: string } | null> {
   // Leggi tutte le assegnazioni dal foglio per trovare gli orari e le posizioni
-  const sheetAssignments = await readShuttlesSheet(direction);
+  const sheetAssignments = await readShuttlesSheet(spreadsheetId, direction);
 
   // Trova tutte le celle per questa macchina e time
   const matchingCells = sheetAssignments.filter(
@@ -441,7 +450,7 @@ async function findShuttleCellPosition(
   }
 
   // Trova la colonna per il time leggendo gli orari dalla riga 1
-  const times = await readShuttleTimesFromSheet(direction);
+  const times = await readShuttleTimesFromSheet(spreadsheetId, direction);
   const timeIdx = times.findIndex((t) => t === slotTime);
 
   if (timeIdx === -1) {
@@ -488,10 +497,19 @@ export async function exportAssignmentToGoogleSheets(
 
   const direction = assignment.slot.direction === "ANDATA" ? "ANDATA" : "RITORNO";
 
+  // Recupera il googleSheetId dell'evento — se non configurato, skip
+  const ev = await prisma.event.findUnique({ where: { id: assignment.slot.eventId }, select: { googleSheetId: true } });
+  if (!ev?.googleSheetId) {
+    logger.info(`Evento senza Google Sheet — export navette saltato`);
+    return;
+  }
+  const spreadsheetId = ev.googleSheetId;
+
   try {
     if (action === "create") {
       // Trova una cella disponibile per questa macchina e time
       const cellPos = await findShuttleCellPosition(
+        spreadsheetId,
         direction,
         assignment.machine.name,
         assignment.slot.time
@@ -505,7 +523,7 @@ export async function exportAssignmentToGoogleSheets(
       }
 
       // Scrivi il nome nella cella
-      await updateShuttleCellInGoogleSheet(direction, cellPos, assignment.fullName);
+      await updateShuttleCellInGoogleSheet(spreadsheetId, direction, cellPos, assignment.fullName);
 
       logger.info(
         `Esportata assegnazione ${assignment.fullName} su Sheets: ${cellPos.col}${cellPos.row}`
@@ -513,6 +531,7 @@ export async function exportAssignmentToGoogleSheets(
     } else if (action === "delete") {
       // Trova la cella con questo nome specifico
       const cellPos = await findShuttleCellPosition(
+        spreadsheetId,
         direction,
         assignment.machine.name,
         assignment.slot.time,
@@ -527,7 +546,7 @@ export async function exportAssignmentToGoogleSheets(
       }
 
       // Svuota la cella
-      await updateShuttleCellInGoogleSheet(direction, cellPos, "");
+      await updateShuttleCellInGoogleSheet(spreadsheetId, direction, cellPos, "");
 
       logger.info(
         `Eliminata assegnazione ${assignment.fullName} da Sheets: ${cellPos.col}${cellPos.row}`

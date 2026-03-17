@@ -56,19 +56,20 @@ export const createInvitee = async (input: InviteeInput, eventId: string) => {
     },
   });
 
-  // Sincronizza con Google Sheets (scrittura bidirezionale)
-  // TODO: per-event Google Sheets integration - usare event.googleSheetId in un follow-up
+  // Sincronizza con Google Sheets (solo se l'evento ha un foglio configurato)
   try {
+    const ev = await prisma.event.findUnique({ where: { id: eventId }, select: { googleSheetId: true } });
     const fullName = `${normalize(input.lastName)} ${normalize(input.firstName)}`;
-    await writeToGoogleSheet(
-      fullName,
-      input.listType,
-      input.listType === "PAGANTE" ? input.paymentType : undefined
-    );
-    logger.info(`✅ Scritto su Google Sheets: ${fullName} (${input.listType})`);
+    if (ev?.googleSheetId) {
+      await writeToGoogleSheet(
+        ev.googleSheetId,
+        fullName,
+        input.listType,
+        input.listType === "PAGANTE" ? input.paymentType : undefined
+      );
+      logger.info(`✅ Scritto su Google Sheets: ${fullName} (${input.listType})`);
+    }
   } catch (error: any) {
-    // Non blocchiamo l'operazione se la scrittura su Google Sheets fallisce
-    // L'invitato è già stato creato nel DB
     logger.error(`⚠️  Errore scrittura Google Sheets per ${normalize(input.lastName)} ${normalize(input.firstName)}:`, error.message);
     logger.warn("L'invitato è stato creato nel DB ma non sincronizzato su Google Sheets");
   }

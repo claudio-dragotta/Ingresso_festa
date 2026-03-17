@@ -79,10 +79,12 @@ export const createTshirt = async (data: TshirtInput, eventId: string) => {
     },
   });
 
-  // Scrivi anche su Google Sheets (best-effort)
-  // TODO: per-event Google Sheets integration - usare event.googleSheetId in un follow-up
+  // Scrivi anche su Google Sheets (best-effort, solo se l'evento ha un foglio configurato)
   try {
-    await writeTshirtToGoogleSheet(created.firstName, created.lastName, created.size, created.type);
+    const ev = await prisma.event.findUnique({ where: { id: eventId }, select: { googleSheetId: true } });
+    if (ev?.googleSheetId) {
+      await writeTshirtToGoogleSheet(ev.googleSheetId, created.firstName, created.lastName, created.size, created.type);
+    }
   } catch (err: any) {
     logger.error("Errore scrittura nuova maglietta su Google Sheets:", err.message);
   }
@@ -129,17 +131,20 @@ export const updateTshirt = async (id: string, data: { size?: string; type?: str
     },
   });
 
-  // Prova ad aggiornare anche su Google Sheets (best-effort)
+  // Prova ad aggiornare anche su Google Sheets (best-effort, solo se l'evento ha un foglio)
   try {
-    await updateTshirtInGoogleSheet({
-      oldFirstName: existing.firstName,
-      oldLastName: existing.lastName,
-      oldSize: existing.size,
-      newFirstName: updated.firstName,
-      newLastName: updated.lastName,
-      newSize: updated.size,
-      newType: updated.type,
-    });
+    const ev = await prisma.event.findUnique({ where: { id: existing.eventId }, select: { googleSheetId: true } });
+    if (ev?.googleSheetId) {
+      await updateTshirtInGoogleSheet(ev.googleSheetId, {
+        oldFirstName: existing.firstName,
+        oldLastName: existing.lastName,
+        oldSize: existing.size,
+        newFirstName: updated.firstName,
+        newLastName: updated.lastName,
+        newSize: updated.size,
+        newType: updated.type,
+      });
+    }
   } catch (err: any) {
     logger.error("Errore sync aggiornamento maglietta su Google Sheets:", err.message);
   }
@@ -218,13 +223,19 @@ export const searchTshirts = async (query: string, eventId: string) => {
 };
 
 // Sincronizza magliette da Google Sheets
-// TODO: per-event Google Sheets integration - usare event.googleSheetId in un follow-up
 export const syncTshirtsFromGoogleSheets = async (eventId: string, opts?: { pruneMissing?: boolean }) => {
   logger.info("Inizio sincronizzazione magliette da Google Sheets");
 
   try {
-    // Leggi dal foglio Google
-    const sheetTshirts = await readTshirtsSheet();
+    // Recupera il googleSheetId dell'evento — se non configurato, salta
+    const ev = await prisma.event.findUnique({ where: { id: eventId }, select: { googleSheetId: true } });
+    if (!ev?.googleSheetId) {
+      logger.info(`Evento ${eventId} senza Google Sheet — sync magliette saltato`);
+      return { success: true, newImported: 0, alreadyExists: 0 };
+    }
+
+    // Leggi dal foglio Google dell'evento
+    const sheetTshirts = await readTshirtsSheet(ev.googleSheetId);
 
     let newImported = 0;
     let alreadyExists = 0;
@@ -299,9 +310,9 @@ export const syncTshirtsFromGoogleSheets = async (eventId: string, opts?: { prun
 };
 
 // Scrivi una maglietta su Google Sheets (usato quando si crea dall'app o dall'app QR)
-export const writeTshirtToSheets = async (firstName: string, lastName: string, size: string, type: string) => {
+export const writeTshirtToSheets = async (spreadsheetId: string, firstName: string, lastName: string, size: string, type: string) => {
   try {
-    await writeTshirtToGoogleSheet(firstName, lastName, size, type);
+    await writeTshirtToGoogleSheet(spreadsheetId, firstName, lastName, size, type);
     logger.info(`Maglietta scritta su Google Sheets: ${lastName} ${firstName}`);
   } catch (error: any) {
     logger.error("Errore scrittura maglietta su Google Sheets:", error.message);

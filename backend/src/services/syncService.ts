@@ -53,9 +53,17 @@ export async function syncGoogleSheetToDatabase(eventId: string, options?: { pru
   };
 
   try {
-    // 1. Leggi e parsa entrambi i fogli Google
-    // TODO: per-event Google Sheets integration - usare event.googleSheetId in un follow-up
-    const persons = await fetchAndParseGoogleSheets();
+    // 1. Recupera il googleSheetId dell'evento — se non configurato, salta la sincronizzazione
+    const event = await prisma.event.findUnique({ where: { id: eventId }, select: { googleSheetId: true } });
+    if (!event?.googleSheetId) {
+      logger.info(`Evento ${eventId} senza Google Sheet configurato — sincronizzazione saltata`);
+      result.success = true;
+      result.duration = Date.now() - startTime;
+      return result;
+    }
+
+    // 2. Leggi e parsa entrambi i fogli Google dell'evento
+    const persons = await fetchAndParseGoogleSheets(event.googleSheetId);
     result.totalFromSheet = persons.length;
 
     if (persons.length === 0) {
