@@ -142,36 +142,27 @@ export const createEvent = async (
   modules: EventModule[],
   createSheet: boolean
 ) => {
-  // 1. Crea prima l'evento nel DB (sempre, indipendentemente dal sheet)
+  // 1. Prima crea il Google Sheet — se fallisce, non si crea nemmeno l'evento
+  let googleSheetId: string | undefined;
+  if (createSheet) {
+    try {
+      googleSheetId = await createGoogleSheet(name, modules);
+    } catch (error: any) {
+      logger.error("Errore creazione Google Sheet:", error.message);
+      throw new AppError(`Impossibile creare Google Sheet: ${error.message}`, 500);
+    }
+  }
+
+  // 2. Solo se il sheet è stato creato (o non richiesto), crea l'evento nel DB
   const event = await prisma.event.create({
     data: {
       name,
       date: date ?? null,
-      googleSheetId: null,
+      googleSheetId: googleSheetId ?? null,
       modules: JSON.stringify(modules),
       status: "ACTIVE",
     },
   });
-
-  // 2. Se richiesto, prova a creare il Google Sheet e aggiorna l'evento
-  if (createSheet) {
-    try {
-      const googleSheetId = await createGoogleSheet(name, modules);
-      const updated = await prisma.event.update({
-        where: { id: event.id },
-        data: { googleSheetId },
-      });
-      return { ...updated, modules: parseModules(updated.modules) };
-    } catch (error: any) {
-      logger.error("Errore creazione Google Sheet:", error.message);
-      // L'evento è già stato creato — restituiamo comunque l'evento senza sheet
-      return {
-        ...event,
-        modules: parseModules(event.modules),
-        sheetError: `Google Sheet non creato: ${error.message}`,
-      };
-    }
-  }
 
   return { ...event, modules: parseModules(event.modules) };
 };
