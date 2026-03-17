@@ -251,11 +251,14 @@
   font-weight: 500;
 }
 
+.event-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
 .event-card-arrow {
-  position: absolute;
-  right: 1.25rem;
-  top: 50%;
-  transform: translateY(-50%);
   color: var(--muted);
   transition: color 0.2s, transform 0.2s;
 }
@@ -267,7 +270,30 @@
 
 .event-card:hover .event-card-arrow {
   color: var(--primary);
-  transform: translateY(-50%) translateX(3px);
+  transform: translateX(3px);
+}
+
+.event-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 6px;
+  color: var(--muted);
+  transition: color 0.2s, background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.event-delete-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.event-delete-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .event-picker-actions {
@@ -522,11 +548,6 @@
   }
 
   .event-card-arrow {
-    top: 1.25rem;
     transform: none;
-  }
-
-  .event-card:hover .event-card-arrow {
-    transform: translateX(3px);
   }
 }

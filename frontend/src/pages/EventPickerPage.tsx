@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import { useEvent } from "../context/EventContext";
 import type { EventInfo, EventModule } from "../context/EventContext";
-import { listEvents, createEvent } from "../api/events";
+import { listEvents, createEvent, deleteEvent } from "../api/events";
 import "./EventPickerPage.css";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -30,6 +30,17 @@ export default function EventPickerPage() {
     queryKey: ["events"],
     queryFn: listEvents,
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (eventId: string) => deleteEvent(eventId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
+  });
+
+  const handleDeleteEvent = (e: React.MouseEvent, eventId: string, eventName: string) => {
+    e.stopPropagation();
+    if (!window.confirm(`Eliminare la festa "${eventName}"?\nTutti i dati (invitati, spese, navette, magliette) verranno cancellati definitivamente.`)) return;
+    deleteMutation.mutate(eventId);
+  };
 
   const createMutation = useMutation({
     mutationFn: createEvent,
@@ -111,11 +122,13 @@ export default function EventPickerPage() {
           ) : (
             <div className="events-grid">
               {events.map((event) => (
-                <button
+                <div
                   key={event.id}
                   className="event-card"
                   onClick={() => handleSelectEvent(event)}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === "Enter" && handleSelectEvent(event)}
                 >
                   <div className="event-card-top">
                     <h2 className="event-card-name">{event.name}</h2>
@@ -149,12 +162,30 @@ export default function EventPickerPage() {
                       <span className="module-chip">Spese</span>
                     )}
                   </div>
-                  <div className="event-card-arrow">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M9 18l6-6-6-6"/>
-                    </svg>
+                  <div className="event-card-footer">
+                    <div className="event-card-arrow">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 18l6-6-6-6"/>
+                      </svg>
+                    </div>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        className="event-delete-btn"
+                        onClick={(e) => handleDeleteEvent(e, event.id, event.name)}
+                        disabled={deleteMutation.isPending}
+                        title="Elimina festa"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6"/>
+                          <path d="M19 6l-1 14H6L5 6"/>
+                          <path d="M10 11v6M14 11v6"/>
+                          <path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
+                    )}
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           )}
