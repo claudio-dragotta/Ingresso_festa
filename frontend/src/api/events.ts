@@ -18,10 +18,14 @@ export const createEvent = async (payload: {
   name: string;
   date?: string;
   modules: EventModule[];
-  createSheet?: boolean;
+  googleSheetId?: string;
 }): Promise<EventInfo> => {
   const { data } = await apiClient.post("/events", payload);
   return data;
+};
+
+export const setupEventSheet = async (eventId: string): Promise<void> => {
+  await apiClient.post(`/events/${eventId}/setup-sheet`);
 };
 
 export const updateEvent = async (

@@ -10,6 +10,7 @@ import {
   listEventUsers,
   assignUserToEvent,
   removeUserFromEvent,
+  setupGoogleSheet,
   ALL_MODULES,
   EventModule,
 } from "../services/eventService";
@@ -35,7 +36,7 @@ router.get("/", async (req: EventRequest, res, next) => {
 // POST /api/events — crea nuova festa (solo ADMIN globale)
 router.post("/", requireGlobalAdmin, async (req: EventRequest, res, next) => {
   try {
-    const { name, date, modules, createSheet = true } = req.body;
+    const { name, date, modules, googleSheetId } = req.body;
 
     if (!name?.trim()) {
       return res.status(400).json({ message: "Nome festa richiesto" });
@@ -50,7 +51,7 @@ router.post("/", requireGlobalAdmin, async (req: EventRequest, res, next) => {
       name.trim(),
       date ? new Date(date) : undefined,
       validModules,
-      createSheet
+      googleSheetId?.trim() || undefined
     );
 
     return res.status(201).json(event);
@@ -89,6 +90,20 @@ router.patch("/:eventId", requireGlobalAdmin, async (req: EventRequest, res, nex
     });
 
     return res.json(event);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// POST /api/events/:eventId/setup-sheet — configura i tab del Google Sheet collegato
+router.post("/:eventId/setup-sheet", requireGlobalAdmin, async (req: EventRequest, res, next) => {
+  try {
+    const event = await getEvent(req.params.eventId);
+    if (!event.googleSheetId) {
+      return res.status(400).json({ message: "Nessun Google Sheet collegato a questa festa" });
+    }
+    await setupGoogleSheet(event.googleSheetId, event.modules as EventModule[]);
+    return res.json({ message: "Sheet configurato correttamente" });
   } catch (error) {
     return next(error);
   }

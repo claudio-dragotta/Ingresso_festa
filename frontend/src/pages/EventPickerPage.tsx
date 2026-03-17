@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import { useEvent } from "../context/EventContext";
 import type { EventInfo, EventModule } from "../context/EventContext";
-import { listEvents, createEvent, deleteEvent } from "../api/events";
+import { listEvents, createEvent, deleteEvent, updateEvent, setupEventSheet } from "../api/events";
 import "./EventPickerPage.css";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -20,10 +20,17 @@ export default function EventPickerPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // Stato form creazione
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formName, setFormName] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formModules, setFormModules] = useState<EventModule[]>(["tshirts", "expenses", "shuttles"]);
+  const [formSheetId, setFormSheetId] = useState("");
+
+  // Stato modale impostazioni evento
+  const [editingEvent, setEditingEvent] = useState<EventInfo | null>(null);
+  const [editSheetId, setEditSheetId] = useState("");
+  const [setupMsg, setSetupMsg] = useState<string | null>(null);
 
   const { data: events = [], isLoading } = useQuery<EventInfo[]>({
     queryKey: ["events"],
@@ -35,12 +42,6 @@ export default function EventPickerPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
   });
 
-  const handleDeleteEvent = (e: React.MouseEvent, eventId: string, eventName: string) => {
-    e.stopPropagation();
-    if (!window.confirm(`Eliminare la festa "${eventName}"?\nTutti i dati (invitati, spese, navette, magliette) verranno cancellati definitivamente.`)) return;
-    deleteMutation.mutate(eventId);
-  };
-
   const createMutation = useMutation({
     mutationFn: createEvent,
     onSuccess: () => {
@@ -49,13 +50,58 @@ export default function EventPickerPage() {
       setFormName("");
       setFormDate("");
       setFormModules(["tshirts", "expenses", "shuttles"]);
+      setFormSheetId("");
     },
   });
 
+  const updateSheetMutation = useMutation({
+    mutationFn: ({ eventId, googleSheetId }: { eventId: string; googleSheetId: string | null }) =>
+      updateEvent(eventId, { googleSheetId }),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      setEditingEvent(updated);
+      setSetupMsg("Sheet ID salvato.");
+    },
+  });
+
+  const setupSheetMutation = useMutation({
+    mutationFn: (eventId: string) => setupEventSheet(eventId),
+    onSuccess: () => setSetupMsg("Tab e intestazioni configurati correttamente nel foglio!"),
+    onError: (err: any) =>
+      setSetupMsg(`Errore: ${err?.response?.data?.message ?? err.message}`),
+  });
+
   const handleSelectEvent = (event: EventInfo) => {
-    queryClient.clear(); // Svuota cache per evitare che dati di altre feste rimangano visibili
+    queryClient.clear();
     selectEvent(event);
     navigate("/", { replace: true });
+  };
+
+  const handleDeleteEvent = (e: React.MouseEvent, eventId: string, eventName: string) => {
+    e.stopPropagation();
+    if (!window.confirm(`Eliminare la festa "${eventName}"?\nTutti i dati (invitati, spese, navette, magliette) verranno cancellati definitivamente.`)) return;
+    deleteMutation.mutate(eventId);
+  };
+
+  const handleOpenSettings = (e: React.MouseEvent, event: EventInfo) => {
+    e.stopPropagation();
+    setEditingEvent(event);
+    setEditSheetId(event.googleSheetId ?? "");
+    setSetupMsg(null);
+  };
+
+  const handleSaveSheetId = () => {
+    if (!editingEvent) return;
+    updateSheetMutation.mutate({
+      eventId: editingEvent.id,
+      googleSheetId: editSheetId.trim() || null,
+    });
+  };
+
+  const handleSetupSheet = () => {
+    if (!editingEvent) return;
+    setSetupMsg(null);
+    setupSheetMutation.mutate(editingEvent.id);
   };
 
   const handleModuleToggle = (module: EventModule) => {
@@ -71,7 +117,7 @@ export default function EventPickerPage() {
       name: formName.trim(),
       date: formDate || undefined,
       modules: formModules,
-      createSheet: true,
+      googleSheetId: formSheetId.trim() || undefined,
     });
   };
 
@@ -150,14 +196,20 @@ export default function EventPickerPage() {
                     </p>
                   )}
                   <div className="event-card-modules">
-                    {event.modules.includes("tshirts") && (
-                      <span className="module-chip">Magliette</span>
-                    )}
-                    {event.modules.includes("shuttles") && (
-                      <span className="module-chip">Navette</span>
-                    )}
-                    {event.modules.includes("expenses") && (
-                      <span className="module-chip">Spese</span>
+                    {event.modules.includes("tshirts") && <span className="module-chip">Magliette</span>}
+                    {event.modules.includes("shuttles") && <span className="module-chip">Navette</span>}
+                    {event.modules.includes("expenses") && <span className="module-chip">Spese</span>}
+                  </div>
+                  <div className="event-card-sheet-status">
+                    {event.googleSheetId ? (
+                      <span className="sheet-linked">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Sheet collegato
+                      </span>
+                    ) : (
+                      <span className="sheet-missing">Nessun sheet</span>
                     )}
                   </div>
                   <div className="event-card-footer">
@@ -167,20 +219,33 @@ export default function EventPickerPage() {
                       </svg>
                     </div>
                     {isAdmin && (
-                      <button
-                        type="button"
-                        className="event-delete-btn"
-                        onClick={(e) => handleDeleteEvent(e, event.id, event.name)}
-                        disabled={deleteMutation.isPending}
-                        title="Elimina festa"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3 6 5 6 21 6"/>
-                          <path d="M19 6l-1 14H6L5 6"/>
-                          <path d="M10 11v6M14 11v6"/>
-                          <path d="M9 6V4h6v2"/>
-                        </svg>
-                      </button>
+                      <div className="event-card-actions">
+                        <button
+                          type="button"
+                          className="event-settings-btn"
+                          onClick={(e) => handleOpenSettings(e, event)}
+                          title="Impostazioni festa"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="event-delete-btn"
+                          onClick={(e) => handleDeleteEvent(e, event.id, event.name)}
+                          disabled={deleteMutation.isPending}
+                          title="Elimina festa"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14H6L5 6"/>
+                            <path d="M10 11v6M14 11v6"/>
+                            <path d="M9 6V4h6v2"/>
+                          </svg>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -258,6 +323,21 @@ export default function EventPickerPage() {
                     </div>
                   </div>
 
+                  <div className="form-field">
+                    <label htmlFor="event-sheet-id">Google Sheet ID (opzionale)</label>
+                    <input
+                      id="event-sheet-id"
+                      type="text"
+                      value={formSheetId}
+                      onChange={(e) => setFormSheetId(e.target.value)}
+                      placeholder="Incolla l'ID del foglio Google Sheets"
+                    />
+                    <span className="form-hint">
+                      Crea un foglio su drive.google.com, condividilo con il service account,
+                      poi incolla l'ID dall'URL. I tab verranno configurati automaticamente.
+                    </span>
+                  </div>
+
                   {createMutation.isError && (
                     <div className="form-error">
                       {(createMutation.error as any)?.response?.data?.message
@@ -299,6 +379,76 @@ export default function EventPickerPage() {
           </div>
         </div>
       </div>
+
+      {/* Modale impostazioni evento */}
+      {editingEvent && (
+        <div className="event-settings-overlay" onClick={() => setEditingEvent(null)}>
+          <div className="event-settings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="event-settings-header">
+              <h2>Impostazioni — {editingEvent.name}</h2>
+              <button type="button" className="modal-close-btn" onClick={() => setEditingEvent(null)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            <div className="event-settings-body">
+              <div className="form-field">
+                <label htmlFor="edit-sheet-id">Google Sheet ID</label>
+                <input
+                  id="edit-sheet-id"
+                  type="text"
+                  value={editSheetId}
+                  onChange={(e) => {
+                    setEditSheetId(e.target.value);
+                    setSetupMsg(null);
+                  }}
+                  placeholder="Incolla l'ID del foglio Google Sheets"
+                />
+                <span className="form-hint">
+                  Dall'URL: docs.google.com/spreadsheets/d/<strong>ID_QUI</strong>/edit
+                </span>
+              </div>
+
+              <div className="settings-actions">
+                <button
+                  type="button"
+                  className="submit-button"
+                  onClick={handleSaveSheetId}
+                  disabled={updateSheetMutation.isPending}
+                >
+                  {updateSheetMutation.isPending ? "Salvataggio..." : "Salva Sheet ID"}
+                </button>
+
+                {editingEvent.googleSheetId && (
+                  <button
+                    type="button"
+                    className="setup-sheet-button"
+                    onClick={handleSetupSheet}
+                    disabled={setupSheetMutation.isPending}
+                    title="Aggiunge i tab (Lista, GREEN, Magliette, Navette) al foglio se mancanti"
+                  >
+                    {setupSheetMutation.isPending ? "Configurazione..." : "Configura Tab Sheet"}
+                  </button>
+                )}
+              </div>
+
+              {setupMsg && (
+                <div className={`setup-msg ${setupMsg.startsWith("Errore") ? "form-error" : "form-success"}`}>
+                  {setupMsg}
+                </div>
+              )}
+
+              <div className="settings-info">
+                <p><strong>Moduli attivi:</strong> {editingEvent.modules.join(", ") || "nessuno"}</p>
+                <p><strong>Sheet collegato:</strong> {editingEvent.googleSheetId ? "Sì" : "No"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

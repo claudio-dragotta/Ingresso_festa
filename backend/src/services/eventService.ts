@@ -17,112 +17,75 @@ function parseModules(raw: string): EventModule[] {
   }
 }
 
-function getAuthClient() {
+function getSheetsClient() {
   const credentialsJson = config.googleSheets.credentials;
   if (!credentialsJson) throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON non configurato");
   const credentials = JSON.parse(credentialsJson);
-  return new google.auth.GoogleAuth({
+  const auth = new google.auth.GoogleAuth({
     credentials,
-    scopes: ["https://www.googleapis.com/auth/drive"],
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
-}
-
-function getSheetsClient() {
-  return google.sheets({ version: "v4", auth: getAuthClient() });
-}
-
-function getDriveClient() {
-  return google.drive({ version: "v3", auth: getAuthClient() });
+  return google.sheets({ version: "v4", auth });
 }
 
 /**
- * Crea un nuovo Google Spreadsheet per la festa con i tab appropriati in base ai moduli.
- * Restituisce l'ID del nuovo spreadsheet.
+ * Configura un Google Sheet esistente aggiungendo i tab e le intestazioni
+ * in base ai moduli della festa. Salta i tab già esistenti.
  */
-async function createGoogleSheet(eventName: string, modules: EventModule[]): Promise<string> {
-  // Step 1: crea il file Google Sheets nella cartella Drive dell'utente (evita quota service account)
-  const drive = getDriveClient();
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-  const fileRes = await drive.files.create({
-    requestBody: {
-      name: eventName,
-      mimeType: "application/vnd.google-apps.spreadsheet",
-      ...(folderId ? { parents: [folderId] } : {}),
-    },
-    fields: "id",
-  });
-
-  const spreadsheetId = fileRes.data.id;
-  if (!spreadsheetId) throw new Error("Impossibile creare Google Sheet: ID non ricevuto");
-
-  logger.info(`File Sheets creato via Drive API: ${spreadsheetId}`);
-
-  // Step 2: aggiungi i tab e le intestazioni tramite Sheets API
+export async function setupGoogleSheet(spreadsheetId: string, modules: EventModule[]): Promise<void> {
   const sheets = getSheetsClient();
 
-  const sheetTitles = ["Lista", "GREEN"];
-  if (modules.includes("tshirts")) sheetTitles.push("Magliette");
-  if (modules.includes("shuttles")) {
-    sheetTitles.push("Navette Andata");
-    sheetTitles.push("Navette Ritorno");
-  }
+  // Recupera i tab esistenti
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  const existingTitles = new Set(
+    (meta.data.sheets ?? []).map((s) => s.properties?.title ?? "")
+  );
 
-  // Rinomina "Sheet1" (il tab di default) in "Lista" e aggiungi gli altri
-  const addRequests = sheetTitles.map((title, index) => {
-    if (index === 0) {
-      // Rinomina il primo tab di default
-      return {
-        updateSheetProperties: {
-          properties: { sheetId: 0, title },
-          fields: "title",
-        },
-      };
-    }
-    return { addSheet: { properties: { title } } };
-  });
-
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId,
-    requestBody: { requests: addRequests },
-  });
-
-  // Step 3: intestazioni
-  const data: { range: string; values: string[][] }[] = [
-    { range: "Lista!A1:B1", values: [["Cognome Nome", "Tipologia Pagamento"]] },
-    { range: "GREEN!A1", values: [["Cognome Nome"]] },
+  const needed: { title: string; headers: { range: string; values: string[][] } | null }[] = [
+    { title: "Lista", headers: { range: "Lista!A1:B1", values: [["Cognome Nome", "Tipologia Pagamento"]] } },
+    { title: "GREEN", headers: { range: "GREEN!A1", values: [["Cognome Nome"]] } },
   ];
   if (modules.includes("tshirts")) {
-    data.push({ range: "Magliette!A1:D1", values: [["Nome", "Cognome", "Taglia", "Tipologia"]] });
+    needed.push({ title: "Magliette", headers: { range: "Magliette!A1:D1", values: [["Nome", "Cognome", "Taglia", "Tipologia"]] } });
+  }
+  if (modules.includes("shuttles")) {
+    needed.push({ title: "Navette Andata", headers: null });
+    needed.push({ title: "Navette Ritorno", headers: null });
   }
 
-  await sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId,
-    requestBody: { valueInputOption: "RAW", data },
-  });
+  // Aggiungi solo i tab mancanti
+  const toAdd = needed.filter((n) => !existingTitles.has(n.title));
+  if (toAdd.length > 0) {
+    // Se "Lista" è tra quelli da aggiungere e il primo tab si chiama "Sheet1", rinominalo
+    const firstSheet = meta.data.sheets?.[0];
+    const firstTitle = firstSheet?.properties?.title;
+    const firstId = firstSheet?.properties?.sheetId;
+    const requests: any[] = [];
 
-  logger.info(`Creato Google Sheet "${eventName}" con ID: ${spreadsheetId}`);
-
-  // Condividi con l'owner configurato (es. claudiodragotta@gmail.com)
-  const ownerEmail = process.env.GOOGLE_DRIVE_OWNER_EMAIL;
-  if (ownerEmail) {
-    try {
-      const drive = getDriveClient();
-      await drive.permissions.create({
-        fileId: spreadsheetId,
-        requestBody: {
-          type: "user",
-          role: "writer",
-          emailAddress: ownerEmail,
-        },
-        sendNotificationEmail: false,
-      });
-      logger.info(`Google Sheet condiviso con ${ownerEmail}`);
-    } catch (err: any) {
-      logger.warn(`Impossibile condividere il foglio con ${ownerEmail}: ${err.message}`);
+    for (const item of toAdd) {
+      if (item.title === "Lista" && firstTitle === "Sheet1" && firstId !== undefined) {
+        requests.push({ updateSheetProperties: { properties: { sheetId: firstId, title: "Lista" }, fields: "title" } });
+      } else {
+        requests.push({ addSheet: { properties: { title: item.title } } });
+      }
     }
+
+    await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } });
   }
 
-  return spreadsheetId;
+  // Scrivi intestazioni nei tab appena aggiunti (solo se la cella A1 è vuota)
+  const headerData = toAdd
+    .filter((n) => n.headers !== null)
+    .map((n) => n.headers!);
+
+  if (headerData.length > 0) {
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId,
+      requestBody: { valueInputOption: "RAW", data: headerData },
+    });
+  }
+
+  logger.info(`Sheet ${spreadsheetId} configurato con moduli: ${modules.join(", ")}`);
 }
 
 // ===================== CRUD EVENTI =====================
@@ -182,20 +145,8 @@ export const createEvent = async (
   name: string,
   date: Date | undefined,
   modules: EventModule[],
-  createSheet: boolean
+  googleSheetId?: string
 ) => {
-  // 1. Prima crea il Google Sheet — se fallisce, non si crea nemmeno l'evento
-  let googleSheetId: string | undefined;
-  if (createSheet) {
-    try {
-      googleSheetId = await createGoogleSheet(name, modules);
-    } catch (error: any) {
-      logger.error("Errore creazione Google Sheet:", error.message);
-      throw new AppError(`Impossibile creare Google Sheet: ${error.message}`, 500);
-    }
-  }
-
-  // 2. Solo se il sheet è stato creato (o non richiesto), crea l'evento nel DB
   const event = await prisma.event.create({
     data: {
       name,
@@ -205,6 +156,15 @@ export const createEvent = async (
       status: "ACTIVE",
     },
   });
+
+  // Se è stato fornito uno Sheet ID, configura automaticamente i tab
+  if (googleSheetId) {
+    try {
+      await setupGoogleSheet(googleSheetId, modules);
+    } catch (err: any) {
+      logger.warn(`Impossibile configurare Sheet ${googleSheetId}: ${err.message}`);
+    }
+  }
 
   return { ...event, modules: parseModules(event.modules) };
 };
