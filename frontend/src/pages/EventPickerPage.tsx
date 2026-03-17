@@ -24,7 +24,7 @@ export default function EventPickerPage() {
   const [formName, setFormName] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formModules, setFormModules] = useState<EventModule[]>(["tshirts", "expenses", "shuttles"]);
-  const [formCreateSheet, setFormCreateSheet] = useState(true);
+  const [formCreateSheet, setFormCreateSheet] = useState(false);
 
   const { data: events = [], isLoading } = useQuery<EventInfo[]>({
     queryKey: ["events"],
