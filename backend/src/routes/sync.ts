@@ -81,7 +81,8 @@ router.get(
     try {
       logger.info("🧪 Test connessione Google Sheets");
 
-      const connected = await testGoogleSheetsConnection();
+      const ev = await prisma.event.findUnique({ where: { id: req.eventId }, select: { googleSheetId: true } });
+      const connected = await testGoogleSheetsConnection(ev?.googleSheetId ?? undefined);
 
       res.json({
         success: connected,
