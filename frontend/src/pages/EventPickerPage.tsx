@@ -442,16 +442,21 @@ export default function EventPickerPage() {
               {editingEvent.googleSheetId && (
                 <div className="sheet-tabs-section">
                   <label className="sheet-tabs-label">Tab da aggiungere al foglio</label>
-                  <div className="sheet-tabs-checkboxes">
+                  <div className="sheet-tabs-chips">
                     {ALL_SHEET_TABS.map((tab) => (
-                      <label key={tab} className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={selectedTabs.includes(tab)}
-                          onChange={() => handleTabToggle(tab)}
-                        />
-                        <span>{tab}</span>
-                      </label>
+                      <button
+                        key={tab}
+                        type="button"
+                        className={`sheet-tab-chip ${selectedTabs.includes(tab) ? "selected" : ""}`}
+                        onClick={() => handleTabToggle(tab)}
+                      >
+                        {selectedTabs.includes(tab) && (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="13" height="13">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
+                        {tab}
+                      </button>
                     ))}
                   </div>
                   <button

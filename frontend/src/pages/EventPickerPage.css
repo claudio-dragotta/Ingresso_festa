@@ -712,15 +712,44 @@
 }
 
 .sheet-tabs-label {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: 500;
-  color: var(--text);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.sheet-tabs-checkboxes {
+.sheet-tabs-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1rem;
+  gap: 0.5rem;
+}
+
+.sheet-tab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sheet-tab-chip:hover {
+  border-color: var(--primary, #667eea);
+  color: var(--primary, #667eea);
+}
+
+.sheet-tab-chip.selected {
+  background: var(--primary, #667eea);
+  border-color: var(--primary, #667eea);
+  color: #fff;
 }
 
 @media (max-width: 640px) {
