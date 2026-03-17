@@ -24,7 +24,6 @@ export default function EventPickerPage() {
   const [formName, setFormName] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formModules, setFormModules] = useState<EventModule[]>(["tshirts", "expenses", "shuttles"]);
-  const [formCreateSheet, setFormCreateSheet] = useState(false);
 
   const { data: events = [], isLoading } = useQuery<EventInfo[]>({
     queryKey: ["events"],
@@ -50,7 +49,6 @@ export default function EventPickerPage() {
       setFormName("");
       setFormDate("");
       setFormModules(["tshirts", "expenses", "shuttles"]);
-      setFormCreateSheet(false);
     },
   });
 
@@ -73,7 +71,7 @@ export default function EventPickerPage() {
       name: formName.trim(),
       date: formDate || undefined,
       modules: formModules,
-      createSheet: formCreateSheet,
+      createSheet: true,
     });
   };
 
@@ -258,22 +256,6 @@ export default function EventPickerPage() {
                         <span>Spese</span>
                       </label>
                     </div>
-                  </div>
-
-                  <div className="form-field">
-                    <label className="toggle-label">
-                      <span>Crea foglio Google Sheets automaticamente</span>
-                      <div
-                        className={`toggle-switch ${formCreateSheet ? "on" : "off"}`}
-                        onClick={() => setFormCreateSheet((v) => !v)}
-                        role="switch"
-                        aria-checked={formCreateSheet}
-                        tabIndex={0}
-                        onKeyDown={(e) => e.key === "Enter" && setFormCreateSheet((v) => !v)}
-                      >
-                        <div className="toggle-thumb"></div>
-                      </div>
-                    </label>
                   </div>
 
                   {createMutation.isError && (
