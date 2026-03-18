@@ -501,13 +501,12 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      {(!isOrganizer || (isOrganizer && activeTab === "green")) && (
-        <div className="actions-bar">
+      <div className="actions-bar">
           <button className="add-button" onClick={() => setShowAddForm(!showAddForm)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 5v14m-7-7h14"/>
           </svg>
-          Aggiungi {activeTab === "paganti" ? (isOrganizer ? "" : "Pagante") : "Green"}
+          Aggiungi {activeTab === "paganti" ? "Pagante" : "Green"}
         </button>
 
           <div className="list-stats">
@@ -519,7 +518,6 @@ export default function AdminDashboard() {
               )}
           </div>
         </div>
-      )}
 
       <div className="search-container">
         <div className="search-box">
@@ -546,11 +544,11 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {showAddForm && (!isOrganizer || (isOrganizer && activeTab === "green")) && (
+      {showAddForm && (
         <div className="add-form-container">
           <form className="add-form" onSubmit={handleSubmit} autoComplete="off">
             <h3>
-              Aggiungi {activeTab === "paganti" ? (isOrganizer ? "" : "Pagante") : "Green"}
+              Aggiungi {activeTab === "paganti" ? "Pagante" : "Green"}
             </h3>
 
             <div className="form-row">
