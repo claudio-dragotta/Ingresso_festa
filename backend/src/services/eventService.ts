@@ -58,6 +58,13 @@ export async function setupGoogleSheet(spreadsheetId: string, tabs: SheetTab[]):
 
   const toAdd = tabs.filter((t) => !existingByTitle.has(t));
 
+  // Tab da eliminare: esistono, sono tab "noti" (Lista/GREEN/Magliette/ecc.) ma non sono selezionati
+  const knownTabTitles = new Set<string>(Object.keys(TAB_DEFS));
+  const toDelete = existingSheets.filter((s) => {
+    const title = s.properties?.title ?? "";
+    return knownTabTitles.has(title) && !tabs.includes(title as SheetTab);
+  });
+
   // Rinomina "Sheet1" se "Lista" va aggiunto
   if (toAdd.length > 0) {
     const firstSheet = existingSheets[0];
@@ -125,6 +132,20 @@ export async function setupGoogleSheet(spreadsheetId: string, tabs: SheetTab[]):
         ],
       },
     });
+  }
+
+  // Elimina i tab non selezionati DOPO aver aggiunto quelli nuovi
+  // (così il foglio non rimane mai con 0 tab)
+  if (toDelete.length > 0) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: toDelete.map((s) => ({
+          deleteSheet: { sheetId: s.properties?.sheetId },
+        })),
+      },
+    });
+    logger.info(`Tab eliminati dal foglio: ${toDelete.map((s) => s.properties?.title).join(", ")}`);
   }
 
   logger.info(`Sheet ${spreadsheetId} configurato con tab: ${tabs.join(", ")}`);

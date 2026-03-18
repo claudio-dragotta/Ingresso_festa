@@ -1205,35 +1205,35 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1.5px solid #ef4444;
-  background: rgba(239, 68, 68, 0.12);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
   color: #ef4444;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+  transition: background 0.18s, transform 0.15s;
   flex-shrink: 0;
 }
 
 .delete-row-btn svg {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
   stroke: #ef4444;
+  transition: stroke 0.18s, transform 0.15s;
 }
 
 .delete-row-btn:hover:not(:disabled) {
-  background: #ef4444;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
-  transform: scale(1.08);
+  background: rgba(239, 68, 68, 0.12);
+  transform: scale(1.15);
 }
 
 .delete-row-btn:hover:not(:disabled) svg {
-  stroke: #fff;
+  stroke: #dc2626;
+  transform: scale(1.1);
 }
 
 .delete-row-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.3;
   cursor: not-allowed;
 }
