@@ -7,6 +7,7 @@ import {
   fetchInvitees,
   createInvitee,
   checkInPerson,
+  deleteInvitee,
   syncGoogleSheets,
   fetchDuplicateInvitees,
   promoteDuplicateGroup,
@@ -186,6 +187,19 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteInvitee(eventId, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
+      queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
+    },
+  });
+
+  const handleDelete = (person: Invitee) => {
+    if (!window.confirm(`Eliminare "${person.lastName} ${person.firstName}" definitivamente?\nVerrà rimosso anche dal foglio Google.`)) return;
+    deleteMutation.mutate(person.id);
+  };
 
   const syncMutation = useMutation({
     mutationFn: (opts?: { pruneMissing?: boolean }) => syncGoogleSheets(eventId, opts),
@@ -700,6 +714,21 @@ export default function AdminDashboard() {
                           {person.hasEntered ? "Entrato" : "Non entrato"}
                         </button>
                       )}
+                    </td>
+                    <td className="cell-delete">
+                      <button
+                        className="delete-row-btn"
+                        onClick={() => handleDelete(person)}
+                        disabled={deleteMutation.isPending}
+                        title="Elimina persona"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6"/>
+                          <path d="M19 6l-1 14H6L5 6"/>
+                          <path d="M10 11v6M14 11v6"/>
+                          <path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
                     </td>
                   </tr>
                 ))}

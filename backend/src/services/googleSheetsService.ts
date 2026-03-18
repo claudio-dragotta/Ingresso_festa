@@ -336,6 +336,58 @@ export async function deleteShuttleSlotFromSheet(spreadsheetId: string, directio
   logger.info(`Eliminata colonna ${columnIndex} (orario ${time}) da ${sheetName}`);
 }
 
+// ─── ELIMINAZIONE RIGA INVITATO DAL FOGLIO ───────────────────────────────────
+
+export async function deleteInviteeFromSheet(
+  spreadsheetId: string,
+  fullName: string,
+  listType: 'PAGANTE' | 'GREEN'
+): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+
+  const sheetName = listType === 'PAGANTE' ? 'Lista' : 'GREEN';
+  const range = listType === 'PAGANTE'
+    ? (config.googleSheets.range || 'Lista!A:A')
+    : (process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A:A');
+
+  const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  const rows = response.data.values;
+  if (!rows || rows.length === 0) return;
+
+  const rowIndex = rows.findIndex(row => {
+    const cell = row[0]?.toString().trim().toLowerCase();
+    return cell === fullName.toLowerCase();
+  });
+  if (rowIndex === -1) {
+    logger.warn(`Invitato "${fullName}" non trovato nel foglio ${sheetName}`);
+    return;
+  }
+
+  // Recupera sheetId numerico per la tab
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheet = meta.data.sheets?.find(s => s.properties?.title === sheetName);
+  const sheetId = sheet?.properties?.sheetId;
+  if (sheetId === undefined) return;
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [{
+        deleteDimension: {
+          range: {
+            sheetId,
+            dimension: 'ROWS',
+            startIndex: rowIndex,
+            endIndex: rowIndex + 1,
+          },
+        },
+      }],
+    },
+  });
+
+  logger.info(`Riga "${fullName}" eliminata dal foglio ${sheetName}`);
+}
+
 // ─── TEST CONNESSIONE (usa sheet globale per test) ───────────────────────────
 
 export async function testGoogleSheetsConnection(spreadsheetId?: string): Promise<boolean> {

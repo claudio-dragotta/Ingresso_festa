@@ -2,7 +2,7 @@ import { Prisma, ListType } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 import { logger } from "../logger";
-import { writeToGoogleSheet } from "./googleSheetsService";
+import { writeToGoogleSheet, deleteInviteeFromSheet } from "./googleSheetsService";
 
 export interface InviteeInput {
   firstName: string;
@@ -239,7 +239,26 @@ export const resetCheckIn = async (inviteeId: string) => {
 };
 
 export const deleteInvitee = async (inviteeId: string) => {
+  const invitee = await prisma.invitee.findUnique({
+    where: { id: inviteeId },
+    select: { firstName: true, lastName: true, listType: true, eventId: true },
+  });
+  if (!invitee) return;
+
   await prisma.invitee.delete({ where: { id: inviteeId } });
+
+  const event = await prisma.event.findUnique({
+    where: { id: invitee.eventId },
+    select: { googleSheetId: true },
+  });
+  if (event?.googleSheetId) {
+    const fullName = `${invitee.lastName} ${invitee.firstName}`;
+    try {
+      await deleteInviteeFromSheet(event.googleSheetId, fullName, invitee.listType);
+    } catch (err: any) {
+      logger.warn(`Eliminazione dal foglio fallita per "${fullName}": ${err.message}`);
+    }
+  }
 };
 
 // Statistiche per i contatori

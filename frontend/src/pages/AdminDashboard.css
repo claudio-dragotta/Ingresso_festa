@@ -1194,3 +1194,38 @@
 
   .status-badge { padding: 0.625rem 1rem; font-size: 0.8125rem; }
 }
+
+.cell-delete {
+  width: 44px;
+  text-align: center;
+  padding: 0 0.25rem;
+}
+
+.delete-row-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.delete-row-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.delete-row-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18);
+  transform: scale(1.08);
+}
+
+.delete-row-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
