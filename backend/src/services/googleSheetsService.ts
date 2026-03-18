@@ -346,11 +346,11 @@ export async function deleteInviteeFromSheet(
   const sheets = getGoogleSheetsClient();
 
   const sheetName = listType === 'PAGANTE' ? 'Lista' : 'GREEN';
-  const range = listType === 'PAGANTE'
-    ? (config.googleSheets.range || 'Lista!A:A')
-    : (process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A:A');
 
-  const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  // Legge tutta la colonna A dall'inizio (riga 1) così l'indice corrisponde
+  // esattamente all'indice 0-based usato da deleteDimension
+  const fullRange = `${sheetName}!A:A`;
+  const response = await sheets.spreadsheets.values.get({ spreadsheetId, range: fullRange });
   const rows = response.data.values;
   if (!rows || rows.length === 0) return;
 
@@ -367,7 +367,10 @@ export async function deleteInviteeFromSheet(
   const meta = await sheets.spreadsheets.get({ spreadsheetId });
   const sheet = meta.data.sheets?.find(s => s.properties?.title === sheetName);
   const sheetId = sheet?.properties?.sheetId;
-  if (sheetId === undefined) return;
+  if (sheetId === undefined) {
+    logger.warn(`Tab "${sheetName}" non trovata nel foglio`);
+    return;
+  }
 
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId,

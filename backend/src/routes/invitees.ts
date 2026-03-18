@@ -188,12 +188,13 @@ router.patch("/:id/reset", async (req: EventRequest, res, next) => {
   }
 });
 
-// DELETE /invitees/:id - Elimina invitato (solo admin)
+// DELETE /invitees/:id - Elimina invitato (admin o organizer evento)
 router.delete("/:id", async (req: EventRequest, res, next) => {
   try {
-    const userRole = (req as any).user?.role;
-    if (userRole !== "ADMIN") {
-      return res.status(403).json({ message: "Solo admin può eliminare invitati" });
+    const globalRole = (req as any).user?.role;
+    const eventRole = req.eventRole;
+    if (globalRole !== "ADMIN" && eventRole !== "ADMIN" && eventRole !== "ORGANIZER") {
+      return res.status(403).json({ message: "Solo admin o organizer può eliminare invitati" });
     }
 
     await deleteInvitee(req.params.id);
