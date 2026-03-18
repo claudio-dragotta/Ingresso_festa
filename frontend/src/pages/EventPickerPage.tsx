@@ -22,7 +22,7 @@ type Chip = (typeof ALL_CHIPS)[number];
 
 export default function EventPickerPage() {
   const { isAdmin, logout } = useAuth();
-  const { selectEvent, currentEvent } = useEvent();
+  const { selectEvent } = useEvent();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
