@@ -106,8 +106,10 @@ export default function EventPickerPage() {
   };
 
   const handleSelectEvent = (event: EventInfo) => {
+    const cachedEvents = queryClient.getQueryData<EventInfo[]>(["events"]);
+    const freshEvent = cachedEvents?.find((e) => e.id === event.id) ?? event;
     queryClient.clear();
-    selectEvent(event);
+    selectEvent(freshEvent);
     navigate("/", { replace: true });
   };
 
