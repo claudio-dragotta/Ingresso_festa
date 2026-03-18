@@ -242,7 +242,7 @@
   height: 34px;
   border-radius: 50%;
   border: none;
-  background: transparent;
+  background: rgba(239, 68, 68, 0.15);
   cursor: pointer;
   transition: background 0.18s, transform 0.15s;
   flex-shrink: 0;
@@ -251,18 +251,17 @@
 .delete-person-btn svg {
   width: 17px;
   height: 17px;
-  stroke: #ef4444;
-  transition: stroke 0.18s, transform 0.15s;
+  stroke: #f87171 !important;
+  fill: none;
 }
 
 .delete-person-btn:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.12);
-  transform: scale(1.15);
+  background: #ef4444;
+  transform: scale(1.1);
 }
 
 .delete-person-btn:hover:not(:disabled) svg {
-  stroke: #dc2626;
-  transform: scale(1.1);
+  stroke: #ffffff !important;
 }
 
 .delete-person-btn:disabled {
