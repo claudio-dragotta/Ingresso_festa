@@ -61,13 +61,19 @@ export default function EventPickerPage() {
     },
   });
 
+  const updateCacheAndEvent = (updated: EventInfo) => {
+    queryClient.setQueryData<EventInfo[]>(["events"], (old) =>
+      old?.map((e) => (e.id === updated.id ? updated : e)) ?? [updated]
+    );
+    setEditingEvent(updated);
+    selectEvent(updated);
+  };
+
   const updateSheetMutation = useMutation({
     mutationFn: ({ eventId, googleSheetId }: { eventId: string; googleSheetId: string | null }) =>
       updateEvent(eventId, { googleSheetId }),
     onSuccess: (updated) => {
-      queryClient.invalidateQueries({ queryKey: ["events"] });
-      setEditingEvent(updated);
-      if (currentEvent?.id === updated.id) selectEvent(updated);
+      updateCacheAndEvent(updated);
       setSetupMsg("Sheet ID salvato.");
     },
   });
@@ -76,9 +82,7 @@ export default function EventPickerPage() {
     mutationFn: ({ eventId, modules }: { eventId: string; modules: EventModule[] }) =>
       updateEvent(eventId, { modules }),
     onSuccess: (updated) => {
-      queryClient.invalidateQueries({ queryKey: ["events"] });
-      setEditingEvent(updated);
-      if (currentEvent?.id === updated.id) selectEvent(updated);
+      updateCacheAndEvent(updated);
       setSetupMsg("Moduli aggiornati. Le sezioni del menu sono state aggiornate.");
     },
     onError: (err: any) =>
