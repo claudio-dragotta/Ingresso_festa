@@ -17,9 +17,12 @@ const STATUS_LABELS: Record<string, string> = {
 const ALL_SHEET_TABS = ["Lista", "GREEN", "Magliette", "Navette Andata", "Navette Ritorno"] as const;
 type SheetTab = (typeof ALL_SHEET_TABS)[number];
 
+const ALL_CHIPS = [...ALL_SHEET_TABS, "Spese"] as const;
+type Chip = (typeof ALL_CHIPS)[number];
+
 export default function EventPickerPage() {
   const { isAdmin, logout } = useAuth();
-  const { selectEvent } = useEvent();
+  const { selectEvent, currentEvent } = useEvent();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -33,7 +36,7 @@ export default function EventPickerPage() {
   // Stato modale impostazioni evento
   const [editingEvent, setEditingEvent] = useState<EventInfo | null>(null);
   const [editSheetId, setEditSheetId] = useState("");
-  const [selectedTabs, setSelectedTabs] = useState<SheetTab[]>([...ALL_SHEET_TABS]);
+  const [selectedChips, setSelectedChips] = useState<Chip[]>([...ALL_CHIPS]);
   const [setupMsg, setSetupMsg] = useState<string | null>(null);
 
   const { data: events = [], isLoading } = useQuery<EventInfo[]>({
@@ -64,8 +67,22 @@ export default function EventPickerPage() {
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       setEditingEvent(updated);
+      if (currentEvent?.id === updated.id) selectEvent(updated);
       setSetupMsg("Sheet ID salvato.");
     },
+  });
+
+  const updateModulesMutation = useMutation({
+    mutationFn: ({ eventId, modules }: { eventId: string; modules: EventModule[] }) =>
+      updateEvent(eventId, { modules }),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      setEditingEvent(updated);
+      if (currentEvent?.id === updated.id) selectEvent(updated);
+      setSetupMsg("Moduli aggiornati. Le sezioni del menu sono state aggiornate.");
+    },
+    onError: (err: any) =>
+      setSetupMsg(`Errore: ${err?.response?.data?.message ?? err.message}`),
   });
 
   const setupSheetMutation = useMutation({
@@ -75,6 +92,14 @@ export default function EventPickerPage() {
     onError: (err: any) =>
       setSetupMsg(`Errore: ${err?.response?.data?.message ?? err.message}`),
   });
+
+  const deriveModules = (chips: Chip[]): EventModule[] => {
+    const mods: EventModule[] = [];
+    if (chips.includes("Magliette")) mods.push("tshirts");
+    if (chips.includes("Navette Andata") || chips.includes("Navette Ritorno")) mods.push("shuttles");
+    if (chips.includes("Spese")) mods.push("expenses");
+    return mods;
+  };
 
   const handleSelectEvent = (event: EventInfo) => {
     queryClient.clear();
@@ -93,16 +118,17 @@ export default function EventPickerPage() {
     setEditingEvent(event);
     setEditSheetId(event.googleSheetId ?? "");
     setSetupMsg(null);
-    // Pre-seleziona i tab in base ai moduli attivi
-    const defaultTabs: SheetTab[] = ["Lista", "GREEN"];
-    if (event.modules.includes("tshirts")) defaultTabs.push("Magliette");
-    if (event.modules.includes("shuttles")) { defaultTabs.push("Navette Andata"); defaultTabs.push("Navette Ritorno"); }
-    setSelectedTabs(defaultTabs);
+    // Pre-seleziona i chip in base ai moduli attivi
+    const defaultChips: Chip[] = ["Lista", "GREEN"];
+    if (event.modules.includes("tshirts")) defaultChips.push("Magliette");
+    if (event.modules.includes("shuttles")) { defaultChips.push("Navette Andata"); defaultChips.push("Navette Ritorno"); }
+    if (event.modules.includes("expenses")) defaultChips.push("Spese");
+    setSelectedChips(defaultChips);
   };
 
-  const handleTabToggle = (tab: SheetTab) => {
-    setSelectedTabs((prev) =>
-      prev.includes(tab) ? prev.filter((t) => t !== tab) : [...prev, tab]
+  const handleChipToggle = (chip: Chip) => {
+    setSelectedChips((prev) =>
+      prev.includes(chip) ? prev.filter((c) => c !== chip) : [...prev, chip]
     );
   };
 
@@ -114,10 +140,19 @@ export default function EventPickerPage() {
     });
   };
 
+  const handleSaveModules = () => {
+    if (!editingEvent) return;
+    setSetupMsg(null);
+    updateModulesMutation.mutate({ eventId: editingEvent.id, modules: deriveModules(selectedChips) });
+  };
+
   const handleSetupSheet = () => {
     if (!editingEvent) return;
     setSetupMsg(null);
-    setupSheetMutation.mutate({ eventId: editingEvent.id, tabs: selectedTabs });
+    const sheetTabs = selectedChips.filter((c): c is SheetTab =>
+      ALL_SHEET_TABS.includes(c as SheetTab)
+    );
+    setupSheetMutation.mutate({ eventId: editingEvent.id, tabs: sheetTabs });
   };
 
   const handleModuleToggle = (module: EventModule) => {
@@ -439,40 +474,55 @@ export default function EventPickerPage() {
                 </button>
               </div>
 
-              {editingEvent.googleSheetId && (
-                <div className="sheet-tabs-section">
-                  <label className="sheet-tabs-label">Tab da aggiungere al foglio</label>
-                  <div className="sheet-tabs-chips">
-                    {ALL_SHEET_TABS.map((tab) => (
-                      <button
-                        key={tab}
-                        type="button"
-                        className={`sheet-tab-chip ${selectedTabs.includes(tab) ? "selected" : ""}`}
-                        onClick={() => handleTabToggle(tab)}
-                      >
-                        {selectedTabs.includes(tab) && (
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="13" height="13">
-                            <polyline points="20 6 9 17 4 12"/>
-                          </svg>
-                        )}
-                        {tab}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    className="setup-sheet-button"
-                    onClick={handleSetupSheet}
-                    disabled={setupSheetMutation.isPending || selectedTabs.length === 0}
-                    title="Aggiunge i tab selezionati al foglio (salta quelli già esistenti)"
-                  >
-                    {setupSheetMutation.isPending ? "Configurazione..." : "Configura Tab Sheet"}
-                  </button>
-                  <p className="form-hint">
-                    I tab già presenti nel foglio non vengono modificati. La colonna "Tipologia Pagamento" nel tab Lista avrà un menu a tendina (paypal, contanti, p2p, bonifico).
-                  </p>
+              <div className="sheet-tabs-section">
+                <label className="sheet-tabs-label">Sezioni attive</label>
+                <p className="form-hint" style={{ marginBottom: "0.75rem" }}>
+                  Seleziona le sezioni che vuoi usare. Il menu di navigazione mostrerà solo quelle attive.
+                </p>
+                <div className="sheet-tabs-chips">
+                  {ALL_CHIPS.map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      className={`sheet-tab-chip ${selectedChips.includes(chip) ? "selected" : ""} ${chip === "Lista" || chip === "GREEN" ? "chip-locked" : ""}`}
+                      onClick={() => chip !== "Lista" && chip !== "GREEN" && handleChipToggle(chip)}
+                      title={chip === "Lista" || chip === "GREEN" ? "Sempre attivo" : undefined}
+                    >
+                      {selectedChips.includes(chip) && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="13" height="13">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                      {chip}
+                    </button>
+                  ))}
                 </div>
-              )}
+                <button
+                  type="button"
+                  className="submit-button"
+                  onClick={handleSaveModules}
+                  disabled={updateModulesMutation.isPending}
+                >
+                  {updateModulesMutation.isPending ? "Salvataggio..." : "Salva sezioni attive"}
+                </button>
+
+                {editingEvent.googleSheetId && (
+                  <>
+                    <button
+                      type="button"
+                      className="setup-sheet-button"
+                      onClick={handleSetupSheet}
+                      disabled={setupSheetMutation.isPending || selectedChips.length === 0}
+                      title="Aggiunge i tab selezionati al foglio (salta quelli già esistenti)"
+                    >
+                      {setupSheetMutation.isPending ? "Configurazione..." : "Configura Tab Sheet"}
+                    </button>
+                    <p className="form-hint">
+                      I tab già presenti nel foglio non vengono modificati. La colonna "Tipologia Pagamento" nel tab Lista avrà un menu a tendina (paypal, contanti, p2p, bonifico).
+                    </p>
+                  </>
+                )}
+              </div>
 
               {setupMsg && (
                 <div className={`setup-msg ${setupMsg.startsWith("Errore") ? "form-error" : "form-success"}`}>
