@@ -101,16 +101,7 @@ router.post("/", allowRoles(["ADMIN", "ORGANIZER"]), async (req: EventRequest, r
       return res.status(400).json({ message: "Nome, cognome e tipo lista sono obbligatori" });
     }
 
-    // Gli ORGANIZER possono creare SOLO GREEN e senza paymentType
-    const sanitized = userRole === "ORGANIZER"
-      ? { firstName: payload.firstName, lastName: payload.lastName, listType: "GREEN" as ListType }
-      : payload;
-
-    if (userRole === "ORGANIZER" && sanitized.listType !== "GREEN") {
-      return res.status(403).json({ message: "Gli organizer possono aggiungere solo invitati GREEN" });
-    }
-
-    const result = await createInvitee(sanitized, req.eventId!);
+    const result = await createInvitee(payload, req.eventId!);
     return res.status(201).json(result);
   } catch (error) {
     return next(error);

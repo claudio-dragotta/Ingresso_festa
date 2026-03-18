@@ -661,7 +661,6 @@ export default function AdminDashboard() {
                 <col className="col-last" />
                 {activeTab === "paganti" && <col className="col-pay" />}
                 <col className="col-status" />
-                <col style={{ width: "44px" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -677,7 +676,6 @@ export default function AdminDashboard() {
                     </th>
                   )}
                   <th>Stato</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -693,44 +691,44 @@ export default function AdminDashboard() {
                       </td>
                     )}
                     <td className="cell-status">
-                      {isOrganizer ? (
-                        person.hasEntered ? (
-                          <span className={`status-badge ${person.hasEntered ? "entered" : "not-entered"} read-only`}>
-                            Entrato
-                          </span>
+                      <div className="cell-status-inner">
+                        {isOrganizer ? (
+                          person.hasEntered ? (
+                            <span className={`status-badge ${person.hasEntered ? "entered" : "not-entered"} read-only`}>
+                              Entrato
+                            </span>
+                          ) : (
+                            <button
+                              className={`status-badge ${person.hasEntered ? "entered" : "not-entered"}`}
+                              onClick={() => handleCheckIn(person)}
+                              disabled={checkInMutation.isPending}
+                            >
+                              Non entrato
+                            </button>
+                          )
                         ) : (
                           <button
                             className={`status-badge ${person.hasEntered ? "entered" : "not-entered"}`}
                             onClick={() => handleCheckIn(person)}
                             disabled={checkInMutation.isPending}
                           >
-                            Non entrato
+                            {person.hasEntered ? "Entrato" : "Non entrato"}
                           </button>
-                        )
-                      ) : (
+                        )}
                         <button
-                          className={`status-badge ${person.hasEntered ? "entered" : "not-entered"}`}
-                          onClick={() => handleCheckIn(person)}
-                          disabled={checkInMutation.isPending}
+                          className="delete-row-btn"
+                          onClick={() => handleDelete(person)}
+                          disabled={deleteMutation.isPending}
+                          title="Elimina persona"
                         >
-                          {person.hasEntered ? "Entrato" : "Non entrato"}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14H6L5 6"/>
+                            <path d="M10 11v6M14 11v6"/>
+                            <path d="M9 6V4h6v2"/>
+                          </svg>
                         </button>
-                      )}
-                    </td>
-                    <td className="cell-delete">
-                      <button
-                        className="delete-row-btn"
-                        onClick={() => handleDelete(person)}
-                        disabled={deleteMutation.isPending}
-                        title="Elimina persona"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3 6 5 6 21 6"/>
-                          <path d="M19 6l-1 14H6L5 6"/>
-                          <path d="M10 11v6M14 11v6"/>
-                          <path d="M9 6V4h6v2"/>
-                        </svg>
-                      </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
