@@ -661,6 +661,7 @@ export default function AdminDashboard() {
                 <col className="col-last" />
                 {activeTab === "paganti" && <col className="col-pay" />}
                 <col className="col-status" />
+                <col style={{ width: "44px" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -676,6 +677,7 @@ export default function AdminDashboard() {
                     </th>
                   )}
                   <th>Stato</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
