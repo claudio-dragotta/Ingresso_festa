@@ -62,3 +62,15 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         sync: false
+
+  # Sito pubblico SEPARATO per la pre-registrazione degli invitati
+  # URL completamente diverso dall'app principale — nessun link tra i due
+  - type: web
+    name: sesa-register
+    env: static
+    rootDir: register-app
+    staticPublishPath: .
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

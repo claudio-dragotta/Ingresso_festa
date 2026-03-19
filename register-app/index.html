@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registrazione Evento</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="card" id="card">
+      <!-- Stato: caricamento -->
+      <div id="state-loading" class="state">
+        <div class="spinner"></div>
+        <p>Caricamento...</p>
+      </div>
+
+      <!-- Stato: evento non trovato -->
+      <div id="state-notfound" class="state hidden">
+        <div class="icon-box error">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <h2>Link non valido</h2>
+        <p>Il link che hai utilizzato non è valido o l'evento non esiste.</p>
+      </div>
+
+      <!-- Stato: form -->
+      <div id="state-form" class="state hidden">
+        <div class="card-header">
+          <div class="header-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.63 19.79 19.79 0 01.99 1h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/>
+            </svg>
+          </div>
+          <h1 id="event-name">Evento</h1>
+          <p class="subtitle">Compila il form con la tua email istituzionale per richiedere il biglietto</p>
+        </div>
+
+        <form id="reg-form" novalidate>
+          <div class="row">
+            <div class="field">
+              <label for="firstName">Nome *</label>
+              <input id="firstName" type="text" placeholder="Es. Mario" autocomplete="given-name" required />
+            </div>
+            <div class="field">
+              <label for="lastName">Cognome *</label>
+              <input id="lastName" type="text" placeholder="Es. Rossi" autocomplete="family-name" required />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="email">Email istituzionale *</label>
+            <input id="email" type="email" placeholder="nome.cognome@..." autocomplete="email" required />
+            <span class="hint">Usa la tua email istituzionale universitaria — qui riceverai il QR code per l'ingresso</span>
+          </div>
+
+          <div class="field">
+            <label for="notes">Note <span class="optional">(opzionale)</span></label>
+            <textarea id="notes" placeholder="Eventuali note per gli organizzatori..." rows="3"></textarea>
+          </div>
+
+          <div id="form-error" class="error-box hidden"></div>
+
+          <button type="submit" id="submit-btn">Invia richiesta</button>
+        </form>
+      </div>
+
+      <!-- Stato: successo -->
+      <div id="state-success" class="state hidden">
+        <div class="icon-box success">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke-linecap="round"/>
+            <polyline points="22 4 12 14.01 9 11.01" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h2>Registrazione ricevuta!</h2>
+        <p id="success-msg">La tua richiesta è stata inviata con successo. Riceverai un'email con il QR code non appena il pagamento sarà confermato.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
