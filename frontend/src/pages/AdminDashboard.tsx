@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import { useEvent } from "../context/EventContext";
@@ -19,6 +20,8 @@ import {
   type DuplicateGroup,
 } from "../api/invitees";
 import InviteeDetailModal from "../components/InviteeDetailModal";
+import { fetchPreRegistrations } from "../api/preregistrations";
+import type { PreRegistration } from "../api/preregistrations";
 import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
@@ -26,6 +29,7 @@ export default function AdminDashboard() {
   const { currentEvent } = useEvent();
   const eventId = currentEvent!.id;
   const isOrganizer = role === 'ORGANIZER';
+  const navigate = useNavigate();
 
   const duplicatesRef = useRef<HTMLDivElement | null>(null);
   const hasShownDupHintRef = useRef(false);
@@ -65,6 +69,13 @@ export default function AdminDashboard() {
     queryFn: () => fetchDuplicateInvitees(eventId),
     refetchInterval: 10000,
   });
+
+  const { data: preRegs = [] } = useQuery<PreRegistration[]>({
+    queryKey: ["preregistrations", eventId],
+    queryFn: () => fetchPreRegistrations(eventId),
+    refetchInterval: 30000,
+  });
+  const pendingCount = preRegs.filter(p => p.status === "PENDING").length;
 
   type LocalDupGroup = { key: string; count: number; crossList: boolean; items: Invitee[] };
   const [localDupGroups, setLocalDupGroups] = useState<LocalDupGroup[] | null>(null);
@@ -536,6 +547,20 @@ export default function AdminDashboard() {
             </svg>
           </span>
           Green ({greenList.length})
+        </button>
+        <button
+          className="tab tab-pending"
+          onClick={() => navigate("/pre-registrations")}
+        >
+          <span className="tab-icon" aria-hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+          </span>
+          In attesa
+          {pendingCount > 0 && <span className="tab-pending-badge">{pendingCount}</span>}
         </button>
       </div>
 
