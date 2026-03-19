@@ -537,7 +537,7 @@ export default function AdminDashboard() {
           Paganti ({pagantiList.length})
         </button>
         <button
-          className={`tab ${activeTab === "green" ? "active" : ""}`}
+          className={`tab tab-green ${activeTab === "green" ? "active" : ""}`}
           onClick={() => setActiveTab("green")}
         >
           <span className="tab-icon" aria-hidden>

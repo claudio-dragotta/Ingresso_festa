@@ -334,6 +334,31 @@
   box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4), 0 4px 8px rgba(5, 150, 105, 0.2);
 }
 
+/* Tab Green */
+.tab.tab-green {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.08));
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #047857;
+}
+
+[data-theme="dark"] .tab.tab-green {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.06));
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.tab.tab-green:hover {
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 12px 40px rgba(16, 185, 129, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.tab.tab-green.active {
+  background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4), 0 4px 8px rgba(5, 150, 105, 0.2);
+}
+
 /* Tab "In attesa" pre-registrazioni */
 .tab.tab-pending {
   position: relative;
