@@ -1,9 +1,6 @@
 // ── Configurazione ────────────────────────────────────────────────────────────
-// URL del backend (cambia se necessario)
 const API_BASE = "https://ingresso-festa-api.onrender.com";
-
-// Dominio istituzionale richiesto (non esposto in nessun messaggio visibile)
-const ALLOWED_DOMAIN = "alcampus.it";
+const ALLOWED_DOMAIN = "alcampus.it"; // non esposto nei messaggi visibili
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -29,39 +26,22 @@ function hideError() {
   $("form-error").classList.add("hidden");
 }
 
-// ── Legge eventId dall'URL ────────────────────────────────────────────────────
-// URL atteso: https://sito.com/?e=EVENT_ID  oppure  https://sito.com/EVENT_ID
-function getEventId() {
-  // Prima prova query string ?e=...
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("e")) return params.get("e");
+// ── Carica evento attivo (nessun ID nell'URL) ─────────────────────────────────
+let eventId = null;
 
-  // Poi prova path /EVENT_ID
-  const path = window.location.pathname.replace(/^\//, "").split("/")[0];
-  if (path && path.length > 4) return path;
-
-  return null;
-}
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-const eventId = getEventId();
-
-if (!eventId) {
-  showState("notfound");
-} else {
-  fetch(`${API_BASE}/api/register/${eventId}/info`)
-    .then((r) => {
-      if (!r.ok) throw new Error("not found");
-      return r.json();
-    })
-    .then((event) => {
-      $("event-name").textContent = event.name;
-      showState("form");
-    })
-    .catch(() => {
-      showState("notfound");
-    });
-}
+fetch(`${API_BASE}/api/register/active`)
+  .then((r) => {
+    if (!r.ok) throw new Error();
+    return r.json();
+  })
+  .then((event) => {
+    eventId = event.id;
+    $("event-name").textContent = event.name;
+    showState("form");
+  })
+  .catch(() => {
+    showState("notfound");
+  });
 
 // ── Submit ────────────────────────────────────────────────────────────────────
 $("reg-form").addEventListener("submit", async (e) => {
@@ -71,9 +51,7 @@ $("reg-form").addEventListener("submit", async (e) => {
   const firstName = $("firstName").value.trim();
   const lastName  = $("lastName").value.trim();
   const email     = $("email").value.trim();
-  const notes     = $("notes").value.trim();
 
-  // Validazioni lato client
   if (!firstName || !lastName || !email) {
     showError("Compila tutti i campi obbligatori.");
     return;
@@ -91,7 +69,7 @@ $("reg-form").addEventListener("submit", async (e) => {
     const res = await fetch(`${API_BASE}/api/register/${eventId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ firstName, lastName, email, notes: notes || undefined }),
+      body: JSON.stringify({ firstName, lastName, email }),
     });
 
     const data = await res.json();
@@ -103,7 +81,6 @@ $("reg-form").addEventListener("submit", async (e) => {
       return;
     }
 
-    // Personalizza messaggio successo
     $("success-msg").textContent =
       `Grazie ${firstName}! La tua richiesta è stata ricevuta. ` +
       `Riceverai il QR code per l'ingresso all'indirizzo ${email} non appena il pagamento sarà confermato.`;

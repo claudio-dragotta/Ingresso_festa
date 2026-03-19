@@ -30,6 +30,21 @@ const registerRateLimit = rateLimit({
 // GET  /api/register/:eventId/info – recupera nome evento (per la pagina pubblica)
 export const publicPreRegRouter = Router({ mergeParams: true });
 
+// GET /api/register/active — restituisce il primo evento ACTIVE (nessun eventId necessario)
+publicPreRegRouter.get("/active", async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const event = await prisma.event.findFirst({
+      where: { status: "ACTIVE" },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, status: true },
+    });
+    if (!event) throw new AppError("Nessun evento attivo", 404);
+    return res.json(event);
+  } catch (err) {
+    return next(err);
+  }
+});
+
 publicPreRegRouter.get("/:eventId/info", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const event = await prisma.event.findUnique({
