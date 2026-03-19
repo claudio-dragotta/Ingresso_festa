@@ -33,12 +33,13 @@ export default function RegisterPage() {
     if (parts.length !== 2 || parts[1] !== "alcampus.it")
       return "Devi utilizzare la tua email istituzionale universitaria per registrarti.";
 
-    // Estrai il cognome dalla mail: parte dopo il primo '.' nel local part
+    // Estrai nome e cognome dalla mail: nome.cognome@alcampus.it
     const localPart = parts[0];
     const dotIdx = localPart.indexOf(".");
-    const emailSurname = dotIdx >= 0 ? localPart.slice(dotIdx + 1) : localPart;
+    const emailFirstName = dotIdx >= 0 ? localPart.slice(0, dotIdx) : localPart;
+    const emailLastName  = dotIdx >= 0 ? localPart.slice(dotIdx + 1) : "";
 
-    if (norm(emailSurname) !== norm(form.lastName.trim()))
+    if (norm(emailFirstName) !== norm(form.firstName.trim()) || norm(emailLastName) !== norm(form.lastName.trim()))
       return "I dati inseriti non corrispondono. Verifica di aver inserito correttamente nome, cognome e la tua email istituzionale.";
 
     return null;
