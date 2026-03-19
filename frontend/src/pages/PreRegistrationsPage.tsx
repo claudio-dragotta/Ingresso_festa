@@ -53,7 +53,7 @@ export default function PreRegistrationsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["preregistrations", eventId] }),
   });
 
-  const publicLink = `${window.location.origin}/register/${eventId}`;
+  const publicLink = "https://sesa-register.onrender.com";
   const pendingCount = items.filter(i => i.status === "PENDING").length;
 
   const filtered = filter === "ALL" ? items : items.filter(i => i.status === filter);

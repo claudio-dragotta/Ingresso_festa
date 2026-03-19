@@ -116,25 +116,37 @@
   gap: 6px;
   padding: 6px 14px;
   border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: none;
-  color: var(--text-muted, rgba(255,255,255,0.5));
+  border: 1px solid rgba(0,0,0,0.15);
+  background: #f1f5f9;
+  color: #475569;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
 }
-.prereg-filter-btn:hover { border-color: rgba(255,255,255,0.25); color: var(--text, #e2e8f0); }
-.prereg-filter-btn.active { background: #6366f1; border-color: #6366f1; color: #fff; }
-.prereg-filter-btn.active.pending { background: #f59e0b; border-color: #f59e0b; }
-.prereg-filter-btn.active.approved { background: #22c55e; border-color: #22c55e; }
-.prereg-filter-btn.active.rejected { background: #ef4444; border-color: #ef4444; }
+.prereg-filter-btn:hover { border-color: #94a3b8; color: #1e293b; background: #e2e8f0; }
+.prereg-filter-btn.active { border-color: transparent; color: #fff; }
+.prereg-filter-btn.active.pending  { background: #f59e0b; }
+.prereg-filter-btn.active.approved { background: #22c55e; }
+.prereg-filter-btn.active.rejected { background: #ef4444; }
+.prereg-filter-btn.active.all      { background: #6366f1; }
+
+[data-theme="dark"] .prereg-filter-btn {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.55);
+}
+[data-theme="dark"] .prereg-filter-btn:hover { background: rgba(255,255,255,0.12); color: #f1f5f9; }
+[data-theme="dark"] .prereg-filter-btn.active { color: #fff; }
 
 .prereg-filter-count {
-  background: rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.12);
   border-radius: 10px;
   padding: 1px 7px;
   font-size: 11px;
+}
+.prereg-filter-btn.active .prereg-filter-count {
+  background: rgba(255,255,255,0.25);
 }
 
 /* ── Lista ────────────────────────────────────────── */
