@@ -11,7 +11,6 @@ import {
 } from "../api/preregistrations";
 import "./PreRegistrationsPage.css";
 
-const BACKEND_URL = import.meta.env.VITE_API_URL ?? "";
 
 export default function PreRegistrationsPage() {
   const { currentEvent } = useEvent();
