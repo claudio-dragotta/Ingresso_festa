@@ -172,22 +172,24 @@ const AppLayout = () => {
           </div>
         </div>
 
-        {/* Mobile Menu Overlay */}
-        {mobileMenuOpen && (
-          <div className="mobile-menu-overlay" onClick={closeMobileMenu}></div>
-        )}
+      </header>
 
-        {/* Mobile Menu */}
-        <nav className={`mobile-menu ${mobileMenuOpen ? "open" : ""}`}>
-          <div className="mobile-menu-header">
-            <h2>Menu</h2>
-            <button className="mobile-menu-close" onClick={closeMobileMenu}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round"/>
-              </svg>
-            </button>
-          </div>
-          <div className="mobile-menu-links">
+      {/* Mobile Menu Overlay — fuori dall'header per evitare stacking context issues */}
+      {mobileMenuOpen && (
+        <div className="mobile-menu-overlay" onClick={closeMobileMenu}></div>
+      )}
+
+      {/* Mobile Menu Drawer */}
+      <nav className={`mobile-menu ${mobileMenuOpen ? "open" : ""}`}>
+        <div className="mobile-menu-header">
+          <h2>Menu</h2>
+          <button className="mobile-menu-close" onClick={closeMobileMenu}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div className="mobile-menu-links">
             {canSeeDashboard && (
               <NavLink to="/dashboard" className={navLinkClass} onClick={closeMobileMenu}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -287,7 +289,6 @@ const AppLayout = () => {
             </button>
           </div>
         </nav>
-      </header>
 
       <main className="app-main">
         <Outlet />

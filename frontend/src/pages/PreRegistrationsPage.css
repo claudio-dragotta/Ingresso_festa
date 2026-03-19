@@ -25,6 +25,7 @@
   margin: 0;
   font-size: 1.4rem;
   font-weight: 700;
+  color: var(--text);
 }
 
 .prereg-badge {
@@ -41,14 +42,14 @@
 .prereg-subtitle {
   margin: 0;
   font-size: 13px;
-  color: var(--text-muted, rgba(255,255,255,0.5));
+  color: var(--muted);
   line-height: 1.5;
 }
 
 /* ── Link box ─────────────────────────────────────── */
 .prereg-link-box {
-  background: rgba(99, 102, 241, 0.07);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
   border-radius: 12px;
   padding: 0.85rem 1rem;
   display: flex;
@@ -62,7 +63,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #6366f1;
+  color: var(--accent);
 }
 
 .prereg-link-row {
@@ -72,12 +73,12 @@
 
 .prereg-link-input {
   flex: 1;
-  background: none;
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
   border-radius: 8px;
   padding: 7px 10px;
   font-size: 13px;
-  color: var(--text, #e2e8f0);
+  color: var(--text);
   outline: none;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -88,7 +89,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: #6366f1;
+  background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -98,9 +99,9 @@
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: background 0.15s;
+  transition: opacity 0.15s;
 }
-.prereg-copy-btn:hover { background: #4f46e5; }
+.prereg-copy-btn:hover { opacity: 0.85; }
 .prereg-copy-btn svg { width: 15px; height: 15px; }
 
 /* ── Filtri ───────────────────────────────────────── */
@@ -116,28 +117,24 @@
   gap: 6px;
   padding: 6px 14px;
   border-radius: 20px;
-  border: 1px solid rgba(0,0,0,0.15);
-  background: #f1f5f9;
-  color: #475569;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
 }
-.prereg-filter-btn:hover { border-color: #94a3b8; color: #1e293b; background: #e2e8f0; }
+.prereg-filter-btn:hover {
+  border-color: var(--border-strong, #94a3b8);
+  color: var(--text);
+  background: var(--surface-raised);
+}
 .prereg-filter-btn.active { border-color: transparent; color: #fff; }
 .prereg-filter-btn.active.pending  { background: #f59e0b; }
 .prereg-filter-btn.active.approved { background: #22c55e; }
 .prereg-filter-btn.active.rejected { background: #ef4444; }
-.prereg-filter-btn.active.all      { background: #6366f1; }
-
-[data-theme="dark"] .prereg-filter-btn {
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.55);
-}
-[data-theme="dark"] .prereg-filter-btn:hover { background: rgba(255,255,255,0.12); color: #f1f5f9; }
-[data-theme="dark"] .prereg-filter-btn.active { color: #fff; }
+.prereg-filter-btn.active.all      { background: var(--accent); }
 
 .prereg-filter-count {
   background: rgba(0,0,0,0.12);
@@ -157,23 +154,15 @@
 }
 
 .prereg-item {
-  background: var(--surface, rgba(255,255,255,0.04));
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
   transition: border-color 0.15s;
 }
-.prereg-item.pending { border-left: 3px solid #f59e0b; }
+.prereg-item.pending  { border-left: 3px solid #f59e0b; }
 .prereg-item.approved { border-left: 3px solid #22c55e; }
-.prereg-item.rejected { border-left: 3px solid #6b7280; opacity: 0.7; }
-
-[data-theme="light"] .prereg-item {
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.08);
-}
-[data-theme="light"] .prereg-item.pending  { border-left: 3px solid #f59e0b; }
-[data-theme="light"] .prereg-item.approved { border-left: 3px solid #22c55e; }
-[data-theme="light"] .prereg-item.rejected { border-left: 3px solid #9ca3af; }
+.prereg-item.rejected { border-left: 3px solid #9ca3af; opacity: 0.7; }
 
 .prereg-item-main {
   display: flex;
@@ -193,16 +182,17 @@
 .prereg-name {
   font-weight: 700;
   font-size: 15px;
+  color: var(--text);
 }
 
 .prereg-email {
   font-size: 13px;
-  color: var(--text-muted, rgba(255,255,255,0.5));
+  color: var(--muted);
 }
 
 .prereg-notes {
   font-size: 12px;
-  color: var(--text-muted, rgba(255,255,255,0.4));
+  color: var(--muted);
   font-style: italic;
   margin-top: 2px;
 }
@@ -227,21 +217,19 @@
 .prereg-status-badge.approved { background: rgba(34,197,94,0.12);  color: #16a34a; }
 .prereg-status-badge.rejected { background: rgba(107,114,128,0.1); color: #6b7280; }
 
+[data-theme="dark"] .prereg-status-badge.pending  { color: #fbbf24; }
+[data-theme="dark"] .prereg-status-badge.approved { color: #4ade80; }
+
 .prereg-date {
   font-size: 11px;
-  color: var(--text-muted, rgba(255,255,255,0.35));
+  color: var(--muted);
 }
 
 /* ── Actions ──────────────────────────────────────── */
 .prereg-actions {
   padding: 0.65rem 1rem;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  background: rgba(0,0,0,0.1);
-}
-
-[data-theme="light"] .prereg-actions {
-  border-top: 1px solid rgba(0,0,0,0.06);
-  background: rgba(0,0,0,0.03);
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--border) 30%, transparent);
 }
 
 .prereg-action-btns {
@@ -260,20 +248,14 @@
 .prereg-input {
   padding: 6px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.05);
-  color: var(--text, #e2e8f0);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
   font-size: 13px;
   outline: none;
 }
-[data-theme="light"] .prereg-select,
-[data-theme="light"] .prereg-input {
-  border: 1px solid rgba(0,0,0,0.15);
-  background: #f8fafc;
-  color: #1e293b;
-}
 .prereg-select:focus,
-.prereg-input:focus { border-color: #6366f1; }
+.prereg-input:focus { border-color: var(--accent); }
 
 .prereg-approve-btns {
   display: flex;
@@ -294,17 +276,17 @@
 
 .prereg-btn.approve  { background: #22c55e; color: #fff; }
 .prereg-btn.approve:hover { background: #16a34a; }
-.prereg-btn.reject   { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
-.prereg-btn.reject:hover { background: rgba(239,68,68,0.2); }
-.prereg-btn.cancel   { background: rgba(255,255,255,0.08); color: var(--text, #e2e8f0); }
-.prereg-btn.cancel:hover { background: rgba(255,255,255,0.14); }
-.prereg-btn.delete   { background: none; color: #6b7280; font-size: 12px; padding: 4px 10px; }
+.prereg-btn.reject   { background: color-mix(in srgb, #ef4444 12%, transparent); color: #ef4444; border: 1px solid color-mix(in srgb, #ef4444 30%, transparent); }
+.prereg-btn.reject:hover { background: color-mix(in srgb, #ef4444 22%, transparent); }
+.prereg-btn.cancel   { background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); }
+.prereg-btn.cancel:hover { background: color-mix(in srgb, var(--border) 60%, transparent); }
+.prereg-btn.delete   { background: none; color: var(--muted); font-size: 12px; padding: 4px 10px; }
 .prereg-btn.delete:hover { color: #ef4444; }
 
 /* ── Empty ────────────────────────────────────────── */
 .prereg-empty {
   text-align: center;
   padding: 3rem 1rem;
-  color: var(--text-muted, rgba(255,255,255,0.4));
+  color: var(--muted);
   font-size: 14px;
 }
