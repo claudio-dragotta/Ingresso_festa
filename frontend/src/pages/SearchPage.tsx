@@ -4,11 +4,13 @@ import type { Invitee, Stats } from "../api/invitees";
 import { searchInvitees, fetchStats, checkInPerson, deleteInvitee } from "../api/invitees";
 import { useAuth } from "../context/AuthContext";
 import { useEvent } from "../context/EventContext";
+import InviteeDetailModal from "../components/InviteeDetailModal";
 import "./SearchPage.css";
 
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [selectedInvitee, setSelectedInvitee] = useState<Invitee | null>(null);
   const { isAdmin, role } = useAuth();
   const { currentEvent } = useEvent();
   const eventId = currentEvent!.id;
@@ -69,6 +71,15 @@ export default function SearchPage() {
 
   return (
     <div className="search-page">
+      {selectedInvitee && (
+        <InviteeDetailModal
+          invitee={selectedInvitee}
+          eventId={eventId}
+          onClose={() => setSelectedInvitee(null)}
+          isAdmin={isAdmin}
+          canCheckIn={canClick(selectedInvitee)}
+        />
+      )}
       <div className="stats-header">
         <div className="stat-card paganti">
           <div className="stat-label">Paganti</div>
@@ -145,7 +156,11 @@ export default function SearchPage() {
               {results.map((person) => (
                 <div key={person.id} className="result-card">
                   <div className="result-info">
-                    <div className="result-name">
+                    <div
+                      className="result-name result-name-clickable"
+                      onClick={() => setSelectedInvitee(person)}
+                      title="Clicca per i dettagli"
+                    >
                       {person.lastName} {person.firstName}
                     </div>
                     <div className="result-meta">

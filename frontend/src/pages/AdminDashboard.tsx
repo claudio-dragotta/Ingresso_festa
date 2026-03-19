@@ -14,9 +14,11 @@ import {
   keepOneDuplicate,
   resetAndReimport,
   fetchStats,
+  sendQrBulk,
   type Stats,
   type DuplicateGroup,
 } from "../api/invitees";
+import InviteeDetailModal from "../components/InviteeDetailModal";
 import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
@@ -29,6 +31,8 @@ export default function AdminDashboard() {
   const hasShownDupHintRef = useRef(false);
   const [showDupHint, setShowDupHint] = useState(false);
 
+  const [selectedInvitee, setSelectedInvitee] = useState<Invitee | null>(null);
+
   const [activeTab, setActiveTab] = useState<"paganti" | "green">("paganti");
   const [showAddForm, setShowAddForm] = useState(false);
   const firstNameInputRef = useRef<HTMLInputElement | null>(null);
@@ -38,6 +42,7 @@ export default function AdminDashboard() {
     lastName: "",
     listType: "PAGANTE",
     paymentType: "",
+    email: "",
   });
   const [sortBy, setSortBy] = useState<"firstName" | "lastName" | "paymentType">("lastName");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -148,6 +153,7 @@ export default function AdminDashboard() {
         lastName: "",
         listType: activeTab === "paganti" ? "PAGANTE" : "GREEN",
         paymentType: "",
+        email: "",
       });
       setTimeout(() => {
         firstNameInputRef.current?.focus();
@@ -219,6 +225,15 @@ export default function AdminDashboard() {
     },
   });
 
+  const [bulkQrResult, setBulkQrResult] = useState<string | null>(null);
+  const sendQrBulkMutation = useMutation({
+    mutationFn: () => sendQrBulk(eventId),
+    onSuccess: (data) => {
+      setBulkQrResult(`QR inviati: ${data.sent} ✓  |  Falliti: ${data.failed}  |  Senza email: ${data.skipped}`);
+      setTimeout(() => setBulkQrResult(null), 8000);
+    },
+  });
+
   useEffect(() => {
     if (syncMutation.data && duplicates.length > 0) {
       setShowDupHint(true);
@@ -272,6 +287,15 @@ export default function AdminDashboard() {
 
   return (
     <div className="admin-dashboard">
+      {selectedInvitee && (
+        <InviteeDetailModal
+          invitee={selectedInvitee}
+          eventId={eventId}
+          onClose={() => setSelectedInvitee(null)}
+          isAdmin={role === "ADMIN"}
+          canCheckIn={true}
+        />
+      )}
       {!isOrganizer && duplicates.length > 0 && (
         <div className="duplicates-alert" ref={duplicatesRef}>
           <svg viewBox="0 0 24 24" fill="currentColor" className="dup-icon">
@@ -523,6 +547,37 @@ export default function AdminDashboard() {
           Aggiungi {activeTab === "paganti" ? "Pagante" : "Green"}
         </button>
 
+        <button
+          className="send-qr-bulk-button"
+          onClick={() => {
+            if (confirm("Inviare il QR via email a tutti gli invitati che hanno un indirizzo email?\nOgni persona riceverà un'email individuale da sesaorganizers@gmail.com.")) {
+              sendQrBulkMutation.mutate();
+            }
+          }}
+          disabled={sendQrBulkMutation.isPending}
+          title="Invia QR code via email a tutti gli invitati con email"
+        >
+          {sendQrBulkMutation.isPending ? (
+            <>
+              <div className="spinner-small"></div>
+              Invio in corso...
+            </>
+          ) : (
+            <>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="3" height="3"/>
+                <rect x="18" y="14" width="3" height="3"/>
+                <rect x="14" y="18" width="3" height="3"/>
+                <rect x="18" y="18" width="3" height="3"/>
+              </svg>
+              Invia QR a tutti
+            </>
+          )}
+        </button>
+
           <div className="list-stats">
             {activeTab === "paganti"
               ? (
@@ -532,6 +587,15 @@ export default function AdminDashboard() {
               )}
           </div>
         </div>
+
+      {bulkQrResult && (
+        <div className="sync-result success">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+          </svg>
+          <div><strong>Invio QR completato</strong><p>{bulkQrResult}</p></div>
+        </div>
+      )}
 
       <div className="search-container">
         <div className="search-box">
@@ -618,6 +682,16 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            <div className="form-field">
+              <label>Email <span style={{ fontWeight: 400, color: "var(--text-muted)", fontSize: "12px" }}>(opzionale — per invio QR)</span></label>
+              <input
+                type="email"
+                value={formData.email ?? ""}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="mario@example.com"
+              />
+            </div>
+
             <div className="form-actions">
               <button
                 type="button"
@@ -681,8 +755,16 @@ export default function AdminDashboard() {
               <tbody>
                 {sortedCurrent.map((person) => (
                   <tr key={person.id} className={person.hasEntered ? "entered" : ""}>
-                    <td>{person.firstName}</td>
-                    <td>{person.lastName}</td>
+                    <td
+                      className="cell-name-clickable"
+                      onClick={() => setSelectedInvitee(person)}
+                      title="Clicca per i dettagli"
+                    >{person.firstName}</td>
+                    <td
+                      className="cell-name-clickable"
+                      onClick={() => setSelectedInvitee(person)}
+                      title="Clicca per i dettagli"
+                    >{person.lastName}</td>
                     {activeTab === "paganti" && (
                       <td>
                         {person.paymentType && (

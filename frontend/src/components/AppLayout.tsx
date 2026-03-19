@@ -9,6 +9,7 @@ const AppLayout = () => {
   const { logout, isAdmin, role } = useAuth();
   const { currentEvent, clearEvent, hasModule } = useEvent();
   const showShuttles = (role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE") && hasModule("shuttles");
+  const canScan = role === "ADMIN" || role === "ORGANIZER" || role === "ENTRANCE";
   const isShuttle = role === "SHUTTLE";
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -86,6 +87,18 @@ const AppLayout = () => {
                   <path d="M21 21l-4.35-4.35"/>
                 </svg>
                 Ricerca
+              </NavLink>
+            )}
+            {canScan && (
+              <NavLink to="/scan" className={navLinkClass}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/>
+                  <rect x="7" y="7" width="4" height="4" rx="0.5"/>
+                  <rect x="13" y="7" width="4" height="4" rx="0.5"/>
+                  <rect x="7" y="13" width="4" height="4" rx="0.5"/>
+                  <rect x="13" y="13" width="4" height="4" rx="0.5"/>
+                </svg>
+                Scanner QR
               </NavLink>
             )}
             {showShuttles && (
@@ -203,6 +216,18 @@ const AppLayout = () => {
                   <path d="M21 21l-4.35-4.35"/>
                 </svg>
                 <span>Ricerca</span>
+              </NavLink>
+            )}
+            {canScan && (
+              <NavLink to="/scan" className={navLinkClass} onClick={closeMobileMenu}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/>
+                  <rect x="7" y="7" width="4" height="4" rx="0.5"/>
+                  <rect x="13" y="7" width="4" height="4" rx="0.5"/>
+                  <rect x="7" y="13" width="4" height="4" rx="0.5"/>
+                  <rect x="13" y="13" width="4" height="4" rx="0.5"/>
+                </svg>
+                <span>Scanner QR</span>
               </NavLink>
             )}
             {!isShuttle && hasModule("tshirts") && (

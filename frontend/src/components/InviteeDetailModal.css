@@ -1,0 +1,272 @@
+/* ── Overlay ────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1000;
+  animation: overlayFadeIn 0.2s ease;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Drawer (bottom sheet) ──────────────────────────── */
+.modal-drawer {
+  background: var(--card-bg);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: drawerSlideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes drawerSlideUp {
+  from { transform: translateY(60px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ── Header ─────────────────────────────────────────── */
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.25rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.modal-list-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.modal-list-badge.pagante {
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+}
+
+.modal-list-badge.green {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+
+.modal-name {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.modal-close-btn svg { width: 22px; height: 22px; }
+
+.modal-close-btn:hover {
+  color: var(--text);
+  background: var(--hover-bg, rgba(0,0,0,0.06));
+}
+
+/* ── Body ───────────────────────────────────────────── */
+.modal-body {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-section:last-child { border-bottom: none; }
+
+.modal-field {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.modal-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.modal-field-value {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.email-value { word-break: break-all; }
+
+.no-email {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* Status pill */
+.status-pill {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-pill.entered  { background: rgba(34, 197, 94, 0.15); color: #16a34a; }
+.status-pill.not-entered { background: rgba(107, 114, 128, 0.12); color: var(--text-muted); }
+
+.qr-sent-date { font-size: 13px; color: #16a34a; }
+
+/* Email editing */
+.modal-field-email { align-items: flex-start; flex-direction: column; gap: 0.4rem; }
+.modal-field-email .modal-field-label { min-width: unset; }
+
+.email-display-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.email-edit-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.email-input {
+  flex: 1;
+  min-width: 180px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg, var(--card-bg));
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.email-input:focus { border-color: #6366f1; }
+
+.btn-edit-email {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-edit-email svg { width: 13px; height: 13px; }
+.btn-edit-email:hover { border-color: #6366f1; color: #6366f1; }
+
+.btn-save-email,
+.btn-cancel-email {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-save-email { background: #6366f1; color: #fff; }
+.btn-save-email:hover { background: #4f46e5; }
+.btn-save-email:disabled { opacity: 0.6; cursor: default; }
+
+.btn-cancel-email { background: var(--hover-bg, rgba(0,0,0,0.06)); color: var(--text); }
+.btn-cancel-email:hover { background: var(--hover-bg-strong, rgba(0,0,0,0.1)); }
+
+/* QR result banner */
+.qr-result-banner {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.qr-result-banner.success { background: rgba(34, 197, 94, 0.12); color: #15803d; }
+.qr-result-banner.error   { background: rgba(239, 68, 68, 0.12);  color: #b91c1c; }
+
+/* ── Footer ─────────────────────────────────────────── */
+.modal-footer {
+  display: flex;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.modal-btn {
+  flex: 1;
+  min-width: 100px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.modal-btn:active { transform: scale(0.97); }
+.modal-btn:disabled { opacity: 0.5; cursor: default; }
+
+.btn-checkin      { background: #22c55e; color: #fff; }
+.btn-checkin:hover { background: #16a34a; }
+
+.btn-undo-checkin { background: rgba(107, 114, 128, 0.15); color: var(--text); }
+.btn-undo-checkin:hover { background: rgba(107, 114, 128, 0.25); }
+
+.btn-send-qr      { background: #6366f1; color: #fff; }
+.btn-send-qr:hover { background: #4f46e5; }
+
+.btn-download-qr  { background: rgba(99, 102, 241, 0.1); color: #6366f1; border: 1px solid rgba(99, 102, 241, 0.3); }
+.btn-download-qr:hover { background: rgba(99, 102, 241, 0.18); }

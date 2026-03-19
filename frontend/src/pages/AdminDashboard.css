@@ -1235,3 +1235,54 @@
   opacity: 0.3;
   cursor: not-allowed;
 }
+
+/* ── Celle nome cliccabili ──────────────────────────── */
+.cell-name-clickable {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.cell-name-clickable:hover {
+  color: #6366f1;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Pulsante Invia QR a tutti ──────────────────────── */
+.send-qr-bulk-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+
+.send-qr-bulk-button svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.send-qr-bulk-button:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45);
+}
+
+.send-qr-bulk-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.send-qr-bulk-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}

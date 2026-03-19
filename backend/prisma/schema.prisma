@@ -55,6 +55,9 @@ model Invitee {
   lastName       String
   listType       ListType       @default(PAGANTE)
   paymentType    String?
+  email          String?
+  qrToken        String?        @unique
+  qrSentAt       DateTime?
   hasEntered     Boolean        @default(false)
   checkedInAt    DateTime?
   createdAt      DateTime       @default(now())

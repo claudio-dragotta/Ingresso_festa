@@ -9,6 +9,7 @@ import UsersPage from "./pages/UsersPage";
 import TshirtsPage from "./pages/TshirtsPage";
 import ExpensesPage from "./pages/ExpensesPage";
 import ShuttlesPage from "./pages/ShuttlesPage";
+import QrScanPage from "./pages/QrScanPage";
 import { useAuth } from "./context/AuthContext";
 import { useEvent } from "./context/EventContext";
 
@@ -25,6 +26,7 @@ const App = () => {
   const { currentEvent } = useEvent();
   const canSeeShuttles = role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE";
   const canSeeDashboard = role === "ADMIN" || role === "ORGANIZER";
+  const canScan = role === "ADMIN" || role === "ORGANIZER" || role === "ENTRANCE";
   const isShuttle = role === "SHUTTLE";
 
   return (
@@ -53,6 +55,7 @@ const App = () => {
         {!isShuttle && <Route path="/search" element={<SearchPage />} />}
         {canSeeShuttles && <Route path="/shuttles" element={<ShuttlesPage />} />}
         {!isShuttle && <Route path="/tshirts" element={<TshirtsPage />} />}
+        {canScan && <Route path="/scan" element={<QrScanPage />} />}
 
         <Route
           path="/"

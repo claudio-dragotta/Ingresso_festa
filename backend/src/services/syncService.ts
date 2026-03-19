@@ -157,7 +157,7 @@ export async function syncGoogleSheetToDatabase(eventId: string, options?: { pru
  * @returns true se importato, false se già esistente
  */
 export async function importPersonIfNotExists(person: ParsedPerson, eventId: string): Promise<boolean> {
-  const { firstName, lastName, listType, paymentType } = person;
+  const { firstName, lastName, listType, paymentType, email } = person;
 
   // Cerca se esiste già (controllo case-insensitive manuale)
   // SQLite non supporta mode: 'insensitive', quindi recuperiamo tutti e filtriamo in memoria
@@ -204,6 +204,7 @@ export async function importPersonIfNotExists(person: ParsedPerson, eventId: str
       lastName: lastName.trim().replace(/\s+/g, " "),
       listType: listType as ListType,
       paymentType: listType === "PAGANTE" ? (paymentType ?? null) : null,
+      email: email ? email.trim().toLowerCase() : null,
       hasEntered: false,
       eventId,
     },

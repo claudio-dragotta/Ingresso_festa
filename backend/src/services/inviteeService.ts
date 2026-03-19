@@ -9,6 +9,7 @@ export interface InviteeInput {
   lastName: string;
   listType: ListType; // PAGANTE o GREEN
   paymentType?: string; // Solo per PAGANTE: bonifico, paypal, contanti, p2p
+  email?: string;
 }
 
 const normalize = (value: string) => value.trim().replace(/\s+/g, " ");
@@ -51,6 +52,7 @@ export const createInvitee = async (input: InviteeInput, eventId: string) => {
       lastName: normalize(input.lastName),
       listType: input.listType,
       paymentType: input.listType === "PAGANTE" ? input.paymentType?.trim().toLowerCase() : null,
+      email: input.email?.trim().toLowerCase() || null,
       hasEntered: false,
       eventId,
     },
@@ -65,7 +67,8 @@ export const createInvitee = async (input: InviteeInput, eventId: string) => {
         ev.googleSheetId,
         fullName,
         input.listType,
-        input.listType === "PAGANTE" ? input.paymentType : undefined
+        input.listType === "PAGANTE" ? input.paymentType : undefined,
+        input.email
       );
       logger.info(`✅ Scritto su Google Sheets: ${fullName} (${input.listType})`);
     }
@@ -333,6 +336,14 @@ export const promoteDuplicateGroupToPagante = async (key: string, paymentType?: 
     }
   }
   return { updated };
+};
+
+export const updateInviteeEmail = async (inviteeId: string, email: string | null) => {
+  const invitee = await prisma.invitee.update({
+    where: { id: inviteeId },
+    data: { email: email ? email.trim().toLowerCase() : null },
+  });
+  return invitee;
 };
 
 export const keepOneAndDeleteOthersInGroup = async (key: string, keepId: string, eventId?: string) => {

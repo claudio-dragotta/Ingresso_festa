@@ -12,12 +12,16 @@ import {
   getDuplicateInviteeGroups,
   keepOneAndDeleteOthersInGroup,
   promoteDuplicateGroupToPagante,
+  updateInviteeEmail,
 } from "../services/inviteeService";
 import { adminOnly } from "../middleware/adminOnly";
 import { allowRoles } from "../middleware/roles";
 import { parseFileBuffer } from "../services/importService";
 import { ListType } from "@prisma/client";
 import { EventRequest } from "../middleware/eventAccess";
+import { isValidQrToken, ensureQrToken, generateQrImageBuffer } from "../services/qrService";
+import { sendQrEmail, sendQrEmailBulk } from "../services/emailService";
+import { prisma } from "../lib/prisma";
 
 const upload = multer();
 const router = Router();
@@ -183,6 +187,97 @@ router.patch("/:id/reset", async (req: EventRequest, res, next) => {
 
     const invitee = await resetCheckIn(req.params.id);
     return res.json(invitee);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// PATCH /invitees/:id/email - Aggiorna email invitato
+router.patch("/:id/email", allowRoles(["ADMIN", "ORGANIZER"]), async (req: EventRequest, res, next) => {
+  try {
+    const { email } = req.body as { email?: string };
+    const updated = await updateInviteeEmail(req.params.id, email ?? null);
+    return res.json(updated);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// GET /invitees/:id/qr-image - Scarica immagine QR come PNG (admin only)
+router.get("/:id/qr-image", adminOnly, async (req: EventRequest, res, next) => {
+  try {
+    const token = await ensureQrToken(req.params.id);
+    const buffer = await generateQrImageBuffer(token);
+    const invitee = await prisma.invitee.findUnique({
+      where: { id: req.params.id },
+      select: { firstName: true, lastName: true },
+    });
+    const filename = invitee
+      ? `qr-${invitee.lastName.toLowerCase()}-${invitee.firstName.toLowerCase()}.png`
+      : "qr.png";
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    return res.send(buffer);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// POST /invitees/:id/send-qr - Genera token e invia email QR
+router.post("/:id/send-qr", allowRoles(["ADMIN", "ORGANIZER"]), async (req: EventRequest, res, next) => {
+  try {
+    const result = await sendQrEmail(req.params.id);
+    if (!result.success) {
+      return res.status(400).json({ message: result.error });
+    }
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// POST /invitees/send-qr-bulk - Invia QR a tutti gli invitati con email (admin e organizer)
+router.post("/send-qr-bulk", allowRoles(["ADMIN", "ORGANIZER"]), async (req: EventRequest, res, next) => {
+  try {
+    const result = await sendQrEmailBulk(req.eventId!);
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// POST /invitees/qr/checkin - Check-in via token QR (richiede autenticazione)
+router.post("/qr/checkin", allowRoles(["ADMIN", "ORGANIZER", "ENTRANCE"]), async (req: EventRequest, res, next) => {
+  try {
+    const { token } = req.body as { token?: string };
+
+    if (!token) {
+      return res.status(400).json({ message: "Token mancante" });
+    }
+
+    // Validazione regex — difesa in profondità contro input malevoli
+    if (!isValidQrToken(token)) {
+      return res.status(400).json({ message: "Token non valido" });
+    }
+
+    // Cerca invitato per token (query parametrizzata Prisma — nessuna SQL injection possibile)
+    const invitee = await prisma.invitee.findUnique({
+      where: { qrToken: token },
+      select: { id: true, eventId: true },
+    });
+
+    if (!invitee) {
+      return res.status(404).json({ message: "QR code non riconosciuto" });
+    }
+
+    // Verifica che l'invitato appartenga all'evento corrente
+    if (req.eventId && invitee.eventId !== req.eventId) {
+      return res.status(403).json({ message: "QR code non valido per questo evento" });
+    }
+
+    const performedByUserId = (req as any).user?.userId as string | undefined;
+    const updated = await markCheckIn(invitee.id, false, performedByUserId, invitee.eventId);
+    return res.json(updated);
   } catch (error) {
     return next(error);
   }

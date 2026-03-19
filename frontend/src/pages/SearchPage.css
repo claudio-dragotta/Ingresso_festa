@@ -628,3 +628,15 @@
   .search-box .clear-button { width: 36px; height: 36px; }
   .search-box .clear-button svg { width: 18px; height: 18px; stroke-width: 3; }
 }
+
+/* ── Nome cliccabile nella SearchPage ───────────────── */
+.result-name-clickable {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.result-name-clickable:hover {
+  color: #6366f1;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

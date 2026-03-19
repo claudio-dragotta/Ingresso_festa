@@ -9,6 +9,9 @@ export interface Invitee {
   lastName: string;
   listType: ListType;
   paymentType?: string | null;
+  email?: string | null;
+  qrToken?: string | null;
+  qrSentAt?: string | null;
   hasEntered: boolean;
   checkedInAt?: string | null;
   createdAt: string;
@@ -20,6 +23,7 @@ export interface InviteeInput {
   lastName: string;
   listType: ListType;
   paymentType?: string;
+  email?: string;
 }
 
 export interface DuplicateGroup {
@@ -175,5 +179,25 @@ export const promoteDuplicateGroup = async (eventId: string, key: string, paymen
 
 export const keepOneDuplicate = async (eventId: string, key: string, keepId: string) => {
   const response = await apiClient.post<{ deleted: number }>(`/events/${eventId}/invitees/duplicates/keep-one`, { key, keepId });
+  return response.data;
+};
+
+export const updateInviteeEmail = async (eventId: string, inviteeId: string, email: string | null) => {
+  const response = await apiClient.patch<Invitee>(`/events/${eventId}/invitees/${inviteeId}/email`, { email });
+  return response.data;
+};
+
+export const sendQrToInvitee = async (eventId: string, inviteeId: string) => {
+  const response = await apiClient.post<{ success: boolean; email: string }>(`/events/${eventId}/invitees/${inviteeId}/send-qr`);
+  return response.data;
+};
+
+export const sendQrBulk = async (eventId: string) => {
+  const response = await apiClient.post<{ sent: number; failed: number; skipped: number }>(`/events/${eventId}/invitees/send-qr-bulk`);
+  return response.data;
+};
+
+export const qrCheckin = async (eventId: string, token: string) => {
+  const response = await apiClient.post<Invitee>(`/events/${eventId}/invitees/qr/checkin`, { token });
   return response.data;
 };

@@ -14,6 +14,7 @@ export interface ParsedPerson {
   lastName: string;
   listType: 'PAGANTE' | 'GREEN';
   paymentType?: string;
+  email?: string;
   originalValue: string;
 }
 
@@ -54,8 +55,11 @@ function capitalizeWords(text: string): string {
 
 // ─── LETTURA LISTA PAGANTI ───────────────────────────────────────────────────
 
-export async function readPagantiSheet(spreadsheetId: string): Promise<Array<{ colA: string; colB?: string }>> {
-  const range = config.googleSheets.range;
+export async function readPagantiSheet(spreadsheetId: string): Promise<Array<{ colA: string; colB?: string; colC?: string }>> {
+  // Leggiamo fino alla colonna C: A=nome, B=pagamento, C=email
+  const baseRange = config.googleSheets.range;
+  // Trasforma "Lista!A:B" → "Lista!A:C" per includere la colonna email
+  const range = baseRange.replace(/:[A-Z]+$/, ':C');
   logger.info(`Lettura Google Sheet PAGANTI: ${spreadsheetId}, range: ${range}`);
   const sheets = getGoogleSheetsClient();
   const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
@@ -69,6 +73,7 @@ export async function readPagantiSheet(spreadsheetId: string): Promise<Array<{ c
     .map(row => ({
       colA: row[0].toString().trim(),
       colB: row[1] ? row[1].toString().trim().toLowerCase() : undefined,
+      colC: row[2] ? row[2].toString().trim().toLowerCase() : undefined,
     }));
   logger.info(`Letti ${data.length} valori PAGANTI`);
   return data;
@@ -76,8 +81,9 @@ export async function readPagantiSheet(spreadsheetId: string): Promise<Array<{ c
 
 // ─── LETTURA LISTA GREEN ─────────────────────────────────────────────────────
 
-export async function readGreenSheet(spreadsheetId: string): Promise<string[]> {
-  const greenRange = process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A:A';
+export async function readGreenSheet(spreadsheetId: string): Promise<Array<{ name: string; email?: string }>> {
+  // Leggiamo A:B per includere la colonna email (colonna B)
+  const greenRange = (process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A:A').replace(/:[A-Z]+$/, ':B');
   logger.info(`Lettura Google Sheet GREEN: ${spreadsheetId}, range: ${greenRange}`);
   const sheets = getGoogleSheetsClient();
   const response = await sheets.spreadsheets.values.get({ spreadsheetId, range: greenRange });
@@ -86,23 +92,28 @@ export async function readGreenSheet(spreadsheetId: string): Promise<string[]> {
     logger.warn('Google Sheet GREEN vuoto');
     return [];
   }
-  const data = rows.filter(row => row[0]?.toString().trim()).map(row => row[0].toString().trim());
+  const data = rows
+    .filter(row => row[0]?.toString().trim())
+    .map(row => ({
+      name: row[0].toString().trim(),
+      email: row[1] ? row[1].toString().trim().toLowerCase() : undefined,
+    }));
   logger.info(`Letti ${data.length} valori GREEN`);
   return data;
 }
 
 // ─── PARSER NOME ─────────────────────────────────────────────────────────────
 
-export function parsePersonName(fullName: string, listType: 'PAGANTE' | 'GREEN', paymentType?: string): ParsedPerson {
+export function parsePersonName(fullName: string, listType: 'PAGANTE' | 'GREEN', paymentType?: string, email?: string): ParsedPerson {
   const trimmed = fullName.trim();
   if (!trimmed) throw new Error('Nome vuoto');
   const parts = trimmed.split(/\s+/);
   if (parts.length === 1) {
-    return { lastName: parts[0], firstName: '', listType, paymentType: listType === 'PAGANTE' ? paymentType : undefined, originalValue: fullName };
+    return { lastName: parts[0], firstName: '', listType, paymentType: listType === 'PAGANTE' ? paymentType : undefined, email, originalValue: fullName };
   }
   const firstName = parts.pop()!;
   const lastName = parts.join(' ');
-  return { firstName, lastName, listType, paymentType: listType === 'PAGANTE' ? paymentType : undefined, originalValue: fullName };
+  return { firstName, lastName, listType, paymentType: listType === 'PAGANTE' ? paymentType : undefined, email, originalValue: fullName };
 }
 
 // ─── FETCH + PARSE PAGANTI + GREEN ──────────────────────────────────────────
@@ -118,7 +129,7 @@ export async function fetchAndParseGoogleSheets(spreadsheetId: string): Promise<
 
   for (const row of pagantiData) {
     try {
-      const person = parsePersonName(row.colA, 'PAGANTE', row.colB);
+      const person = parsePersonName(row.colA, 'PAGANTE', row.colB, row.colC);
       if (!person.lastName) { errors.push(`Ignorato PAGANTE: "${row.colA}"`); continue; }
       parsedPersons.push(person);
     } catch (error: any) {
@@ -126,13 +137,13 @@ export async function fetchAndParseGoogleSheets(spreadsheetId: string): Promise<
     }
   }
 
-  for (const name of greenData) {
+  for (const row of greenData) {
     try {
-      const person = parsePersonName(name, 'GREEN');
-      if (!person.lastName) { errors.push(`Ignorato GREEN: "${name}"`); continue; }
+      const person = parsePersonName(row.name, 'GREEN', undefined, row.email);
+      if (!person.lastName) { errors.push(`Ignorato GREEN: "${row.name}"`); continue; }
       parsedPersons.push(person);
     } catch (error: any) {
-      errors.push(`Errore parsing GREEN "${name}": ${error.message}`);
+      errors.push(`Errore parsing GREEN "${row.name}": ${error.message}`);
     }
   }
 
@@ -143,24 +154,28 @@ export async function fetchAndParseGoogleSheets(spreadsheetId: string): Promise<
 
 // ─── SCRITTURA INVITATO ──────────────────────────────────────────────────────
 
-export async function writeToGoogleSheet(spreadsheetId: string, fullName: string, listType: 'PAGANTE' | 'GREEN', paymentType?: string): Promise<void> {
+export async function writeToGoogleSheet(spreadsheetId: string, fullName: string, listType: 'PAGANTE' | 'GREEN', paymentType?: string, email?: string): Promise<void> {
   const formattedName = capitalizeWords(fullName.trim());
   const formattedPaymentType = paymentType ? paymentType.trim().toLowerCase() : '';
+  const formattedEmail = email ? email.trim().toLowerCase() : '';
   const sheets = getGoogleSheetsClient();
 
   if (listType === 'PAGANTE') {
+    // Colonne: A=nome, B=pagamento, C=email
     await sheets.spreadsheets.values.append({
-      spreadsheetId, range: 'Lista!A:B', valueInputOption: 'RAW', insertDataOption: 'OVERWRITE',
-      requestBody: { values: [[formattedName, formattedPaymentType]] },
+      spreadsheetId, range: 'Lista!A:C', valueInputOption: 'RAW', insertDataOption: 'OVERWRITE',
+      requestBody: { values: [[formattedName, formattedPaymentType, formattedEmail]] },
     });
-    logger.info(`Scritto su PAGANTI: ${formattedName} | ${formattedPaymentType || 'N/D'}`);
+    logger.info(`Scritto su PAGANTI: ${formattedName} | ${formattedPaymentType || 'N/D'} | ${formattedEmail || 'no email'}`);
   } else {
-    const greenRange = process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A:A';
+    // Colonne: A=nome, B=email
+    const greenRangeBase = process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A:A';
+    const greenRange = greenRangeBase.replace(/:[A-Z]+$/, ':B');
     await sheets.spreadsheets.values.append({
       spreadsheetId, range: greenRange, valueInputOption: 'RAW', insertDataOption: 'OVERWRITE',
-      requestBody: { values: [[formattedName]] },
+      requestBody: { values: [[formattedName, formattedEmail]] },
     });
-    logger.info(`Scritto su GREEN: ${formattedName}`);
+    logger.info(`Scritto su GREEN: ${formattedName} | ${formattedEmail || 'no email'}`);
   }
 }
 

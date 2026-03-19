@@ -1,0 +1,231 @@
+/* ── Pagina ──────────────────────────────────────────── */
+.qrscan-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.5rem 1rem 2rem;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+    linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Header ──────────────────────────────────────────── */
+.qrscan-header {
+  text-align: center;
+}
+
+.qrscan-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.qrscan-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* ── Viewport ────────────────────────────────────────── */
+.qrscan-viewport {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  aspect-ratio: 1;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0a0a0a;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+}
+
+.qrscan-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.qrscan-canvas {
+  display: none;
+}
+
+/* ── Placeholder ─────────────────────────────────────── */
+.qrscan-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: rgba(255,255,255,0.35);
+}
+
+.qrscan-placeholder svg {
+  width: 72px;
+  height: 72px;
+}
+
+.qrscan-placeholder span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ── Frame con angoli e laser ────────────────────────── */
+.qrscan-frame {
+  position: absolute;
+  inset: 30px;
+  pointer-events: none;
+}
+
+.qrscan-corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: #6366f1;
+  border-style: solid;
+}
+
+.qrscan-corner.tl { top: 0;    left: 0;  border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+.qrscan-corner.tr { top: 0;    right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+.qrscan-corner.bl { bottom: 0; left: 0;  border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+.qrscan-corner.br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+.qrscan-laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #6366f1, transparent);
+  animation: laserScan 2s ease-in-out infinite;
+  border-radius: 1px;
+}
+
+@keyframes laserScan {
+  0%   { top: 0; opacity: 1; }
+  50%  { top: calc(100% - 2px); opacity: 1; }
+  100% { top: 0; opacity: 1; }
+}
+
+/* ── Overlay risultato ───────────────────────────────── */
+.qrscan-result-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1rem;
+  text-align: center;
+  animation: resultFadeIn 0.2s ease;
+}
+
+@keyframes resultFadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.qrscan-result-overlay.success   { background: rgba(0, 0, 0, 0.82); }
+.qrscan-result-overlay.duplicate { background: rgba(0, 0, 0, 0.82); }
+.qrscan-result-overlay.error     { background: rgba(0, 0, 0, 0.82); }
+
+.result-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.result-icon svg { width: 30px; height: 30px; }
+
+.result-icon.success   { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.result-icon.duplicate { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.result-icon.error     { background: rgba(239, 68, 68, 0.2);  color: #ef4444; }
+
+.result-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.result-meta {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+}
+
+/* ── Errore camera ───────────────────────────────────── */
+.qrscan-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  max-width: 380px;
+  width: 100%;
+}
+
+.qrscan-error svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* ── Controlli ───────────────────────────────────────── */
+.qrscan-controls {
+  width: 100%;
+  max-width: 380px;
+}
+
+.qrscan-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 13px 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.qrscan-btn svg { width: 20px; height: 20px; }
+
+.qrscan-btn.start {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+}
+
+.qrscan-btn.stop {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.qrscan-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+.qrscan-btn:active:not(:disabled) { transform: scale(0.97); }
+
+/* ── Info ────────────────────────────────────────────── */
+.qrscan-info {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.qrscan-info p { margin: 0.1rem 0; }
