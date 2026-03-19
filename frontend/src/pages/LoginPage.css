@@ -76,7 +76,12 @@
   border-radius: 24px;
   padding: 3rem;
   box-shadow: var(--shadow-strong);
+  border: 1.5px solid rgba(255,255,255,0.35);
   animation: slideUp 0.5s ease;
+}
+
+[data-theme="dark"] .login-card {
+  border-color: rgba(255,255,255,0.08);
 }
 
 @keyframes slideUp {

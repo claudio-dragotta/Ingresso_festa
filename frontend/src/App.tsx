@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/AppLayout";
 import LoginPage from "./pages/LoginPage";
@@ -25,13 +25,14 @@ const EventGuard = ({ children }: { children: React.ReactNode }) => {
 const App = () => {
   const { isAdmin, isAuthenticated, role } = useAuth();
   const { currentEvent } = useEvent();
+  const location = useLocation();
   const canSeeShuttles = role === "ADMIN" || role === "ORGANIZER" || role === "SHUTTLE";
   const canSeeDashboard = role === "ADMIN" || role === "ORGANIZER";
   const canScan = role === "ADMIN" || role === "ORGANIZER" || role === "ENTRANCE";
   const isShuttle = role === "SHUTTLE";
 
   return (
-    <Routes>
+    <Routes location={location} key={location.pathname}>
       <Route path="/login" element={<LoginPage />} />
       <Route
         path="/select-event"

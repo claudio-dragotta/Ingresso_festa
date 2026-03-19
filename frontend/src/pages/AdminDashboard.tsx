@@ -22,6 +22,7 @@ import {
 import InviteeDetailModal from "../components/InviteeDetailModal";
 import { fetchPreRegistrations } from "../api/preregistrations";
 import type { PreRegistration } from "../api/preregistrations";
+import { useToast } from "../context/ToastContext";
 import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
@@ -30,6 +31,7 @@ export default function AdminDashboard() {
   const eventId = currentEvent!.id;
   const isOrganizer = role === 'ORGANIZER';
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const duplicatesRef = useRef<HTMLDivElement | null>(null);
   const hasShownDupHintRef = useRef(false);
@@ -166,10 +168,12 @@ export default function AdminDashboard() {
         paymentType: "",
         email: "",
       });
+      toast("Persona aggiunta", "success", 2000);
       setTimeout(() => {
         firstNameInputRef.current?.focus();
       }, 0);
     },
+    onError: () => toast("Errore durante l'aggiunta", "error"),
   });
 
   useEffect(() => {
@@ -210,7 +214,9 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
       queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
+      toast("Persona eliminata", "success", 2500);
     },
+    onError: () => toast("Errore durante l'eliminazione", "error"),
   });
 
   const handleDelete = (person: Invitee) => {
@@ -220,37 +226,44 @@ export default function AdminDashboard() {
 
   const syncMutation = useMutation({
     mutationFn: (opts?: { pruneMissing?: boolean }) => syncGoogleSheets(eventId, opts),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
       queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
       queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates", eventId] });
+      if (data.success) {
+        toast(`Sincronizzato: ${data.newImported} nuovi, ${data.alreadyExists} già presenti`, "success");
+      } else {
+        toast("Errore durante la sincronizzazione", "error");
+      }
     },
+    onError: () => toast("Errore durante la sincronizzazione", "error"),
   });
 
   const resetMutation = useMutation({
     mutationFn: () => resetAndReimport(eventId),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
       queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
       queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates", eventId] });
+      toast(`Reset completato: ${data.import.newImported} importati (${data.import.breakdown.paganti.imported} paganti, ${data.import.breakdown.green.imported} green)`, "success");
     },
+    onError: () => toast("Errore durante il reset", "error"),
   });
 
-  const [bulkQrResult, setBulkQrResult] = useState<string | null>(null);
   const sendQrBulkMutation = useMutation({
     mutationFn: () => sendQrBulk(eventId),
     onSuccess: (data) => {
-      setBulkQrResult(`QR inviati: ${data.sent} ✓  |  Falliti: ${data.failed}  |  Senza email: ${data.skipped}`);
-      setTimeout(() => setBulkQrResult(null), 8000);
+      toast(`QR inviati: ${data.sent} ✓  |  Falliti: ${data.failed}  |  Senza email: ${data.skipped}`, data.failed > 0 ? "warning" : "success", 6000);
     },
+    onError: () => toast("Errore durante l'invio dei QR", "error"),
   });
 
   useEffect(() => {
-    if (syncMutation.data && duplicates.length > 0) {
+    if (duplicates.length > 0) {
       setShowDupHint(true);
       setTimeout(() => setShowDupHint(false), 6000);
     }
-  }, [syncMutation.data, duplicates.length]);
+  }, [duplicates.length]);
 
   const promoteMut = useMutation({
     mutationFn: (key: string) => promoteDuplicateGroup(eventId, key),
@@ -485,41 +498,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {syncMutation.data && (
-        <div className={`sync-result ${syncMutation.data.success ? "success" : "error"}`}>
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            {syncMutation.data.success ? (
-              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-            ) : (
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-            )}
-          </svg>
-          <div>
-            <strong>
-              {syncMutation.data.success ? "Sincronizzazione completata!" : "Errore sincronizzazione"}
-            </strong>
-            <p>
-              {syncMutation.data.newImported} nuovi importati, {syncMutation.data.alreadyExists} già presenti
-              {syncMutation.data.breakdown && (
-                <> ({syncMutation.data.breakdown.paganti.imported} paganti, {syncMutation.data.breakdown.green.imported} green)</>
-              )}
-            </p>
-          </div>
-        </div>
-      )}
-      {resetMutation.data && (
-        <div className="sync-result success">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-          </svg>
-          <div>
-            <strong>Reset + Reimport completato!</strong>
-            <p>
-              Eliminati: {resetMutation.data.reset.deletedInvitees} invitati, {resetMutation.data.reset.deletedLogs} log. Importati: {resetMutation.data.import.newImported} nuovi ({resetMutation.data.import.breakdown.paganti.imported} paganti, {resetMutation.data.import.breakdown.green.imported} green), {resetMutation.data.import.alreadyExists} già presenti.
-            </p>
-          </div>
-        </div>
-      )}
 
       <div className="tabs">
         <button
@@ -613,14 +591,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-      {bulkQrResult && (
-        <div className="sync-result success">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-          </svg>
-          <div><strong>Invio QR completato</strong><p>{bulkQrResult}</p></div>
-        </div>
-      )}
 
       <div className="search-container">
         <div className="search-box">

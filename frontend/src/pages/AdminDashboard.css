@@ -664,8 +664,9 @@
 }
 
 .invitees-table thead {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--surface-raised, #f8fafc);
+  border-bottom: 2px solid var(--border);
+  color: var(--muted);
 }
 
 /* Arrotonda gli angoli dell'intestazione per allinearla al contenitore */
@@ -685,11 +686,11 @@
 .invitees-table th {
   padding: 1.25rem 1rem;
   text-align: left;
-  font-weight: 800;
-  font-size: 0.875rem;
+  font-weight: 700;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: #ffffff;
+  letter-spacing: 0.06em;
+  color: var(--muted);
 }
 
 .invitees-table th.sortable {
@@ -1168,9 +1169,9 @@
 }
 
 .data-table thead {
-  /* Stesso header della tabella Magliette */
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
+  background: var(--surface-raised, #f8fafc);
+  border-bottom: 2px solid var(--border);
+  color: var(--muted);
 }
 
 .data-table th,
@@ -1182,13 +1183,12 @@
   text-overflow: ellipsis;
 }
 
-/* Stile header identico a Magliette */
 .data-table th {
-  font-weight: 800;
-  font-size: 0.875rem;
+  font-weight: 700;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: #ffffff;
+  letter-spacing: 0.06em;
+  color: var(--muted);
 }
 
 .data-table th.sortable { cursor: pointer; user-select: none; }

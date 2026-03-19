@@ -1,9 +1,10 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useEvent } from "../context/EventContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./AppLayout.css";
 import ThemeToggle from "./ThemeToggle";
+import ToastContainer from "./Toast";
 
 const AppLayout = () => {
   const { logout, isAdmin, role } = useAuth();
@@ -13,6 +14,13 @@ const AppLayout = () => {
   const isShuttle = role === "SHUTTLE";
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const canSeeDashboard = isAdmin || role === "ORGANIZER";
 
@@ -36,7 +44,7 @@ const AppLayout = () => {
 
   return (
     <div className="app-shell">
-      <header className={`app-header ${!isAdmin ? "entrance-mode" : ""}`}>
+      <header className={`app-header${!isAdmin ? " entrance-mode" : ""}${scrolled ? " scrolled" : ""}`}>
         <div className="header-content">
           <div className="header-left">
             <NavLink to="/" className="brand" aria-label="Home">
@@ -284,6 +292,7 @@ const AppLayout = () => {
       <main className="app-main">
         <Outlet />
       </main>
+      <ToastContainer />
     </div>
   );
 };
