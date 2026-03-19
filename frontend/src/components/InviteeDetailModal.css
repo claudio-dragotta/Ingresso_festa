@@ -2,12 +2,13 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.65);
   display: flex;
   align-items: flex-end;
   justify-content: center;
   z-index: 1000;
   animation: overlayFadeIn 0.2s ease;
+  backdrop-filter: blur(2px);
 }
 
 @keyframes overlayFadeIn {
@@ -17,16 +18,35 @@
 
 /* ── Drawer (bottom sheet) ──────────────────────────── */
 .modal-drawer {
-  background: var(--card-bg);
+  background: #1e1e2e;
   border-radius: 20px 20px 0 0;
   width: 100%;
   max-width: 520px;
-  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
   overflow-y: auto;
   animation: drawerSlideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (prefers-color-scheme: light) {
+  .modal-drawer {
+    background: #ffffff;
+    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.18);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+  }
+}
+
+[data-theme="light"] .modal-drawer {
+  background: #ffffff;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.18);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .modal-drawer {
+  background: #1e1e2e;
 }
 
 @keyframes drawerSlideUp {
@@ -40,7 +60,11 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: 1.25rem 1.25rem 0.75rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] .modal-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .modal-title-group {
@@ -74,14 +98,18 @@
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--text);
+  color: #f1f5f9;
+}
+
+[data-theme="light"] .modal-name {
+  color: #0f172a;
 }
 
 .modal-close-btn {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.5);
   padding: 4px;
   border-radius: 6px;
   display: flex;
@@ -92,9 +120,12 @@
 .modal-close-btn svg { width: 22px; height: 22px; }
 
 .modal-close-btn:hover {
-  color: var(--text);
-  background: var(--hover-bg, rgba(0,0,0,0.06));
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.08);
 }
+
+[data-theme="light"] .modal-close-btn { color: rgba(0,0,0,0.4); }
+[data-theme="light"] .modal-close-btn:hover { color: #0f172a; background: rgba(0,0,0,0.06); }
 
 /* ── Body ───────────────────────────────────────────── */
 .modal-body {
@@ -109,7 +140,11 @@
   flex-direction: column;
   gap: 0.6rem;
   padding: 0.75rem 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .modal-section {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .modal-section:last-child { border-bottom: none; }
@@ -124,25 +159,31 @@
 .modal-field-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.45);
   text-transform: uppercase;
   letter-spacing: 0.4px;
   min-width: 80px;
   flex-shrink: 0;
 }
 
+[data-theme="light"] .modal-field-label { color: rgba(0,0,0,0.45); }
+
 .modal-field-value {
   font-size: 14px;
-  color: var(--text);
+  color: #e2e8f0;
 }
+
+[data-theme="light"] .modal-field-value { color: #1e293b; }
 
 .email-value { word-break: break-all; }
 
 .no-email {
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.35);
   font-style: italic;
   font-size: 13px;
 }
+
+[data-theme="light"] .no-email { color: rgba(0,0,0,0.35); }
 
 /* Status pill */
 .status-pill {
@@ -180,13 +221,19 @@
   flex: 1;
   min-width: 180px;
   padding: 7px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255,255,255,0.15);
   border-radius: 8px;
-  background: var(--input-bg, var(--card-bg));
-  color: var(--text);
+  background: rgba(255,255,255,0.05);
+  color: #e2e8f0;
   font-size: 14px;
   outline: none;
   transition: border-color 0.15s;
+}
+
+[data-theme="light"] .email-input {
+  border: 1px solid rgba(0,0,0,0.15);
+  background: #f8fafc;
+  color: #1e293b;
 }
 
 .email-input:focus { border-color: #6366f1; }
@@ -196,13 +243,18 @@
   align-items: center;
   gap: 4px;
   background: none;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255,255,255,0.15);
   border-radius: 8px;
   padding: 4px 10px;
   font-size: 12px;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.5);
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
+}
+
+[data-theme="light"] .btn-edit-email {
+  border: 1px solid rgba(0,0,0,0.15);
+  color: rgba(0,0,0,0.5);
 }
 
 .btn-edit-email svg { width: 13px; height: 13px; }
@@ -222,8 +274,10 @@
 .btn-save-email:hover { background: #4f46e5; }
 .btn-save-email:disabled { opacity: 0.6; cursor: default; }
 
-.btn-cancel-email { background: var(--hover-bg, rgba(0,0,0,0.06)); color: var(--text); }
-.btn-cancel-email:hover { background: var(--hover-bg-strong, rgba(0,0,0,0.1)); }
+.btn-cancel-email { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+.btn-cancel-email:hover { background: rgba(255,255,255,0.14); }
+[data-theme="light"] .btn-cancel-email { background: rgba(0,0,0,0.06); color: #1e293b; }
+[data-theme="light"] .btn-cancel-email:hover { background: rgba(0,0,0,0.1); }
 
 /* QR result banner */
 .qr-result-banner {
@@ -262,8 +316,9 @@
 .btn-checkin      { background: #22c55e; color: #fff; }
 .btn-checkin:hover { background: #16a34a; }
 
-.btn-undo-checkin { background: rgba(107, 114, 128, 0.15); color: var(--text); }
-.btn-undo-checkin:hover { background: rgba(107, 114, 128, 0.25); }
+.btn-undo-checkin { background: rgba(107, 114, 128, 0.2); color: #e2e8f0; }
+.btn-undo-checkin:hover { background: rgba(107, 114, 128, 0.35); }
+[data-theme="light"] .btn-undo-checkin { color: #1e293b; }
 
 .btn-send-qr      { background: #6366f1; color: #fff; }
 .btn-send-qr:hover { background: #4f46e5; }
