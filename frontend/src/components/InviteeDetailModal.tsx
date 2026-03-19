@@ -19,7 +19,7 @@ export default function InviteeDetailModal({ invitee, eventId, onClose, isAdmin,
   const emailInputRef = useRef<HTMLInputElement>(null);
 
   const [qrResult, setQrResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [bulkResult, setBulkResult] = useState<string | null>(null);
+  const [bulkResult] = useState<string | null>(null);
 
   useEffect(() => {
     if (editingEmail) emailInputRef.current?.focus();
