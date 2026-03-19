@@ -18,13 +18,6 @@ export default function RegisterPage() {
     retry: false,
   });
 
-  // Normalizza stringa: minuscolo, rimuove accenti, spazi, trattini, apostrofi
-  const norm = (s: string) =>
-    s.toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[\s\-']/g, "");
-
   const validateForm = (): string | null => {
     if (!form.firstName.trim() || !form.lastName.trim() || !form.email.trim())
       return "Compila tutti i campi obbligatori.";
@@ -32,15 +25,6 @@ export default function RegisterPage() {
     const parts = form.email.trim().toLowerCase().split("@");
     if (parts.length !== 2 || parts[1] !== "alcampus.it")
       return "Devi utilizzare la tua email istituzionale universitaria per registrarti.";
-
-    // Estrai nome e cognome dalla mail: nome.cognome@alcampus.it
-    const localPart = parts[0];
-    const dotIdx = localPart.indexOf(".");
-    const emailFirstName = dotIdx >= 0 ? localPart.slice(0, dotIdx) : localPart;
-    const emailLastName  = dotIdx >= 0 ? localPart.slice(dotIdx + 1) : "";
-
-    if (norm(emailFirstName) !== norm(form.firstName.trim()) || norm(emailLastName) !== norm(form.lastName.trim()))
-      return "I dati inseriti non corrispondono. Verifica di aver inserito correttamente nome, cognome e la tua email istituzionale.";
 
     return null;
   };

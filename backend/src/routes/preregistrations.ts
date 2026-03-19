@@ -88,14 +88,6 @@ publicPreRegRouter.post("/:eventId", registerRateLimit, async (req: Request, res
 
     // Controlla che il cognome corrisponda alla parte della mail dopo il primo punto
     // Es. mario.dragotta@alcampus.it → "dragotta" deve corrispondere al cognome inserito
-    const norm = (s: string) =>
-      s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\s\-']/g, "");
-    const dotIdx = localPart.indexOf(".");
-    const emailFirstName = dotIdx >= 0 ? localPart.slice(0, dotIdx) : localPart;
-    const emailLastName  = dotIdx >= 0 ? localPart.slice(dotIdx + 1) : "";
-    if (norm(emailFirstName) !== norm(firstName.trim()) || norm(emailLastName) !== norm(lastName.trim())) {
-      throw new AppError("I dati inseriti non corrispondono. Verifica di aver inserito correttamente nome, cognome e la tua email istituzionale.", 400);
-    }
 
     const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true } });
     if (!event) throw new AppError("Evento non trovato", 404);
