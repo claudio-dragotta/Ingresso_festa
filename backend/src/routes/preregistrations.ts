@@ -86,6 +86,15 @@ publicPreRegRouter.post("/:eventId", registerRateLimit, async (req: Request, res
       throw new AppError("Devi utilizzare la tua email istituzionale universitaria per registrarti.", 400);
     }
 
+    // Controlla che il cognome corrisponda alla parte dopo il punto nel local part
+    const norm = (s: string) =>
+      s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\s\-']/g, "");
+    const dotIdx = localPart.indexOf(".");
+    const emailLastName = dotIdx >= 0 ? localPart.slice(dotIdx + 1) : localPart;
+    if (norm(emailLastName) !== norm(lastName.trim())) {
+      throw new AppError("I dati inseriti non corrispondono. Verifica di aver inserito correttamente nome, cognome e la tua email istituzionale.", 400);
+    }
+
     // Controlla che il cognome corrisponda alla parte della mail dopo il primo punto
     // Es. mario.dragotta@alcampus.it → "dragotta" deve corrispondere al cognome inserito
 
