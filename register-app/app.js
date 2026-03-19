@@ -1,5 +1,6 @@
 // ── Configurazione ────────────────────────────────────────────────────────────
 const API_BASE = "https://ingresso-festa-api.onrender.com";
+const EVENT_ID = "cmmupsg340000oc1zrj9f6hmq";
 const ALLOWED_DOMAIN = "alcampus.it"; // non esposto nei messaggi visibili
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -26,16 +27,13 @@ function hideError() {
   $("form-error").classList.add("hidden");
 }
 
-// ── Carica evento attivo (nessun ID nell'URL) ─────────────────────────────────
-let eventId = null;
-
-fetch(`${API_BASE}/api/register/active`)
+// ── Carica nome evento ────────────────────────────────────────────────────────
+fetch(`${API_BASE}/api/register/${EVENT_ID}/info`)
   .then((r) => {
     if (!r.ok) throw new Error();
     return r.json();
   })
   .then((event) => {
-    eventId = event.id;
     $("event-name").textContent = event.name;
     showState("form");
   })
@@ -66,7 +64,7 @@ $("reg-form").addEventListener("submit", async (e) => {
   btn.textContent = "Invio in corso...";
 
   try {
-    const res = await fetch(`${API_BASE}/api/register/${eventId}`, {
+    const res = await fetch(`${API_BASE}/api/register/${EVENT_ID}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ firstName, lastName, email }),

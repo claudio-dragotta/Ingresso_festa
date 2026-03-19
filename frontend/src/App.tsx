@@ -33,9 +33,6 @@ const App = () => {
 
   return (
     <Routes>
-      {/* Pagina pubblica — nessuna autenticazione richiesta */}
-      <Route path="/register/:eventId" element={<RegisterPage />} />
-
       <Route path="/login" element={<LoginPage />} />
       <Route
         path="/select-event"
