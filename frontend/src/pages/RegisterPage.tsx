@@ -7,7 +7,7 @@ import "./RegisterPage.css";
 export default function RegisterPage() {
   const { eventId } = useParams<{ eventId: string }>();
 
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", notes: "" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "" });
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,9 +18,30 @@ export default function RegisterPage() {
     retry: false,
   });
 
-  const isInstitutionalEmail = (email: string) => {
-    const parts = email.trim().toLowerCase().split("@");
-    return parts.length === 2 && parts[1] === "alcampus.it";
+  // Normalizza stringa: minuscolo, rimuove accenti, spazi, trattini, apostrofi
+  const norm = (s: string) =>
+    s.toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[\s\-']/g, "");
+
+  const validateForm = (): string | null => {
+    if (!form.firstName.trim() || !form.lastName.trim() || !form.email.trim())
+      return "Compila tutti i campi obbligatori.";
+
+    const parts = form.email.trim().toLowerCase().split("@");
+    if (parts.length !== 2 || parts[1] !== "alcampus.it")
+      return "Devi utilizzare la tua email istituzionale universitaria per registrarti.";
+
+    // Estrai il cognome dalla mail: parte dopo il primo '.' nel local part
+    const localPart = parts[0];
+    const dotIdx = localPart.indexOf(".");
+    const emailSurname = dotIdx >= 0 ? localPart.slice(dotIdx + 1) : localPart;
+
+    if (norm(emailSurname) !== norm(form.lastName.trim()))
+      return "I dati inseriti non corrispondono. Verifica di aver inserito correttamente nome, cognome e la tua email istituzionale.";
+
+    return null;
   };
 
   const mutation = useMutation({
@@ -29,7 +50,6 @@ export default function RegisterPage() {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email.trim(),
-        notes: form.notes.trim() || undefined,
       }),
     onSuccess: () => {
       setSubmitted(true);
@@ -44,14 +64,8 @@ export default function RegisterPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!form.firstName.trim() || !form.lastName.trim() || !form.email.trim()) {
-      setError("Compila tutti i campi obbligatori.");
-      return;
-    }
-    if (!isInstitutionalEmail(form.email)) {
-      setError("Devi utilizzare la tua email istituzionale universitaria per registrarti.");
-      return;
-    }
+    const err = validateForm();
+    if (err) { setError(err); return; }
     mutation.mutate();
   };
 
@@ -150,17 +164,6 @@ export default function RegisterPage() {
             <span className="reg-hint">
               Usa la tua email istituzionale universitaria — qui riceverai il QR code per l'ingresso
             </span>
-          </div>
-
-          <div className="reg-field">
-            <label className="reg-label">Note <span className="reg-optional">(opzionale)</span></label>
-            <textarea
-              className="reg-input reg-textarea"
-              placeholder="Eventuali note per gli organizzatori..."
-              value={form.notes}
-              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              rows={3}
-            />
           </div>
 
           {error && <div className="reg-error-box">{error}</div>}

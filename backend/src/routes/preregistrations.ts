@@ -78,10 +78,22 @@ publicPreRegRouter.post("/:eventId", registerRateLimit, async (req: Request, res
     if (!EMAIL_RE.test(email.trim())) {
       throw new AppError("Formato email non valido", 400);
     }
+
+    const [localPart, emailDomain] = email.trim().toLowerCase().split("@");
+
     // Controlla dominio istituzionale — messaggio generico, non rivela il dominio
-    const emailDomain = email.trim().toLowerCase().split("@")[1];
     if (emailDomain !== ALLOWED_DOMAIN) {
       throw new AppError("Devi utilizzare la tua email istituzionale universitaria per registrarti.", 400);
+    }
+
+    // Controlla che il cognome corrisponda alla parte della mail dopo il primo punto
+    // Es. mario.dragotta@alcampus.it → "dragotta" deve corrispondere al cognome inserito
+    const norm = (s: string) =>
+      s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\s\-']/g, "");
+    const dotIdx = localPart.indexOf(".");
+    const emailSurname = dotIdx >= 0 ? localPart.slice(dotIdx + 1) : localPart;
+    if (norm(emailSurname) !== norm(lastName.trim())) {
+      throw new AppError("I dati inseriti non corrispondono. Verifica di aver inserito correttamente nome, cognome e la tua email istituzionale.", 400);
     }
 
     const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true } });
