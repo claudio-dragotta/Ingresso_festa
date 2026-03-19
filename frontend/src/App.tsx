@@ -67,6 +67,7 @@ const App = () => {
                 <Navigate to={
                   isAdmin || role === "ORGANIZER" ? "/dashboard" :
                   role === "SHUTTLE" ? "/shuttles" :
+                  role === "ENTRANCE" ? "/scan" :
                   "/search"
                 } replace />
               ) : (
