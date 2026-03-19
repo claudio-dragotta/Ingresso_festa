@@ -10,7 +10,6 @@ import TshirtsPage from "./pages/TshirtsPage";
 import ExpensesPage from "./pages/ExpensesPage";
 import ShuttlesPage from "./pages/ShuttlesPage";
 import QrScanPage from "./pages/QrScanPage";
-import RegisterPage from "./pages/RegisterPage";
 import PreRegistrationsPage from "./pages/PreRegistrationsPage";
 import { useAuth } from "./context/AuthContext";
 import { useEvent } from "./context/EventContext";
