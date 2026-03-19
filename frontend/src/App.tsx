@@ -10,6 +10,8 @@ import TshirtsPage from "./pages/TshirtsPage";
 import ExpensesPage from "./pages/ExpensesPage";
 import ShuttlesPage from "./pages/ShuttlesPage";
 import QrScanPage from "./pages/QrScanPage";
+import RegisterPage from "./pages/RegisterPage";
+import PreRegistrationsPage from "./pages/PreRegistrationsPage";
 import { useAuth } from "./context/AuthContext";
 import { useEvent } from "./context/EventContext";
 
@@ -31,6 +33,9 @@ const App = () => {
 
   return (
     <Routes>
+      {/* Pagina pubblica — nessuna autenticazione richiesta */}
+      <Route path="/register/:eventId" element={<RegisterPage />} />
+
       <Route path="/login" element={<LoginPage />} />
       <Route
         path="/select-event"
@@ -56,6 +61,7 @@ const App = () => {
         {canSeeShuttles && <Route path="/shuttles" element={<ShuttlesPage />} />}
         {!isShuttle && <Route path="/tshirts" element={<TshirtsPage />} />}
         {canScan && <Route path="/scan" element={<QrScanPage />} />}
+        {canSeeDashboard && <Route path="/pre-registrations" element={<PreRegistrationsPage />} />}
 
         <Route
           path="/"

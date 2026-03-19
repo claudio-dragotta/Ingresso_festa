@@ -12,6 +12,7 @@ import tshirtRoutes from "./tshirts";
 import expenseRoutes from "./expenses";
 import shuttlesRoutes from "./shuttles";
 import usersRoutes from "./users";
+import preregRoutes, { publicPreRegRouter } from "./preregistrations";
 
 const router = Router();
 
@@ -20,6 +21,9 @@ router.use("/auth", authRoutes);
 router.use("/events", eventRoutes);
 router.use("/health", healthRoutes);
 router.use("/users", usersRoutes);
+
+// Route PUBBLICA per auto-registrazione invitati (no auth)
+router.use("/register", publicPreRegRouter);
 
 // Routes per-evento: tutte montate sotto /events/:eventId/
 // Il middleware requireEventAccess() verifica l'accesso e aggiunge req.eventId e req.eventRole
@@ -33,6 +37,7 @@ eventRouter.use("/sync", syncRoutes);
 eventRouter.use("/tshirts", tshirtRoutes);
 eventRouter.use("/expenses", expenseRoutes);
 eventRouter.use("/shuttles", shuttlesRoutes);
+eventRouter.use("/preregistrations", preregRoutes);
 
 router.use("/events/:eventId", eventRouter);
 

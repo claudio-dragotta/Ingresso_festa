@@ -30,6 +30,7 @@ model Event {
   shuttleMachines ShuttleMachine[]
   shuttleSlots    ShuttleSlot[]
   userAccess      UserEventAccess[]
+  preRegistrations PreRegistration[]
 }
 
 // Assegna un utente a una festa con un ruolo specifico
@@ -241,4 +242,28 @@ enum EventStatus {
   ACTIVE
   PAUSED
   LOCKED
+}
+
+// ===================== PRE-REGISTRAZIONI =====================
+
+model PreRegistration {
+  id        String        @id @default(cuid())
+  eventId   String
+  event     Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  firstName String
+  lastName  String
+  email     String
+  listType  ListType      @default(PAGANTE)
+  notes     String?
+  status    PreRegStatus  @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([eventId, status])
+}
+
+enum PreRegStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

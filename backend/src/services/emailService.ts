@@ -162,7 +162,6 @@ function buildEmailHtml(fullName: string, eventName: string, listLabel: string):
     <div class="body">
       <div class="greeting">Ciao, ${fullName}!</div>
       <p class="info">
-        Sei nella lista <strong>${listLabel}</strong>.<br>
         Mostra il QR code qui sotto all'ingresso per accedere all'evento.
       </p>
       <div class="badge">${listLabel}</div>

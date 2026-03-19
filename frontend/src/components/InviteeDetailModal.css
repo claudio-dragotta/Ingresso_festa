@@ -2,13 +2,14 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.82);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   z-index: 1000;
   animation: overlayFadeIn 0.2s ease;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(4px);
+  padding: 1rem;
 }
 
 @keyframes overlayFadeIn {
@@ -16,42 +17,53 @@
   to   { opacity: 1; }
 }
 
-/* ── Drawer (bottom sheet) ──────────────────────────── */
+/* ── Dialog (centered panel) ───────────────────────── */
 .modal-drawer {
   background: #1e1e2e;
-  border-radius: 20px 20px 0 0;
+  border-radius: 16px;
   width: 100%;
   max-width: 520px;
-  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
   overflow-y: auto;
-  animation: drawerSlideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-@media (prefers-color-scheme: light) {
-  .modal-drawer {
-    background: #ffffff;
-    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.18);
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-  }
+  animation: dialogPopIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 [data-theme="light"] .modal-drawer {
   background: #ffffff;
-  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.18);
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 [data-theme="dark"] .modal-drawer {
   background: #1e1e2e;
 }
 
-@keyframes drawerSlideUp {
-  from { transform: translateY(60px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+@keyframes dialogPopIn {
+  from { transform: scale(0.93) translateY(10px); opacity: 0; }
+  to   { transform: scale(1)    translateY(0);    opacity: 1; }
+}
+
+/* Su mobile → bottom sheet */
+@media (max-width: 540px) {
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal-drawer {
+    border-radius: 20px 20px 0 0;
+    max-width: 100%;
+    max-height: 92vh;
+    border-bottom: none;
+    animation: drawerSlideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  @keyframes drawerSlideUp {
+    from { transform: translateY(60px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
 }
 
 /* ── Header ─────────────────────────────────────────── */

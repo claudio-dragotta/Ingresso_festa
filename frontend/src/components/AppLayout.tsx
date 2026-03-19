@@ -101,6 +101,16 @@ const AppLayout = () => {
                 Scanner QR
               </NavLink>
             )}
+            {canSeeDashboard && (
+              <NavLink to="/pre-registrations" className={navLinkClass}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                </svg>
+                Pre-registrazioni
+              </NavLink>
+            )}
             {showShuttles && (
               <NavLink to="/shuttles" className={navLinkClass}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -228,6 +238,16 @@ const AppLayout = () => {
                   <rect x="13" y="13" width="4" height="4" rx="0.5"/>
                 </svg>
                 <span>Scanner QR</span>
+              </NavLink>
+            )}
+            {canSeeDashboard && (
+              <NavLink to="/pre-registrations" className={navLinkClass} onClick={closeMobileMenu}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                </svg>
+                <span>Pre-registrazioni</span>
               </NavLink>
             )}
             {!isShuttle && hasModule("tshirts") && (
