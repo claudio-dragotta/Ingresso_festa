@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import jsQR from "jsqr";
 import { useEvent } from "../context/EventContext";
 import { qrCheckin } from "../api/invitees";
 import type { Invitee } from "../api/invitees";
@@ -85,6 +86,16 @@ export default function QrScanPage() {
   };
 
   const startScanLoop = () => {
+    // Crea BarcodeDetector una volta sola (se disponibile nel browser)
+    let barcodeDetector: any = null;
+    if ("BarcodeDetector" in window) {
+      try {
+        barcodeDetector = new (window as any).BarcodeDetector({ formats: ["qr_code"] });
+      } catch {
+        barcodeDetector = null;
+      }
+    }
+
     const scan = async () => {
       if (!videoRef.current || !canvasRef.current) return;
       const video = videoRef.current;
@@ -94,20 +105,26 @@ export default function QrScanPage() {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext("2d");
-        if (!ctx) return;
+        if (!ctx) { scanLoopRef.current = requestAnimationFrame(scan); return; }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Usa BarcodeDetector se disponibile (Chrome/Edge moderni)
-        if ("BarcodeDetector" in window) {
+        if (barcodeDetector) {
+          // Chrome/Edge: usa BarcodeDetector nativo (più veloce)
           try {
-            const detector = new (window as any).BarcodeDetector({ formats: ["qr_code"] });
-            const barcodes = await detector.detect(canvas);
+            const barcodes = await barcodeDetector.detect(canvas);
             for (const barcode of barcodes) {
               handleDetected(barcode.rawValue);
             }
           } catch {
-            // BarcodeDetector non funziona in questo frame
+            // frame non decodificabile, continua
           }
+        } else {
+          // Safari / Firefox / browser senza BarcodeDetector: usa jsQR
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, canvas.width, canvas.height, {
+            inversionAttempts: "dontInvert",
+          });
+          if (code) handleDetected(code.data);
         }
       }
 

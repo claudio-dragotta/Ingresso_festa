@@ -155,6 +155,44 @@ router.post("/duplicates/keep-one", adminOnly, async (req: EventRequest, res, ne
   }
 });
 
+// POST /invitees/qr/checkin - Check-in via token QR (richiede autenticazione)
+// DEVE stare PRIMA di /:id/checkin altrimenti Express matcha "qr" come :id
+router.post("/qr/checkin", allowRoles(["ADMIN", "ORGANIZER", "ENTRANCE"]), async (req: EventRequest, res, next) => {
+  try {
+    const { token } = req.body as { token?: string };
+
+    if (!token) {
+      return res.status(400).json({ message: "Token mancante" });
+    }
+
+    // Validazione regex — difesa in profondità contro input malevoli
+    if (!isValidQrToken(token)) {
+      return res.status(400).json({ message: "Token non valido" });
+    }
+
+    // Cerca invitato per token (query parametrizzata Prisma — nessuna SQL injection possibile)
+    const invitee = await prisma.invitee.findUnique({
+      where: { qrToken: token },
+      select: { id: true, eventId: true },
+    });
+
+    if (!invitee) {
+      return res.status(404).json({ message: "QR code non riconosciuto" });
+    }
+
+    // Verifica che l'invitato appartenga all'evento corrente
+    if (req.eventId && invitee.eventId !== req.eventId) {
+      return res.status(403).json({ message: "QR code non valido per questo evento" });
+    }
+
+    const performedByUserId = (req as any).user?.userId as string | undefined;
+    const updated = await markCheckIn(invitee.id, false, performedByUserId, invitee.eventId);
+    return res.json(updated);
+  } catch (error) {
+    return next(error);
+  }
+});
+
 // POST /invitees/:id/checkin - Marca come entrato/non entrato
 router.post("/:id/checkin", async (req: EventRequest, res, next) => {
   try {
@@ -241,43 +279,6 @@ router.post("/send-qr-bulk", allowRoles(["ADMIN", "ORGANIZER"]), async (req: Eve
   try {
     const result = await sendQrEmailBulk(req.eventId!);
     return res.json(result);
-  } catch (error) {
-    return next(error);
-  }
-});
-
-// POST /invitees/qr/checkin - Check-in via token QR (richiede autenticazione)
-router.post("/qr/checkin", allowRoles(["ADMIN", "ORGANIZER", "ENTRANCE"]), async (req: EventRequest, res, next) => {
-  try {
-    const { token } = req.body as { token?: string };
-
-    if (!token) {
-      return res.status(400).json({ message: "Token mancante" });
-    }
-
-    // Validazione regex — difesa in profondità contro input malevoli
-    if (!isValidQrToken(token)) {
-      return res.status(400).json({ message: "Token non valido" });
-    }
-
-    // Cerca invitato per token (query parametrizzata Prisma — nessuna SQL injection possibile)
-    const invitee = await prisma.invitee.findUnique({
-      where: { qrToken: token },
-      select: { id: true, eventId: true },
-    });
-
-    if (!invitee) {
-      return res.status(404).json({ message: "QR code non riconosciuto" });
-    }
-
-    // Verifica che l'invitato appartenga all'evento corrente
-    if (req.eventId && invitee.eventId !== req.eventId) {
-      return res.status(403).json({ message: "QR code non valido per questo evento" });
-    }
-
-    const performedByUserId = (req as any).user?.userId as string | undefined;
-    const updated = await markCheckIn(invitee.id, false, performedByUserId, invitee.eventId);
-    return res.json(updated);
   } catch (error) {
     return next(error);
   }
