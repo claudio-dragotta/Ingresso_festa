@@ -9,7 +9,6 @@ import {
   createInvitee,
   checkInPerson,
   deleteInvitee,
-  syncGoogleSheets,
   fetchDuplicateInvitees,
   promoteDuplicateGroup,
   keepOneDuplicate,
@@ -225,21 +224,6 @@ export default function AdminDashboard() {
     deleteMutation.mutate(person.id);
   };
 
-  const syncMutation = useMutation({
-    mutationFn: (opts?: { pruneMissing?: boolean }) => syncGoogleSheets(eventId, opts),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
-      queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
-      queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates", eventId] });
-      if (data.success) {
-        toast(`Sincronizzato: ${data.newImported} nuovi, ${data.alreadyExists} già presenti`, "success");
-      } else {
-        toast("Errore durante la sincronizzazione", "error");
-      }
-    },
-    onError: () => toast("Errore durante la sincronizzazione", "error"),
-  });
-
   const resetMutation = useMutation({
     mutationFn: () => resetAndReimport(eventId),
     onSuccess: (data) => {
@@ -303,11 +287,7 @@ export default function AdminDashboard() {
     createMutation.mutate(dataToSubmit);
   };
 
-  const handleSync = (pruneMissing = false) => {
-    syncMutation.mutate(pruneMissing ? { pruneMissing: true } : undefined);
-  };
-
-  const handleCheckIn = (person: Invitee) => {
+const handleCheckIn = (person: Invitee) => {
     checkInMutation.mutate({ id: person.id, adminOverride: true });
   };
 
@@ -432,37 +412,6 @@ export default function AdminDashboard() {
       {!isOrganizer && (
         <div className="dashboard-header">
           <button
-          className="sync-button"
-          onClick={() => handleSync(false)}
-          disabled={syncMutation.isPending}
-        >
-          {syncMutation.isPending ? (
-            <>
-              <div className="spinner-small"></div>
-              Sincronizzazione...
-            </>
-          ) : (
-            <>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
-              </svg>
-              Sincronizza Google Sheets
-            </>
-          )}
-        </button>
-        <button
-          className="sync-button"
-          onClick={() => {
-            if (confirm('Allineare al foglio eliminando chi non è più presente?')) {
-              handleSync(true);
-            }
-          }}
-          disabled={syncMutation.isPending}
-          title="Sincronizza e rimuovi mancanti"
-        >
-          Allinea (rimuovi mancanti)
-        </button>
-        <button
           className="sync-button"
           onClick={analyzeDuplicates}
           title="Analizza duplicati (anche tra Paganti e Green)"
