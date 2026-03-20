@@ -1,428 +1,461 @@
-# 🎉 Ingresso Festa - Sistema di Gestione Ingressi Multi-Evento
+# Ingresso Festa — Sistema di Gestione Ingressi Multi-Evento
 
-Sistema moderno per la gestione degli ingressi, invitati, navette, magliette e spese di eventi/feste. Supporta **più feste contemporaneamente**, ognuna con i propri dati e Google Sheet separati.
+Sistema completo per la gestione di ingressi, invitati, navette, magliette, spese e pre-registrazioni. Supporta **più feste contemporaneamente**, ognuna con dati, Google Sheet e ruoli utente separati.
 
-- **Backend:** https://ingresso-festa-api.onrender.com
-- **Frontend:** https://ingresso-festa-web.onrender.com
+- **Backend:** <https://ingresso-festa-api.onrender.com>
+- **Frontend:** <https://ingresso-festa-web.onrender.com>
+- **Registrazione pubblica:** <https://sesa-register.onrender.com>
 
 ![Node](https://img.shields.io/badge/node-%3E%3D20-green)
 ![TypeScript](https://img.shields.io/badge/typescript-5.6-blue)
 ![React](https://img.shields.io/badge/react-19-blue)
 
-## ✨ Caratteristiche Principali
+---
 
-### 🎯 Per gli Utenti Ingresso
-- **Ricerca Istantanea**: Trova persone digitando nome o cognome
-- **Check-in Veloce**: Bottone verde/rosso per marcare gli ingressi
-- **Contatori Live**: Visualizza in tempo reale quante persone devono ancora entrare
-- **Interface Moderna**: Design intuitivo e responsive
+## Caratteristiche Principali
 
-### 👑 Per gli Admin
-- **Multi-evento**: Gestisci più feste, ognuna con dati completamente separati
-- **Dashboard Completa**: Gestione totale di entrambe le liste (Paganti e Green)
-- **Aggiungi Persone**: Form semplice per inserire nuovi ospiti
-- **Sincronizzazione Google Sheets**: Importa automaticamente dalla lista del foglio collegato
-- **Controllo Totale**: Elimina, modifica e resetta gli stati di ingresso
-- **Statistiche Real-time**: Monitora l'andamento della festa
+### Per gli Addetti all'Ingresso (ruolo ENTRANCE)
 
-### 🔄 Integrazione Google Sheets (per evento)
-- Ogni festa ha il proprio foglio Google Sheets collegato
-- **Due Liste Separate**:
-  - **Lista** (Paganti): Cognome Nome + Tipologia Pagamento
-  - **GREEN**: Cognome Nome (ospiti non paganti)
-- **Tab aggiuntivi** in base ai moduli attivi: Magliette, Navette Andata, Navette Ritorno
-- **Sincronizzazione Automatica**: Ogni 10 minuti (configurabile)
-- **Sincronizzazione Manuale**: Bottone nella dashboard admin
+- Ricerca istantanea per nome o cognome con debounce
+- Check-in con un tap: bottone verde/rosso
+- Contatori live: quante persone devono ancora entrare (Paganti / Green / Totale)
+- Accesso limitato alla sola pagina di ricerca
+
+### Per gli Organizzatori (ruolo ORGANIZER)
+
+- Dashboard completa con tab Paganti / Green
+- Aggiunta e cancellazione invitati (scritto anche su Google Sheet)
+- Analisi duplicati tra le due liste
+- Invio QR via email a tutti gli invitati (bulk)
+- Gestione pre-registrazioni (approva / rifiuta richieste)
+- Accesso ai moduli attivi per la propria festa
+
+### Per gli Admin (ruolo ADMIN)
+
+- Accesso globale a tutte le feste
+- Creazione e configurazione feste (moduli, Google Sheet ID, stato)
+- Gestione utenti e assegnazione ruoli per evento
+- Reset + Reimport completo da Google Sheets
+- Tutte le funzionalità ORGANIZER
+
+### Per gli Addetti Navette (ruolo SHUTTLE)
+
+- Visualizzazione slot navetta (Andata / Ritorno)
+- Marcatura saliti / non saliti per passeggero
 
 ---
 
-## 📋 Setup Google Sheet per una nuova festa
+## Moduli per Evento
 
-### 1. Crea il foglio Google Sheets
+Ogni festa può avere attivi o disattivi i seguenti moduli:
 
-1. Vai su [sheets.google.com](https://sheets.google.com) e crea un nuovo foglio (anche completamente vuoto)
-2. Clicca su **Condividi** in alto a destra
-3. Aggiungi il service account come **Editor**:
-   ```
+| Modulo       | Descrizione                                             |
+| ------------ | ------------------------------------------------------- |
+| Magliette    | Gestione consegna magliette con taglia e tipo           |
+| Navette      | Slot andata/ritorno con macchine e assegnazioni         |
+| Spese        | Tracciamento spese per categoria e metodo di pagamento  |
+
+I moduli disattivi non appaiono nel menu e i relativi tab del Google Sheet non vengono letti.
+
+---
+
+## Integrazione Google Sheets
+
+Ogni festa ha il proprio Google Sheet collegato. La struttura dei tab rispecchia i moduli attivi.
+
+### Tab "Lista" (Paganti)
+
+| Riga | A: Cognome Nome                     | B: Tipologia Pagamento | C: Email         |
+| ---- | ----------------------------------- | ---------------------- | ---------------- |
+| 1    | *(libera — intestazione opzionale)* |                        |                  |
+| 2+   | Rossi Mario                         | paypal                 | mario@esempio.it |
+
+### Tab "GREEN" (Non Paganti)
+
+| Riga | A: Cognome Nome  | B: Email         |
+| ---- | ---------------- | ---------------- |
+| 1    | *(libera)*       |                  |
+| 2+   | Bianchi Anna     | anna@esempio.it  |
+
+> **Importante:** la **riga 1 è sempre riservata** — il sync legge da riga 2 in poi, e quando aggiungi una persona via app viene scritta a partire dalla riga 2. Puoi mettere un'intestazione in riga 1 o lasciarla vuota.
+
+### Tab opzionali (se modulo attivo)
+
+- `Magliette` — Cognome Nome, Taglia, Tipo, Consegnata
+- `Navette_Andata` — Cognome Nome, Orario, Macchina
+- `Navette_Ritorno` — Cognome Nome, Orario, Macchina
+
+### Sincronizzazione Automatica
+
+- Il backend sincronizza **ogni 3 minuti** tutti gli eventi attivi
+- All'avvio del server viene eseguita una sincronizzazione immediata
+- Nessun pulsante manuale nella dashboard: il sync è completamente automatico
+- Rimangono disponibili: **Analizza duplicati**, **Reset + Reimport**, **Invia QR a tutti**
+
+### Configurare il Service Account
+
+1. Vai su [sheets.google.com](https://sheets.google.com) e crea il foglio
+2. Clicca **Condividi** e aggiungi come Editor:
+
+   ```text
    ingresso-festa-sync@lista-festa-8-novembre.iam.gserviceaccount.com
    ```
-4. Copia l'**ID del foglio** dall'URL:
-   ```
-   https://docs.google.com/spreadsheets/d/  →  ID_QUI  ←  /edit
-   ```
 
-### 2. Crea la festa nell'app
+3. Copia l'ID dal URL: `https://docs.google.com/spreadsheets/d/ID_QUI/edit`
 
-1. Accedi con un account **ADMIN**
-2. Nella pagina di selezione festa, clicca **Crea nuova festa**
-3. Inserisci nome, data e seleziona i moduli attivi (Navette, Magliette, Spese)
-4. Incolla l'**ID del foglio** nel campo apposito
-5. Clicca **Crea Festa**
+---
 
-> I tab del foglio (Lista, GREEN, Magliette, Navette Andata, Navette Ritorno) vengono configurati **automaticamente** in base ai moduli scelti.
+## Ruoli Utente
 
-### 3. Collegare uno sheet a una festa esistente
+| Ruolo     | Ambito                    | Permessi principali                                         |
+| --------- | ------------------------- | ----------------------------------------------------------- |
+| ADMIN     | Globale (tutte le feste)  | Tutto: crea feste, gestisce utenti, reset DB, sync          |
+| ORGANIZER | Per evento (assegnato)    | Dashboard, aggiungi/elimina, pre-registrazioni, QR bulk     |
+| ENTRANCE  | Per evento (assegnato)    | Solo ricerca e check-in (non può annullare ingresso)        |
+| SHUTTLE   | Per evento (assegnato)    | Solo gestione navette                                       |
 
-Se hai già creato una festa senza sheet, o vuoi cambiare il foglio collegato:
+Gli utenti ENTRANCE e SHUTTLE vedono **solo** la loro sezione. I menu e le route admin sono invisibili (404) per chi non ha permesso.
 
-1. Nella pagina di selezione festa, clicca l'icona **⚙️** sulla card della festa
-2. Incolla il nuovo **Google Sheet ID**
-3. Clicca **Salva Sheet ID**
-4. Clicca **Configura Tab Sheet** per aggiungere i tab mancanti al foglio
+---
 
-## 🚀 Quick Start
+## Pagine Frontend
+
+| Pagina                | Percorso          | Ruolo minimo |
+| --------------------- | ----------------- | ------------ |
+| Login                 | `/login`          | —            |
+| Selezione Festa       | `/`               | Tutti        |
+| Ricerca & Check-in    | `/search`         | ENTRANCE     |
+| Dashboard Admin       | `/admin`          | ORGANIZER    |
+| Pre-registrazioni     | `/preregistrations` | ORGANIZER  |
+| Magliette             | `/tshirts`        | ORGANIZER    |
+| Navette               | `/shuttles`       | SHUTTLE      |
+| Spese                 | `/expenses`       | ORGANIZER    |
+| Utenti                | `/users`          | ADMIN        |
+| Scanner QR            | `/scan`           | ENTRANCE     |
+| Registrazione pubblica | `/register` (dominio separato) | — |
+
+---
+
+## Quick Start
 
 ### Prerequisiti
+
 - Node.js >= 20
-- npm o yarn
-- Account Google Cloud con Service Account (per Google Sheets)
+- npm
+- Account Google Cloud con Service Account configurato
 
-### Installazione
+### Backend
 
-#### 1. Backend Setup
 ```bash
 cd backend
-
-# Installa dipendenze
 npm install
-
-# Copia e configura environment variables
-# Il file .env.local è già configurato, copialo in .env se necessario
-
-# Genera Prisma Client
 npm run prisma:generate
-
-# Applica migrations (già applicate)
 npm run prisma:deploy
-
-# Inizializza utenti (GIÀ FATTO - admin e ingresso1 esistono)
-# npx ts-node scripts/init-users.ts
-
-# Avvia server
 npm run dev
 ```
 
-#### 2. Frontend Setup
+### Frontend
+
 ```bash
 cd frontend
-
-# Installa dipendenze
 npm install
-
-# Avvia development server
 npm run dev
 ```
 
-#### 3. Accedi
-Apri il browser: `http://localhost:5173`
+### Credenziali di default (solo sviluppo)
 
-**Credenziali di default:**
-- **Admin**: `admin` / `admin123`
-- **Ingresso**: `ingresso1` / `ingresso123`
+- **Admin:** `admin` / `admin123`
+- **Ingresso:** `ingresso1` / `ingresso123`
 
-⚠️ **IMPORTANTE**: Cambia queste password in produzione!
+> Cambia queste password prima di andare in produzione.
 
-## 📋 Configurazione Google Sheets
+---
 
-### Struttura Foglio "Festa 8 Novembre"
+## Variabili d'Ambiente
 
-#### Tabella "Lista" (Paganti)
-| A: Cognome Nome | B: Tipologia Pagamento |
-|----------------|------------------------|
-| Rossi Mario    | bonifico               |
-| Verdi Luigi    | paypal                 |
+### Backend
 
-#### Tabella "GREEN" (Non Paganti)
-| A: Cognome Nome  |
-|-----------------|
-| Bianchi Anna    |
-| Neri Paolo      |
+| Variabile                    | Descrizione                              | Esempio                                    |
+| ---------------------------- | ---------------------------------------- | ------------------------------------------ |
+| `DATABASE_URL`               | Percorso SQLite                          | `file:/var/data/ingresso.db`               |
+| `JWT_SECRET`                 | Segreto JWT                              | `super-secret-key-123`                     |
+| `FRONTEND_URL`               | Origini CORS consentite (virgola)        | `https://ingresso-festa-web.onrender.com,https://sesa-register.onrender.com` |
+| `PORT`                       | Porta server                             | `10000`                                    |
+| `GOOGLE_SERVICE_ACCOUNT_JSON`| JSON service account (inline)            | `{"type":"service_account",...}`           |
+| `GOOGLE_SHEET_RANGE`         | Range tab PAGANTI                        | `Lista!A2:B`                               |
+| `GOOGLE_SHEET_GREEN_RANGE`   | Range tab GREEN                          | `GREEN!A2:A`                               |
+| `GOOGLE_SHEETS_AUTO_SYNC`    | Abilita sync automatico                  | `true`                                     |
+| `GOOGLE_SHEETS_SYNC_INTERVAL`| Minuti tra un sync e l'altro             | `3`                                        |
+| `DISABLE_ENV_ADMIN_FALLBACK` | Disabilita admin da env (usa solo DB)    | `true`                                     |
 
-### Environment Variables (già configurato in .env.local)
-```env
-GOOGLE_SHEET_ID=1ufEQZd1bvjfyEgvBXzNvg_L-oBjVXPDZmynGE8Sfxug
-GOOGLE_SHEET_RANGE=Lista!A2:B
-GOOGLE_SHEET_GREEN_RANGE=GREEN!A:A
-GOOGLE_SHEETS_AUTO_SYNC=true
-GOOGLE_SHEETS_SYNC_INTERVAL=10
+### Frontend
+
+| Variabile           | Descrizione        | Esempio                                               |
+| ------------------- | ------------------ | ----------------------------------------------------- |
+| `VITE_API_BASE_URL` | URL base backend   | `https://ingresso-festa-api.onrender.com/api`         |
+
+---
+
+## Deploy su Render
+
+### Backend (Web Service)
+
+- **Root Directory:** `Ingresso_festa/backend`
+- **Build Command:** `npm ci && npm run build`
+- **Start Command:** `npx prisma migrate deploy && node dist/server.js`
+- **Persistent Disk:** montato su `/var/data` per SQLite
+- **Secret Files:** aggiungi `users.json` (vedi `backend/users.example.json`)
+
+### Frontend (Static Site)
+
+- **Root Directory:** `Ingresso_festa/frontend`
+- **Build Command:** `npm ci && npm run build`
+- **Publish Directory:** `dist`
+- **Env:** `VITE_API_BASE_URL`
+
+---
+
+## API Endpoints
+
+Tutti gli endpoint per-evento seguono il pattern `/api/events/:eventId/...` e richiedono autenticazione JWT.
+
+### Endpoint globali
+
+```text
+POST   /api/auth/login
+GET    /api/auth/users           (ADMIN)
+POST   /api/auth/users           (ADMIN)
+PATCH  /api/auth/users/:id       (ADMIN)
+DELETE /api/auth/users/:id       (ADMIN)
+GET    /api/events
+POST   /api/events               (ADMIN)
+PATCH  /api/events/:id           (ADMIN)
+GET    /api/users                (ADMIN)
+POST   /api/register             (pubblico)
+GET    /api/health
 ```
 
-## 🎨 Interfacce
+### Endpoint per-evento (`/api/events/:eventId/`)
 
-### Login Page
-- Background animato con orb fluttuanti
-- Form moderno con validazione
-- Redirect automatico basato sul ruolo
-
-### Search Page (per tutti)
-- Barra di ricerca con debounce
-- 3 contatori in tempo reale:
-  - Paganti da entrare
-  - Green da entrare
-  - Totale entrati
-- Risultati con badge tipo lista
-- Bottone verde/rosso per check-in
-
-### Admin Dashboard
-- Tab separati per Paganti e Green
-- Form per aggiungere persone
-- Bottone sincronizzazione Google Sheets
-- Tabella completa con azioni:
-  - Toggle stato entrato/non entrato
-  - Elimina persona
-
-## 🔐 Ruoli e Permessi
-
-### ADMIN
-- ✅ Accesso a Dashboard e Ricerca
-- ✅ Aggiungere/Eliminare persone
-- ✅ Marcare come entrato
-- ✅ **Rimettere come non entrato** (unico ruolo che può farlo)
-- ✅ Sincronizzare Google Sheets
-
-### ENTRANCE
-- ✅ Accesso solo a Ricerca
-- ✅ Cercare persone
-- ✅ Marcare come entrato (verde → rosso)
-- ❌ Non può rimettere come non entrato
-- ❌ Non può eliminare/aggiungere
-- ❌ Non può accedere alla dashboard
-
-## 📁 Struttura Progetto
-
+```text
+GET    invitees
+POST   invitees
+GET    invitees/stats
+GET    invitees/duplicates
+POST   invitees/:id/checkin
+DELETE invitees/:id
+POST   invitees/:id/send-qr
+POST   sync/google-sheets
+POST   sync/reset-and-reimport
+GET    settings
+PATCH  settings
+POST   settings/setup-sheet
+GET    tshirts
+PATCH  tshirts/:id/received
+GET    expenses
+POST   expenses
+DELETE expenses/:id
+GET    shuttles/slots
+POST   shuttles/slots
+DELETE shuttles/slots/:id
+GET    preregistrations
+PATCH  preregistrations/:id
+GET    dashboard
 ```
+
+---
+
+## Database — Schema Prisma
+
+| Modello              | Descrizione                                                                 |
+| -------------------- | --------------------------------------------------------------------------- |
+| `Event`              | Festa con nome, data, Google Sheet ID, moduli attivi, stato                 |
+| `UserEventAccess`    | Assegna un utente a una festa con un ruolo specifico                        |
+| `User`               | Utente con username, password (bcrypt), ruolo globale, stato active         |
+| `Invitee`            | Invitato con nome, lista (PAGANTE/GREEN), email, QR token, stato ingresso   |
+| `CheckInLog`         | Log di ogni tentativo di check-in (SUCCESS/DUPLICATE/BLOCKED)               |
+| `Tshirt`             | Maglietta assegnata a un invitato (taglia, tipo, consegnata)                |
+| `Expense`            | Spesa con importo, categoria, metodo di pagamento                           |
+| `ShuttleMachine`     | Veicolo navetta (nome, colore)                                              |
+| `ShuttleSlot`        | Slot orario navetta (direzione, ora, capienza)                              |
+| `ShuttleAssignment`  | Assegnazione invitato a slot+macchina con stato salita                      |
+| `PreRegistration`    | Richiesta di pre-registrazione pubblica (PENDING/APPROVED/REJECTED)         |
+
+### Enum `UserRole`
+
+- `ADMIN` — accesso globale
+- `ORGANIZER` — gestione evento
+- `ENTRANCE` — solo check-in
+- `SHUTTLE` — solo navette
+
+### Enum `EventStatus`
+
+- `ACTIVE` — evento in corso
+- `PAUSED` — accessi sospesi temporaneamente
+- `LOCKED` — evento chiuso
+
+---
+
+## Struttura Progetto
+
+```text
 Ingresso_festa/
 ├── backend/
-│   ├── src/
-│   │   ├── routes/          # API endpoints
-│   │   ├── services/        # Business logic
-│   │   ├── middleware/      # Auth, validation
-│   │   ├── lib/             # Prisma client
-│   │   └── server.ts        # Entry point
 │   ├── prisma/
-│   │   ├── schema.prisma    # Database schema
-│   │   └── migrations/      # Database migrations
+│   │   ├── schema.prisma           # Schema DB completo
+│   │   └── migrations/             # Migration SQLite
+│   ├── src/
+│   │   ├── config.ts               # Configurazione centralizzata
+│   │   ├── server.ts               # Entry point + auto-sync avvio
+│   │   ├── routes/
+│   │   │   ├── index.ts            # Router principale
+│   │   │   ├── auth.ts             # Login e gestione utenti
+│   │   │   ├── events.ts           # CRUD feste
+│   │   │   ├── invitees.ts         # Invitati + check-in + QR
+│   │   │   ├── sync.ts             # Sync Google Sheets + reset
+│   │   │   ├── settings.ts         # Impostazioni per-evento
+│   │   │   ├── tshirts.ts          # Magliette
+│   │   │   ├── expenses.ts         # Spese
+│   │   │   ├── shuttles.ts         # Navette
+│   │   │   ├── preregistrations.ts # Pre-registrazioni
+│   │   │   ├── users.ts            # Utenti globali
+│   │   │   ├── dashboard.ts        # Stats dashboard
+│   │   │   └── health.ts           # Health check
+│   │   ├── services/
+│   │   │   ├── googleSheetsService.ts  # Lettura/scrittura Sheets
+│   │   │   ├── syncService.ts          # Logica sync DB ↔ Sheets
+│   │   │   ├── autoSync.ts             # Timer auto-sync (setInterval)
+│   │   │   └── tshirtService.ts        # Sync magliette
+│   │   ├── middleware/
+│   │   │   ├── auth.ts             # JWT authenticate
+│   │   │   └── eventAccess.ts      # Verifica ruolo per-evento
+│   │   └── lib/
+│   │       └── prisma.ts           # Prisma Client singleton
 │   └── scripts/
-│       └── init-users.ts    # User initialization
+│       ├── init-users.ts           # Inizializzazione utenti
+│       └── users.example.json      # Esempio file utenti
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── api/             # API client
-│   │   ├── components/      # React components
-│   │   ├── context/         # Auth context
+│   │   ├── api/
+│   │   │   └── invitees.ts         # Client HTTP (axios + TanStack Query)
+│   │   ├── components/
+│   │   │   ├── AppLayout.tsx       # Header scroll + hamburger + ToastContainer
+│   │   │   ├── InviteeDetailModal.tsx
+│   │   │   └── Toast.tsx           # Toast notification UI
+│   │   ├── context/
+│   │   │   ├── AuthContext.tsx
+│   │   │   ├── EventContext.tsx
+│   │   │   └── ToastContext.tsx    # Sistema notifiche toast
 │   │   ├── pages/
-│   │   │   ├── AdminDashboard.tsx  # Dashboard admin
-│   │   │   ├── SearchPage.tsx      # Pagina ricerca
-│   │   │   └── LoginPage.tsx       # Login
-│   │   └── App.tsx
-│   └── package.json
+│   │   │   ├── LoginPage.tsx/css
+│   │   │   ├── EventPickerPage.tsx/css
+│   │   │   ├── SearchPage.tsx/css
+│   │   │   ├── AdminDashboard.tsx/css
+│   │   │   ├── PreRegistrationsPage.tsx/css
+│   │   │   ├── TshirtsPage.tsx/css
+│   │   │   ├── ShuttlesPage.tsx/css
+│   │   │   ├── ExpensesPage.tsx/css
+│   │   │   ├── UsersPage.tsx/css
+│   │   │   ├── QrScanPage.tsx/css
+│   │   │   └── RegisterPage.tsx/css
+│   │   ├── App.tsx                 # Router + page transitions
+│   │   ├── main.tsx                # Entry point + ToastProvider
+│   │   └── index.css               # Design tokens globali (dark/light mode)
+│   └── index.html
 │
-├── storage/
-│   └── data/
-│       └── dev.db           # SQLite database
-│
-├── README.md                # Questo file
-├── NUOVO_SISTEMA.md         # Documentazione backend
-└── FRONTEND_COMPLETO.md     # Documentazione frontend
+└── README.md
 ```
 
-## 🗄️ Database
+---
 
-### Tables
+## Scripts Disponibili
 
-#### Invitee
-- `id`: Unique identifier
-- `firstName`: Nome
-- `lastName`: Cognome
-- `listType`: PAGANTE | GREEN
-- `paymentType`: Tipologia pagamento (solo PAGANTE)
-- `hasEntered`: Boolean (true = entrato, false = non entrato)
-- `checkedInAt`: Timestamp ingresso
+### Backend scripts
 
-#### User
-- `id`: Unique identifier
-- `username`: Username login
-- `password`: Password hashed (bcrypt)
-- `role`: ADMIN | ENTRANCE
-- `active`: Boolean (true = può accedere; false = disattivato)
-
-#### SystemConfig
-- `eventName`: Nome evento
-- `eventStatus`: ACTIVE | PAUSED | LOCKED
-
-## 🔧 Scripts Disponibili
-
-### Backend
 ```bash
-npm run dev          # Development server con hot reload
-npm run build        # Build production
-npm run start        # Avvia production build
-npm run prisma:generate   # Genera Prisma Client
-npm run prisma:deploy     # Applica migrations
-npm run users:import      # Importa/aggiorna utenti da users.json (idempotente)
-npm run users:export      # Esporta utenti dal DB in JSON (con hash)
+npm run dev              # Development con hot reload
+npm run build            # Compila TypeScript
+npm run start            # Avvia build produzione
+npm run prisma:generate  # Genera Prisma Client
+npm run prisma:deploy    # Applica migrations
+npm run users:import     # Importa utenti da users.json (idempotente)
+npm run users:export     # Esporta utenti dal DB in JSON
 ```
 
-### Frontend
+### Frontend scripts
+
 ```bash
-npm run dev          # Development server
-npm run build        # Build production
-npm run preview      # Preview build
+npm run dev              # Development server (Vite)
+npm run build            # Build produzione
+npm run preview          # Anteprima build
 ```
 
-## 🌐 API Endpoints
+---
 
-### Authentication
-- `POST /api/auth/login` - Login
-- `POST /api/auth/users` - Crea utente (admin only)
-- `GET /api/auth/users` - Lista utenti (admin only)
-- `PATCH /api/auth/users/:id` - Attiva/Disattiva utente (admin only)
-- `DELETE /api/auth/users/:id` - Elimina utente (admin only)
+## Sicurezza
 
-### Invitees
-- `GET /api/invitees` - Lista tutti
-- `GET /api/invitees/search?q=query` - Ricerca
-- `GET /api/invitees/stats` - Statistiche
-- `POST /api/invitees` - Crea
-- `POST /api/invitees/:id/checkin` - Check-in
-- `DELETE /api/invitees/:id` - Elimina (admin only)
+- Password hashing con bcrypt
+- JWT con scadenza 12h
+- Role-based access control a livello di evento
+- Route admin invisibili (404) per utenti non autorizzati
+- SQL injection protection via Prisma ORM
+- CORS configurato per origini esplicite
+- Helmet.js per HTTP security headers
 
-### Sync
-- `POST /api/sync/google-sheets` - Sincronizza (admin only)
+---
 
-Gli endpoint riservati agli admin rispondono 404 ai non‑admin (invisibili).
+## Troubleshooting
 
-## 🚀 Deploy su Render (aggiornato)
+### Google Sheets restituisce dati vuoti
 
-### Backend (Web Service)
-- Root: `Ingresso_festa/backend`
-- Build Command: `npm ci && npm run build`
-- Start Command (consigliato):
-  - `npx prisma migrate deploy && npm run users:import -- users.json && node dist/server.js`
-  - Fallback (se mancano migration): `npx prisma migrate deploy || npx prisma db push && node dist/server.js`
-- Environment (minimo):
-  - `DATABASE_URL` → es. SQLite con Persistent Disk: `file:/var/data/ingresso.db`
-  - `JWT_SECRET` → segreto robusto
-  - `FRONTEND_URL` → URL frontend per CORS
-  - `GOOGLE_SHEET_ID`, `GOOGLE_SHEET_RANGE=Lista!A2:B`, `GOOGLE_SHEET_GREEN_RANGE=GREEN!A:A`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_SHEETS_AUTO_SYNC=true`, `GOOGLE_SHEETS_SYNC_INTERVAL=10`
-  - Facoltative:
-    - `DISABLE_ENV_ADMIN_FALLBACK=true` (usa solo utenti DB)
-    - `NPM_CONFIG_PRODUCTION=false` (permette `ts-node` negli script npm)
-- Secret Files:
-  - Aggiungi `users.json` (vedi `backend/users.example.json`). Password meglio hashate (`npm run hash-password -- <pwd>`), altrimenti verranno hashate all’import.
+- Verifica che il foglio sia condiviso con il Service Account
+- Controlla che il tab si chiami esattamente `Lista` / `GREEN`
+- I dati devono iniziare da **riga 2** (riga 1 libera per intestazioni)
+- Se `GOOGLE_SHEET_RANGE` non è impostato, il default è `Lista!A2:B`
 
-### Frontend (Static Site o Web Service)
-- Root: `Ingresso_festa/frontend`
-- Build Command: `npm ci && npm run build`
-- Env: `VITE_API_BASE_URL` → URL backend (es. `https://<tuo-backend>.onrender.com/api`)
+### Errore "Unable to parse range: Magliette!..."
 
-### Migrazioni DB in produzione
-- Le migration sono in `backend/prisma/migrations/`.
-- Lo Start esegue `prisma migrate deploy` ad ogni avvio: ridistribuisci dopo modifiche schema (es. aggiunta `User.active`).
-- Se vedi errori tipo "column ... does not exist": ridistribuisci per applicare la nuova migration o usa il fallback con `prisma db push`.
+- Il modulo Magliette non è attivo per questa festa
+- Verifica nelle impostazioni che il modulo sia disabilitato se il tab non esiste nel foglio
 
-## 🎯 Features Tecniche
+### Il reset fallisce con errore 500
 
-### Frontend
-- **React 19** con Hooks
-- **TypeScript** per type safety
-- **React Query** per state management
-- **React Router 7** per routing
-- **Axios** per HTTP requests
-- **Vite** come build tool
-
-### Backend
-- **Node.js 20+** con TypeScript
-- **Express 5** per API
-- **Prisma** ORM con SQLite
-- **JWT** per autenticazione
-- **bcrypt** per password hashing
-- **Google Sheets API** per sincronizzazione
-
-## 🔒 Sicurezza
-
-- ✅ Password hashed con bcrypt
-- ✅ JWT token con scadenza 12h
-- ✅ Role-based access control
-- ✅ Protected routes
-- ✅ SQL injection protection (Prisma)
-- ✅ CORS configurato
-- ✅ Helmet.js headers
-
-## 🐛 Troubleshooting
-
-### Backend non si avvia
-```bash
-# Verifica variabili environment
-cat backend/.env.local
-
-# Rigenera Prisma Client
-cd backend && npm run prisma:generate
-```
+- Controlla i log Render per il messaggio esatto
+- Solitamente indica un tab mancante nel foglio o credenziali Google non valide
 
 ### Frontend non connette al backend
-Verifica che il backend sia in ascolto su porta 8000
 
-### Google Sheets non sincronizza
-- Verifica che il foglio sia condiviso con il Service Account
-- Controlla GOOGLE_SHEET_ID in .env.local
-- Verifica i range (Lista!A2:B e GREEN!A:A)
+- Verifica `VITE_API_BASE_URL` nelle variabili d'ambiente del frontend
+- Controlla che `FRONTEND_URL` sul backend includa l'URL del frontend (CORS)
 
-## 📄 Licenza
+### Migrazioni DB in produzione
 
-MIT License
-
-## 🙏 Credits
-
-Sviluppato con ❤️ per la Festa 8 Novembre
+- Lo start command esegue `prisma migrate deploy` ad ogni avvio
+- Se vedi errori "column does not exist": ridistribuisci per applicare le migration pendenti
 
 ---
 
-**Ready to party! 🎊**
+## Tech Stack
 
-Per documentazione dettagliata:
-- [NUOVO_SISTEMA.md](./NUOVO_SISTEMA.md) - Backend details
-- [FRONTEND_COMPLETO.md](./FRONTEND_COMPLETO.md) - Frontend details
+### Backend
+
+- Node.js 20+ con TypeScript
+- Express 5
+- Prisma ORM + SQLite
+- JWT (jsonwebtoken) + bcrypt
+- Google Sheets API v4
+- Winston (logging)
+
+### Frontend
+
+- React 19 con TypeScript
+- Vite 6
+- TanStack Query (React Query) per data fetching e cache
+- React Router 7 con page transitions
+- Axios
+- CSS custom properties (design tokens per dark/light mode)
 
 ---
 
-## Panoramica Rapida
-
-- Scopo: gestione ingressi con ruoli diversi (Admin, Ingresso), ricerca istantanea, check‑in con contatori live, import e sync da Google Sheets.
-- Backend: Node.js/TypeScript + Express + Prisma/SQLite; Frontend: React + Vite (+ TanStack Query/Router).
-- Deploy: configurabile su Render; credenziali di default presenti per sviluppo (da cambiare in produzione).
-
-## Struttura Cartelle
-
-- `backend/`
-  - `src/routes/` – API endpoints (auth, persone, sync, ecc.).
-  - `src/services/` – Logica applicativa (gestione liste, check‑in).
-  - `src/middleware/` – Autenticazione, validazioni, sicurezza.
-  - `src/lib/` – Prisma Client e util.
-  - `src/server.ts` – Entry point server.
-  - `prisma/schema.prisma` – Modello DB; `migrations/` – migrazioni.
-  - `scripts/` – Inizializzazione e util (es. utenti).
-  - `storage/data/dev.db` – DB SQLite locale per sviluppo.
-- `frontend/`
-  - `src/api/` – Client HTTP.
-  - `src/components/` – Componenti UI.
-  - `src/context/` – Stato auth/utente.
-  - `src/pages/` – `AdminDashboard`, `SearchPage`, `LoginPage`.
-
-## Azioni Possibili
-
-- Avvio sviluppo: `cd backend && npm install && npm run dev` e `cd ../frontend && npm install && npm run dev` → `http://localhost:5173`.
-- Login di prova: `admin/admin123`, `ingresso1/ingresso123` (cambiare in produzione!).
-- Import/sync Google Sheets: configurare variabili in backend (vedi README/ENV) e usare pulsante nella dashboard admin.
-- Gestione liste: aggiungi/elimina persone, check‑in, reset stato (solo Admin può ripristinare).
-
-## Siti/Strumenti Utili
-
-- Prisma ORM: https://www.prisma.io/docs
-- SQLite: https://www.sqlite.org/docs.html
-- Google Sheets API: https://developers.google.com/sheets/api
-- Express: https://expressjs.com
-- React: https://react.dev • Vite: https://vitejs.dev
-- TanStack Query: https://tanstack.com/query/latest
-- JSON Web Tokens: https://jwt.io • bcryptjs: https://github.com/dcodeIO/bcrypt.js
-- Helmet (sicurezza): https://helmetjs.github.io
+Sviluppato per SesaAperitivo
