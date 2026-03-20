@@ -38,6 +38,7 @@ export default function AdminDashboard() {
   const [showDupHint, setShowDupHint] = useState(false);
 
   const [selectedInvitee, setSelectedInvitee] = useState<Invitee | null>(null);
+  const [lastAutoSync, setLastAutoSync] = useState<Date | null>(null);
 
   const [activeTab, setActiveTab] = useState<"paganti" | "green">("paganti");
   const [showAddForm, setShowAddForm] = useState(false);
@@ -264,6 +265,25 @@ export default function AdminDashboard() {
       setTimeout(() => setShowDupHint(false), 6000);
     }
   }, [duplicates.length]);
+
+  // Auto-sync dal Google Sheet ogni 5 minuti (in background, senza toccare la UI del bottone)
+  useEffect(() => {
+    const doAutoSync = async () => {
+      try {
+        await syncGoogleSheets(eventId);
+        queryClient.invalidateQueries({ queryKey: ["invitees", eventId] });
+        queryClient.invalidateQueries({ queryKey: ["stats", eventId] });
+        queryClient.invalidateQueries({ queryKey: ["invitees", "duplicates", eventId] });
+        setLastAutoSync(new Date());
+      } catch {
+        // fallimento silenzioso: l'utente può sempre sincronizzare manualmente
+      }
+    };
+    // Primo sync al mount, poi ogni 5 minuti
+    doAutoSync();
+    const interval = setInterval(doAutoSync, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [eventId]);
 
   const promoteMut = useMutation({
     mutationFn: (key: string) => promoteDuplicateGroup(eventId, key),
@@ -495,6 +515,14 @@ export default function AdminDashboard() {
             </>
           )}
         </button>
+        {lastAutoSync && (
+          <span className="auto-sync-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
+            </svg>
+            Sync auto · {lastAutoSync.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        )}
         </div>
       )}
 

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Invitee } from "../api/invitees";
 import { updateInviteeEmail, sendQrToInvitee, checkInPerson } from "../api/invitees";
@@ -81,7 +82,7 @@ export default function InviteeDetailModal({ invitee, eventId, onClose, isAdmin,
     return new Date(iso).toLocaleString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   };
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-drawer" onClick={e => e.stopPropagation()}>
         {/* Header */}
@@ -207,6 +208,7 @@ export default function InviteeDetailModal({ invitee, eventId, onClose, isAdmin,
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
