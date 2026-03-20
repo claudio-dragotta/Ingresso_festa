@@ -227,10 +227,14 @@ export const syncTshirtsFromGoogleSheets = async (eventId: string, opts?: { prun
   logger.info("Inizio sincronizzazione magliette da Google Sheets");
 
   try {
-    // Recupera il googleSheetId dell'evento — se non configurato, salta
-    const ev = await prisma.event.findUnique({ where: { id: eventId }, select: { googleSheetId: true } });
+    // Recupera il googleSheetId e i moduli attivi dell'evento
+    const ev = await prisma.event.findUnique({ where: { id: eventId }, select: { googleSheetId: true, modules: true } });
     if (!ev?.googleSheetId) {
       logger.info(`Evento ${eventId} senza Google Sheet — sync magliette saltato`);
+      return { success: true, newImported: 0, alreadyExists: 0 };
+    }
+    if (!ev.modules.includes('tshirts')) {
+      logger.info(`Evento ${eventId} senza modulo tshirts — sync magliette saltato`);
       return { success: true, newImported: 0, alreadyExists: 0 };
     }
 
