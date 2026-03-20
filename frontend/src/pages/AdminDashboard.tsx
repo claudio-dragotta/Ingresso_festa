@@ -57,7 +57,8 @@ export default function AdminDashboard() {
   const { data: invitees = [], isLoading } = useQuery<Invitee[]>({
     queryKey: ["invitees", eventId],
     queryFn: () => fetchInvitees(eventId),
-    refetchInterval: 30_000, // aggiorna ogni 30s per recepire i sync backend
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: true,
   });
 
   const { data: stats } = useQuery<Stats>({

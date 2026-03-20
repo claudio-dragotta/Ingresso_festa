@@ -47,7 +47,7 @@ export const config = {
     range: process.env.GOOGLE_SHEET_RANGE ?? "Lista!A2:B", // Colonna A (nome) + B (tipologia pagamento)
     credentials: process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "",
     autoSyncEnabled: process.env.GOOGLE_SHEETS_AUTO_SYNC === "true",
-    autoSyncIntervalMinutes: Number(process.env.GOOGLE_SHEETS_SYNC_INTERVAL ?? 10),
+    autoSyncIntervalMinutes: Number(process.env.GOOGLE_SHEETS_SYNC_INTERVAL ?? 3),
     // Nomi dei tab per le navette (configurabili per adattarsi al foglio reale)
     shuttlesOutboundSheetName: process.env.GOOGLE_SHEET_SHUTTLES_OUTBOUND_NAME ?? "Navette Andata",
     shuttlesReturnSheetName: process.env.GOOGLE_SHEET_SHUTTLES_RETURN_NAME ?? "Navette Ritorno",
