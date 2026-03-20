@@ -85,7 +85,7 @@ export async function readPagantiSheet(spreadsheetId: string): Promise<Array<{ c
 
 export async function readGreenSheet(spreadsheetId: string): Promise<Array<{ name: string; email?: string }>> {
   // Leggiamo A:B per includere la colonna email (colonna B)
-  const greenRange = (process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A:A').replace(/:[A-Z]+$/, ':B');
+  const greenRange = (process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A2:A').replace(/:[A-Z]+$/, ':B');
   logger.info(`Lettura Google Sheet GREEN: ${spreadsheetId}, range: ${greenRange}`);
   const sheets = getGoogleSheetsClient();
   const response = await sheets.spreadsheets.values.get({ spreadsheetId, range: greenRange });
@@ -165,13 +165,13 @@ export async function writeToGoogleSheet(spreadsheetId: string, fullName: string
   if (listType === 'PAGANTE') {
     // Colonne: A=nome, B=pagamento, C=email
     await sheets.spreadsheets.values.append({
-      spreadsheetId, range: 'Lista!A:C', valueInputOption: 'RAW', insertDataOption: 'OVERWRITE',
+      spreadsheetId, range: 'Lista!A2:C', valueInputOption: 'RAW', insertDataOption: 'OVERWRITE',
       requestBody: { values: [[formattedName, formattedPaymentType, formattedEmail]] },
     });
     logger.info(`Scritto su PAGANTI: ${formattedName} | ${formattedPaymentType || 'N/D'} | ${formattedEmail || 'no email'}`);
   } else {
     // Colonne: A=nome, B=email
-    const greenRangeBase = process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A:A';
+    const greenRangeBase = process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A2:A';
     const greenRange = greenRangeBase.replace(/:[A-Z]+$/, ':B');
     await sheets.spreadsheets.values.append({
       spreadsheetId, range: greenRange, valueInputOption: 'RAW', insertDataOption: 'OVERWRITE',
