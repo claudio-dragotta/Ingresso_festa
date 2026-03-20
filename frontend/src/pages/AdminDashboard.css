@@ -92,19 +92,6 @@
   gap: 1rem;
 }
 
-.auto-sync-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--muted);
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: color-mix(in srgb, var(--border) 50%, transparent);
-  white-space: nowrap;
-  align-self: center;
-}
-
 .dashboard-header h1 {
   font-size: 2.5rem;
   font-weight: 800;

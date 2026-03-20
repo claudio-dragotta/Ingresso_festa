@@ -12,12 +12,13 @@ const start = async () => {
     server.listen(config.port, config.host, () => {
       logger.info(`Server avviato su http://${config.host}:${config.port}`);
 
-      // Avvia sincronizzazione automatica Google Sheets se abilitata
-      if (config.googleSheets.autoSyncEnabled && config.googleSheets.spreadsheetId) {
-        logger.info('Google Sheets auto-sync abilitato');
+      // Avvia sincronizzazione automatica Google Sheets se abilitata.
+      // Il Google Sheet ID è salvato per evento nel DB, non serve un ID globale.
+      if (config.googleSheets.autoSyncEnabled) {
+        logger.info(`Google Sheets auto-sync abilitato (ogni ${config.googleSheets.autoSyncIntervalMinutes} minuti)`);
         startAutoSync(config.googleSheets.autoSyncIntervalMinutes);
       } else {
-        logger.info('Google Sheets auto-sync disabilitato (configurare GOOGLE_SHEET_ID e GOOGLE_SHEETS_AUTO_SYNC=true)');
+        logger.info('Google Sheets auto-sync disabilitato (impostare GOOGLE_SHEETS_AUTO_SYNC=true per abilitarlo)');
       }
     });
   } catch (error) {
