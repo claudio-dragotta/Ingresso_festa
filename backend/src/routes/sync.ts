@@ -108,7 +108,10 @@ router.post(
       const deletedInvitees = await prisma.invitee.deleteMany({ where: { eventId } });
       const deletedTshirts = await prisma.tshirt.deleteMany({ where: { eventId } });
       const peopleImport = await syncGoogleSheetToDatabase(eventId);
-      const tshirtImport = await syncTshirtsFromGoogleSheets(eventId);
+      const tshirtImport = await syncTshirtsFromGoogleSheets(eventId).catch((err: any) => {
+        logger.warn("Sync magliette saltato durante reset:", err?.message);
+        return { success: false, newImported: 0, alreadyExists: 0 };
+      });
       return res.json({
         reset: {
           deletedInvitees: deletedInvitees.count,

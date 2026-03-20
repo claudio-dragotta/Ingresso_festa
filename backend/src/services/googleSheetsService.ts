@@ -68,8 +68,10 @@ export async function readPagantiSheet(spreadsheetId: string): Promise<Array<{ c
     logger.warn('Google Sheet PAGANTI vuoto');
     return [];
   }
+  const HEADER_KEYWORDS = new Set(['nome', 'cognome', 'name', 'pagamento', 'payment', 'tipologia', 'email']);
+  const isHeader = (val: string) => HEADER_KEYWORDS.has(val.trim().toLowerCase());
   const data = rows
-    .filter(row => row[0]?.toString().trim())
+    .filter(row => row[0]?.toString().trim() && !isHeader(row[0].toString()))
     .map(row => ({
       colA: row[0].toString().trim(),
       colB: row[1] ? row[1].toString().trim().toLowerCase() : undefined,
