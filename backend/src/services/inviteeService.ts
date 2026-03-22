@@ -144,6 +144,7 @@ const INVITEE_PUBLIC_SELECT = {
   email: true,
   hasEntered: true,
   checkedInAt: true,
+  qrSentAt: true,   // timestamp di invio email QR — sicuro da esporre (non è il token)
   createdAt: true,
   updatedAt: true,
   eventId: true,

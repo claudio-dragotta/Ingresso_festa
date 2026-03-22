@@ -89,7 +89,11 @@ publicPreRegRouter.post("/:eventId", registerRateLimit, async (req: Request, res
       throw new AppError("Formato email non valido", 400);
     }
 
-    const [localPart, emailDomain] = email.trim().toLowerCase().split("@");
+    const emailParts = email.trim().toLowerCase().split("@");
+    if (emailParts.length !== 2) {
+      throw new AppError("Formato email non valido", 400);
+    }
+    const [localPart, emailDomain] = emailParts;
 
     // Controlla dominio istituzionale — messaggio generico, non rivela il dominio
     if (emailDomain !== ALLOWED_DOMAIN) {

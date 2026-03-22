@@ -24,9 +24,14 @@ export const config = {
   // Single or comma-separated list of allowed frontend origins for CORS.
   // Example: "https://ingressofesta.com,https://www.ingressofesta.com"
   frontendUrl: process.env.FRONTEND_URL,
-  frontendOrigins: process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(",").map((s) => s.trim()).filter(Boolean)
-    : undefined,
+  frontendOrigins: (() => {
+    if (!process.env.FRONTEND_URL) return undefined;
+    const origins = process.env.FRONTEND_URL.split(",").map((s) => s.trim()).filter(Boolean);
+    return origins.filter((o) => {
+      try { new URL(o); return true; }
+      catch { console.warn(`[config] CORS origin ignorato (URL non valido): "${o}"`); return false; }
+    });
+  })(),
   databaseUrl: required(process.env.DATABASE_URL, "DATABASE_URL"),
   jwtSecret: required(process.env.JWT_SECRET, "JWT_SECRET"),
   disableEnvAdminFallback: process.env.DISABLE_ENV_ADMIN_FALLBACK === "true",

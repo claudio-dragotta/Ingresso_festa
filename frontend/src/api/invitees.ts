@@ -12,6 +12,7 @@ export interface Invitee {
   email?: string | null;
   hasEntered: boolean;
   checkedInAt?: string | null;
+  qrSentAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

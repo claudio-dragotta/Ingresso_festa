@@ -266,8 +266,9 @@ router.get("/:id/qr-image", adminOnly, async (req: EventRequest, res, next) => {
       where: { id: req.params.id },
       select: { firstName: true, lastName: true },
     });
+    const safeSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
     const filename = invitee
-      ? `qr-${invitee.lastName.toLowerCase()}-${invitee.firstName.toLowerCase()}.png`
+      ? `qr-${safeSlug(invitee.lastName)}-${safeSlug(invitee.firstName)}.png`
       : "qr.png";
     res.setHeader("Content-Type", "image/png");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);

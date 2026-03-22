@@ -3,10 +3,13 @@ import { logger } from "../logger";
 import { ensureQrToken, generateQrImageBase64 } from "./qrService";
 import { prisma } from "../lib/prisma";
 
-const GMAIL_USER = process.env.GMAIL_USER || "sesaorganizers@gmail.com";
+const GMAIL_USER = process.env.GMAIL_USER || "";
 const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD || "";
 
 function createTransporter() {
+  if (!GMAIL_USER) {
+    throw new Error("GMAIL_USER non configurata nelle variabili d'ambiente");
+  }
   if (!GMAIL_APP_PASSWORD) {
     throw new Error("GMAIL_APP_PASSWORD non configurata nelle variabili d'ambiente");
   }

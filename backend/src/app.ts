@@ -30,7 +30,7 @@ export const createApp = async () => {
     }),
   );
   app.use(helmet());
-  app.use(express.json({ limit: "10mb" }));
+  app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true }));
   app.use(morgan("tiny"));
 
