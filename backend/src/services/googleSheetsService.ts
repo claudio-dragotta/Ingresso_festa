@@ -408,6 +408,91 @@ export async function deleteInviteeFromSheet(
   logger.info(`Riga "${fullName}" eliminata dal foglio ${sheetName}`);
 }
 
+// ─── PRE-REGISTRAZIONI ───────────────────────────────────────────────────────
+
+const PREREG_SHEET_NAME = 'Richieste';
+
+async function ensurePreRegSheetExists(sheets: ReturnType<typeof getGoogleSheetsClient>, spreadsheetId: string): Promise<void> {
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  const exists = meta.data.sheets?.some((s: any) => s.properties?.title === PREREG_SHEET_NAME);
+  if (!exists) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: { requests: [{ addSheet: { properties: { title: PREREG_SHEET_NAME } } }] },
+    });
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${PREREG_SHEET_NAME}!A1:I1`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [['Cognome', 'Nome', 'Email', 'Note', 'Stato', 'Data richiesta', 'Lista', 'Tipo pagamento', 'Data decisione']] },
+    });
+    logger.info(`Tab "${PREREG_SHEET_NAME}" creata con intestazioni`);
+  }
+}
+
+export async function writePreRegistrationToSheet(
+  spreadsheetId: string,
+  preReg: { firstName: string; lastName: string; email: string; notes?: string | null }
+): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+  await ensurePreRegSheetExists(sheets, spreadsheetId);
+  const now = new Date().toLocaleString('it-IT');
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: `${PREREG_SHEET_NAME}!A2:I`,
+    valueInputOption: 'RAW',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: {
+      values: [[
+        capitalizeWords(preReg.lastName),
+        capitalizeWords(preReg.firstName),
+        preReg.email.toLowerCase(),
+        preReg.notes || '',
+        'In attesa',
+        now,
+        '', '', '', // Lista, Tipo pagamento, Data decisione
+      ]],
+    },
+  });
+  logger.info(`Pre-registrazione scritta su Sheets: ${preReg.lastName} ${preReg.firstName}`);
+}
+
+export async function updatePreRegistrationInSheet(
+  spreadsheetId: string,
+  email: string,
+  status: 'Approvato' | 'Rifiutato',
+  listType?: string,
+  paymentType?: string
+): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${PREREG_SHEET_NAME}!A2:I`,
+  });
+  const rows = response.data.values || [];
+  // Email in colonna C (index 2)
+  const rowIndex = rows.findIndex((row: any[]) => row[2]?.toString().trim().toLowerCase() === email.toLowerCase());
+  if (rowIndex === -1) {
+    logger.warn(`Pre-registrazione con email "${email}" non trovata nel foglio ${PREREG_SHEET_NAME}`);
+    return;
+  }
+  const absoluteRow = rowIndex + 2; // +1 intestazione, +1 base 1-indexed
+  const now = new Date().toLocaleString('it-IT');
+  await (sheets.spreadsheets.values as any).batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      valueInputOption: 'RAW',
+      data: [
+        { range: `${PREREG_SHEET_NAME}!E${absoluteRow}`, values: [[status]] },
+        { range: `${PREREG_SHEET_NAME}!G${absoluteRow}`, values: [[listType || '']] },
+        { range: `${PREREG_SHEET_NAME}!H${absoluteRow}`, values: [[paymentType || '']] },
+        { range: `${PREREG_SHEET_NAME}!I${absoluteRow}`, values: [[now]] },
+      ],
+    },
+  });
+  logger.info(`Pre-registrazione "${email}" aggiornata su Sheets: ${status}`);
+}
+
 // ─── TEST CONNESSIONE (usa sheet globale per test) ───────────────────────────
 
 export async function testGoogleSheetsConnection(spreadsheetId?: string): Promise<boolean> {

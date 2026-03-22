@@ -5,6 +5,8 @@ import { AppError } from "../utils/errors";
 import { ListType } from "@prisma/client";
 import { allowRoles } from "../middleware/roles";
 import { EventRequest } from "../middleware/eventAccess";
+import { writePreRegistrationToSheet, updatePreRegistrationInSheet } from "../services/googleSheetsService";
+import { logger } from "../logger";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Dominio istituzionale richiesto — NON esposto nelle risposte API
@@ -98,7 +100,7 @@ publicPreRegRouter.post("/:eventId", registerRateLimit, async (req: Request, res
     // Controlla che il cognome corrisponda alla parte della mail dopo il primo punto
     // Es. mario.dragotta@alcampus.it → "dragotta" deve corrispondere al cognome inserito
 
-    const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true } });
+    const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true, googleSheetId: true } });
     if (!event) throw new AppError("Evento non trovato", 404);
 
     // blocca duplicati (stessa email + stesso evento, non già rifiutata)
@@ -118,6 +120,16 @@ publicPreRegRouter.post("/:eventId", registerRateLimit, async (req: Request, res
         notes: notes?.trim() || null,
       },
     });
+
+    // Scrittura su Google Sheets (fire-and-forget, non blocca la risposta)
+    if (event.googleSheetId) {
+      writePreRegistrationToSheet(event.googleSheetId, {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim().toLowerCase(),
+        notes: notes?.trim() || null,
+      }).catch((err: any) => logger.error("Errore scrittura pre-reg su Sheets:", err?.message));
+    }
 
     return res.status(201).json({ success: true });
   } catch (err) {
@@ -166,6 +178,18 @@ router.post("/:id/approve", allowRoles(["ADMIN", "ORGANIZER"]), async (req: Even
 
     await prisma.preRegistration.update({ where: { id }, data: { status: "APPROVED" } });
 
+    // Aggiorna stato su Google Sheets (fire-and-forget)
+    const eventApprove = await prisma.event.findUnique({ where: { id: req.eventId! }, select: { googleSheetId: true } });
+    if (eventApprove?.googleSheetId) {
+      updatePreRegistrationInSheet(
+        eventApprove.googleSheetId,
+        preReg.email,
+        "Approvato",
+        finalListType,
+        paymentType?.trim() || ""
+      ).catch((err: any) => logger.error("Errore aggiornamento approvazione su Sheets:", err?.message));
+    }
+
     return res.json({ success: true, invitee });
   } catch (err) {
     return next(err);
@@ -180,6 +204,17 @@ router.post("/:id/reject", allowRoles(["ADMIN", "ORGANIZER"]), async (req: Event
     if (!preReg) throw new AppError("Pre-registrazione non trovata", 404);
 
     await prisma.preRegistration.update({ where: { id }, data: { status: "REJECTED" } });
+
+    // Aggiorna stato su Google Sheets (fire-and-forget)
+    const eventReject = await prisma.event.findUnique({ where: { id: req.eventId! }, select: { googleSheetId: true } });
+    if (eventReject?.googleSheetId) {
+      updatePreRegistrationInSheet(
+        eventReject.googleSheetId,
+        preReg.email,
+        "Rifiutato"
+      ).catch((err: any) => logger.error("Errore aggiornamento rifiuto su Sheets:", err?.message));
+    }
+
     return res.json({ success: true });
   } catch (err) {
     return next(err);
