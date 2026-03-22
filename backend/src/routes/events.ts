@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth";
 import { requireGlobalAdmin, EventRequest } from "../middleware/eventAccess";
+import { prisma } from "../lib/prisma";
 import {
   listEvents,
   getEvent,
@@ -67,7 +68,20 @@ router.post("/", requireGlobalAdmin, async (req: EventRequest, res, next) => {
 // GET /api/events/:eventId
 router.get("/:eventId", async (req: EventRequest, res, next) => {
   try {
-    const event = await getEvent(req.params.eventId);
+    const user = req.user!;
+    const { eventId } = req.params;
+
+    // Admin globale può vedere qualsiasi evento
+    if (user.role !== "ADMIN") {
+      // Altri ruoli: verificano che abbiano accesso esplicito all'evento
+      if (!user.userId) return res.status(403).json({ message: "Accesso negato" });
+      const access = await prisma.userEventAccess.findUnique({
+        where: { userId_eventId: { userId: user.userId, eventId } },
+      });
+      if (!access) return res.status(403).json({ message: "Non hai accesso a questa festa" });
+    }
+
+    const event = await getEvent(eventId);
     return res.json(event);
   } catch (error) {
     return next(error);

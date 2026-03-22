@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
-import { config } from "../config";
 
 const router = Router();
 
@@ -22,7 +21,6 @@ router.get("/ready", async (_req, res) => {
   res.status(dbOk ? 200 : 503).json({
     status,
     db: dbOk ? "ok" : "error",
-    env: config.env,
   });
 });
 
@@ -38,7 +36,6 @@ router.get("/", async (_req, res) => {
   res.status(dbOk ? 200 : 503).json({
     status: dbOk ? "ok" : "degraded",
     db: dbOk ? "ok" : "error",
-    env: config.env,
   });
 });
 

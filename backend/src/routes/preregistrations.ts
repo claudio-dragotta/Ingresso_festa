@@ -63,9 +63,17 @@ publicPreRegRouter.get("/:eventId/info", async (req: Request, res: Response, nex
 publicPreRegRouter.post("/:eventId", registerRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { eventId } = req.params;
-    const { firstName, lastName, email, notes } = req.body as Record<string, string | undefined>;
+    const { firstName, lastName, email, notes } = req.body ?? {};
 
-    if (!firstName?.trim() || !lastName?.trim() || !email?.trim()) {
+    // Valida che tutti i campi obbligatori siano stringhe (previene type confusion)
+    if (typeof firstName !== "string" || typeof lastName !== "string" || typeof email !== "string") {
+      throw new AppError("Nome, cognome e email sono obbligatori", 400);
+    }
+    if (notes !== undefined && typeof notes !== "string") {
+      throw new AppError("Il campo note deve essere una stringa", 400);
+    }
+
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
       throw new AppError("Nome, cognome e email sono obbligatori", 400);
     }
     if (firstName.trim().length > MAX_NAME_LEN || lastName.trim().length > MAX_NAME_LEN) {

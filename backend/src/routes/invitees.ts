@@ -53,8 +53,8 @@ const isValidInvitee = (value: unknown): value is {
   );
 };
 
-// GET /invitees - Lista tutti gli invitati
-router.get("/", async (req: EventRequest, res, next) => {
+// GET /invitees - Lista tutti gli invitati (solo ruoli che gestiscono la lista)
+router.get("/", allowRoles(["ADMIN", "ORGANIZER", "ENTRANCE"]), async (req: EventRequest, res, next) => {
   try {
     const invitees = await listInvitees(req.eventId!);
     return res.json(invitees);

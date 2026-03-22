@@ -53,11 +53,13 @@ const SQL_INJECTION_PATTERNS = [
 ];
 
 /**
- * Whitelist di pattern SICURI che potrebbero sembrare SQL ma non lo sono
- * Ad esempio: email che contengono "select@example.com"
+ * Whitelist di pattern SICURI che potrebbero fare match parziale con pattern SQL ma sono legittimi.
+ * Esempio: "select@domain.com" contiene "select" ma è un'email valida.
+ * ATTENZIONE: la whitelist viene applicata DOPO aver verificato i pattern pericolosi,
+ * non prima — altrimenti bypasserebbe completamente il check.
  */
 const SAFE_PATTERNS = [
-  /@[\w.-]+/g, // Email addresses
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/, // Email address completa (non solo @domain)
 ];
 
 /**
@@ -66,27 +68,25 @@ const SAFE_PATTERNS = [
  * @returns true se contiene pattern pericolosi
  */
 function containsSQLInjection(value: string): boolean {
-  // Controlla prima se è un pattern sicuro conosciuto
-  for (const safePattern of SAFE_PATTERNS) {
-    if (safePattern.test(value)) {
-      // Resetta lastIndex per regex globali
-      safePattern.lastIndex = 0;
-      return false;
-    }
-  }
-
-  // Controlla pattern pericolosi
+  // 1. Controlla prima i pattern pericolosi
+  let hasDangerousPattern = false;
   for (const pattern of SQL_INJECTION_PATTERNS) {
     if (pattern.test(value)) {
-      // Resetta lastIndex per regex globali
-      pattern.lastIndex = 0;
-      return true;
+      hasDangerousPattern = true;
     }
-    // Resetta lastIndex per regex globali
-    pattern.lastIndex = 0;
+    pattern.lastIndex = 0; // reset lastIndex per regex globali
   }
 
-  return false;
+  if (!hasDangerousPattern) return false;
+
+  // 2. Solo se trovato un pattern pericoloso, verifica se il valore è un false positive noto
+  for (const safePattern of SAFE_PATTERNS) {
+    if (safePattern.test(value)) {
+      return false; // falso positivo — email legittima o pattern sicuro
+    }
+  }
+
+  return true;
 }
 
 /**

@@ -46,32 +46,32 @@ export const loginRequest = async (payload: LoginPayload): Promise<LoginResponse
   return response.data;
 };
 
-// POST /auth/users - Crea nuovo utente (solo admin)
+// POST /users - Crea nuovo utente (solo admin)
 export const createUser = async (username: string, password: string, role: UserRole = "ENTRANCE") => {
-  const response = await apiClient.post<User>("/auth/users", { username, password, role });
+  const response = await apiClient.post<User>("/users", { username, password, role });
   return response.data;
 };
 
-// GET /auth/users - Lista utenti (solo admin)
+// GET /users - Lista utenti (solo admin)
 export const fetchUsers = async () => {
-  const response = await apiClient.get<User[]>("/auth/users");
+  const response = await apiClient.get<User[]>("/users");
   return response.data;
 };
 
-// DELETE /auth/users/:id - Elimina utente (solo admin)
+// DELETE /users/:id - Elimina utente (solo admin)
 export const deleteUser = async (userId: string) => {
-  await apiClient.delete(`/auth/users/${userId}`);
+  await apiClient.delete(`/users/${userId}`);
 };
 
-// PATCH /auth/users/:id - Aggiorna stato attivo
+// PATCH /users/:id - Aggiorna stato attivo
 export const setUserActive = async (userId: string, active: boolean) => {
-  const response = await apiClient.patch<User>(`/auth/users/${userId}`, { active });
+  const response = await apiClient.patch<User>(`/users/${userId}`, { active });
   return response.data;
 };
 
-// GET /auth/users/:id/logs - Log di check-in per utente (solo admin)
+// GET /users/:id/logs - Log di check-in per utente (solo admin)
 export const fetchUserLogs = async (userId: string): Promise<UserLogsResponse> => {
-  const response = await apiClient.get<UserLogsResponse>(`/auth/users/${userId}/logs`);
+  const response = await apiClient.get<UserLogsResponse>(`/users/${userId}/logs`);
   return response.data;
 };
 

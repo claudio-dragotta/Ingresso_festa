@@ -1,32 +1,24 @@
 import { Router } from "express";
-import { login, createUser, listUsers, deleteUser, setUserActive, changeOwnPassword } from "../services/authService";
-import { prisma } from "../lib/prisma";
+import rateLimit from "express-rate-limit";
+import { login, changeOwnPassword } from "../services/authService";
 import { authenticate } from "../middleware/auth";
-import { adminOnly } from "../middleware/adminOnly";
-import { UserRole } from "@prisma/client";
 
 const router = Router();
 
-// POST /auth/change-password - Utente loggato cambia la propria password
-router.post("/change-password", authenticate, async (req, res, next) => {
-  try {
-    const userId = (req as any).user?.userId;
-    if (!userId) return res.status(401).json({ message: "Non autenticato" });
-    const { oldPassword, newPassword } = req.body as { oldPassword?: string; newPassword?: string };
-    if (!oldPassword || !newPassword) {
-      return res.status(400).json({ message: "oldPassword e newPassword sono obbligatorie" });
-    }
-    await changeOwnPassword(userId, oldPassword, newPassword);
-    return res.json({ message: "Password aggiornata con successo" });
-  } catch (error) {
-    return next(error);
-  }
+// Max 15 tentativi di login per IP ogni 15 minuti
+const loginRateLimit = rateLimit({
+  windowMs: 15 * 60_000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Troppi tentativi di accesso. Riprova tra 15 minuti." },
 });
 
-router.post("/login", async (req, res, next) => {
+// POST /auth/login
+router.post("/login", loginRateLimit, async (req, res, next) => {
   try {
-    const { username, password } = req.body;
-    if (!username || !password) {
+    const { username, password } = req.body ?? {};
+    if (typeof username !== "string" || typeof password !== "string" || !username || !password) {
       return res.status(400).json({ message: "Username e password sono obbligatori" });
     }
 
@@ -37,81 +29,22 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
-// Solo admin può creare utenti
-router.post("/users", authenticate, adminOnly, async (req, res, next) => {
+// POST /auth/change-password — utente loggato cambia la propria password
+router.post("/change-password", authenticate, async (req, res, next) => {
   try {
-    const { username, password, role } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ message: "Username e password sono obbligatori" });
+    const userId = (req as any).user?.userId;
+    if (!userId) return res.status(401).json({ message: "Non autenticato" });
+
+    const { oldPassword, newPassword } = req.body ?? {};
+    if (typeof oldPassword !== "string" || typeof newPassword !== "string" || !oldPassword || !newPassword) {
+      return res.status(400).json({ message: "oldPassword e newPassword sono obbligatorie" });
     }
 
-    const user = await createUser(username, password, role as UserRole || 'ENTRANCE');
-    return res.status(201).json({
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      active: true,
-    });
-  } catch (error) {
-    return next(error);
-  }
-});
-
-// Solo admin può vedere la lista utenti
-router.get("/users", authenticate, adminOnly, async (req, res, next) => {
-  try {
-    const users = await listUsers();
-    return res.json(users);
-  } catch (error) {
-    return next(error);
-  }
-});
-
-// Solo admin può eliminare utenti
-router.delete("/users/:id", authenticate, adminOnly, async (req, res, next) => {
-  try {
-    await deleteUser(req.params.id);
-    return res.status(204).send();
+    await changeOwnPassword(userId, oldPassword, newPassword);
+    return res.json({ message: "Password aggiornata con successo" });
   } catch (error) {
     return next(error);
   }
 });
 
 export default router;
-
-// Attiva/Disattiva utente
-router.patch("/users/:id", authenticate, adminOnly, async (req, res, next) => {
-  try {
-    const { active } = req.body as { active?: boolean };
-    if (typeof active !== 'boolean') {
-      return res.status(400).json({ message: "Campo 'active' booleano richiesto" });
-    }
-
-    const user = await setUserActive(req.params.id, active);
-    return res.json(user);
-  } catch (error) {
-    return next(error);
-  }
-});
-
-// GET /auth/users/:id/logs - Log di check-in per utente (solo admin)
-router.get("/users/:id/logs", authenticate, adminOnly, async (req, res, next) => {
-  try {
-    const userId = req.params.id;
-    const logs = await prisma.checkInLog.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        invitee: { select: { id: true, firstName: true, lastName: true, listType: true, paymentType: true } },
-      },
-      take: 500, // limite ragionevole per UI
-    });
-
-    const total = logs.length;
-    const enteredCount = logs.filter(l => l.outcome === 'SUCCESS' && (l.message?.includes('Ingresso autorizzato') ?? false)).length;
-
-    return res.json({ total, enteredCount, logs });
-  } catch (error) {
-    return next(error);
-  }
-});

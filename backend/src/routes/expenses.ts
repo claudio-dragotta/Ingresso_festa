@@ -3,23 +3,24 @@ import * as expenseService from "../services/expenseService";
 import { ExpenseCategory } from "@prisma/client";
 import { EventRequest } from "../middleware/eventAccess";
 import { adminOnly } from "../middleware/adminOnly";
+import { AppError } from "../utils/errors";
 
 const router = Router();
 
 const VALID_PAYMENT_METHODS = ["paypal", "contanti", "p2p", "bonifico"];
 
 // GET /expenses/balances - Saldi per metodo pagamento (solo admin)
-router.get("/balances", adminOnly, async (req: EventRequest, res) => {
+router.get("/balances", adminOnly, async (req: EventRequest, res, next) => {
   try {
     const balances = await expenseService.fetchBalances(req.eventId!);
     res.json(balances);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    next(error);
   }
 });
 
 // GET /expenses - Lista spese (solo admin)
-router.get("/", adminOnly, async (req: EventRequest, res) => {
+router.get("/", adminOnly, async (req: EventRequest, res, next) => {
   try {
     const { category, startDate, endDate } = req.query;
 
@@ -34,13 +35,13 @@ router.get("/", adminOnly, async (req: EventRequest, res) => {
     );
 
     res.json(expenses);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    next(error);
   }
 });
 
 // GET /expenses/stats - Statistiche spese (solo admin)
-router.get("/stats", adminOnly, async (req: EventRequest, res) => {
+router.get("/stats", adminOnly, async (req: EventRequest, res, next) => {
   try {
     const { startDate, endDate } = req.query;
 
@@ -50,47 +51,47 @@ router.get("/stats", adminOnly, async (req: EventRequest, res) => {
     const stats = await expenseService.fetchExpenseStats(req.eventId!, start, end);
 
     res.json(stats);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    next(error);
   }
 });
 
 // GET /expenses/:id - Singola spesa (solo admin)
-router.get("/:id", adminOnly, async (req: EventRequest, res) => {
+router.get("/:id", adminOnly, async (req: EventRequest, res, next) => {
   try {
     const { id } = req.params;
     const expense = await expenseService.fetchExpenseById(id);
 
     if (!expense) {
-      return res.status(404).json({ error: "Spesa non trovata" });
+      return next(new AppError("Spesa non trovata", 404));
     }
 
     return res.json(expense);
-  } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+  } catch (error) {
+    return next(error);
   }
 });
 
 // POST /expenses - Crea nuova spesa (solo admin)
-router.post("/", adminOnly, async (req: EventRequest, res) => {
+router.post("/", adminOnly, async (req: EventRequest, res, next) => {
   try {
     const { description, amount, category, paymentMethod, date, notes } = req.body;
 
     // Validazione
     if (!description || !amount || !category || !paymentMethod) {
-      return res.status(400).json({ error: "Descrizione, importo, categoria e metodo pagamento sono obbligatori" });
+      return next(new AppError("Descrizione, importo, categoria e metodo pagamento sono obbligatori", 400));
     }
 
     if (amount <= 0) {
-      return res.status(400).json({ error: "L'importo deve essere maggiore di zero" });
+      return next(new AppError("L'importo deve essere maggiore di zero", 400));
     }
 
     if (!Object.values(ExpenseCategory).includes(category)) {
-      return res.status(400).json({ error: "Categoria non valida" });
+      return next(new AppError("Categoria non valida", 400));
     }
 
     if (!VALID_PAYMENT_METHODS.includes(paymentMethod.toLowerCase())) {
-      return res.status(400).json({ error: "Metodo di pagamento non valido. Usa: paypal, contanti, p2p, bonifico" });
+      return next(new AppError("Metodo di pagamento non valido. Usa: paypal, contanti, p2p, bonifico", 400));
     }
 
     const expense = await expenseService.createExpense(
@@ -106,30 +107,30 @@ router.post("/", adminOnly, async (req: EventRequest, res) => {
     );
 
     return res.status(201).json(expense);
-  } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+  } catch (error) {
+    return next(error);
   }
 });
 
 // PATCH /expenses/:id - Aggiorna spesa (solo admin)
-router.patch("/:id", adminOnly, async (req: EventRequest, res) => {
+router.patch("/:id", adminOnly, async (req: EventRequest, res, next) => {
   try {
     const { id } = req.params;
     const { description, amount, category, paymentMethod, date, notes } = req.body;
 
     // Validazione importo se presente
     if (amount !== undefined && amount <= 0) {
-      return res.status(400).json({ error: "L'importo deve essere maggiore di zero" });
+      return next(new AppError("L'importo deve essere maggiore di zero", 400));
     }
 
     // Validazione categoria se presente
     if (category !== undefined && !Object.values(ExpenseCategory).includes(category)) {
-      return res.status(400).json({ error: "Categoria non valida" });
+      return next(new AppError("Categoria non valida", 400));
     }
 
     // Validazione metodo pagamento se presente
     if (paymentMethod !== undefined && !VALID_PAYMENT_METHODS.includes(paymentMethod.toLowerCase())) {
-      return res.status(400).json({ error: "Metodo di pagamento non valido. Usa: paypal, contanti, p2p, bonifico" });
+      return next(new AppError("Metodo di pagamento non valido. Usa: paypal, contanti, p2p, bonifico", 400));
     }
 
     const updateData: any = {};
@@ -144,24 +145,24 @@ router.patch("/:id", adminOnly, async (req: EventRequest, res) => {
 
     return res.json(expense);
   } catch (error: any) {
-    if (error.code === "P2025") {
-      return res.status(404).json({ error: "Spesa non trovata" });
+    if (error?.code === "P2025") {
+      return next(new AppError("Spesa non trovata", 404));
     }
-    return res.status(500).json({ error: error.message });
+    return next(error);
   }
 });
 
 // DELETE /expenses/:id - Elimina spesa (solo admin)
-router.delete("/:id", adminOnly, async (req: EventRequest, res) => {
+router.delete("/:id", adminOnly, async (req: EventRequest, res, next) => {
   try {
     const { id } = req.params;
     await expenseService.deleteExpense(id);
     return res.json({ message: "Spesa eliminata con successo" });
   } catch (error: any) {
-    if (error.code === "P2025") {
-      return res.status(404).json({ error: "Spesa non trovata" });
+    if (error?.code === "P2025") {
+      return next(new AppError("Spesa non trovata", 404));
     }
-    return res.status(500).json({ error: error.message });
+    return next(error);
   }
 });
 
