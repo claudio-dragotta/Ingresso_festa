@@ -102,7 +102,6 @@ const LoginPage = () => {
               </svg>
             </div>
             <h1>Accedi</h1>
-            <p>Sistema di Gestione Ingressi</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
