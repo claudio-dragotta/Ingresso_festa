@@ -57,26 +57,26 @@ export default function AdminDashboard() {
   const { data: invitees = [], isLoading } = useQuery<Invitee[]>({
     queryKey: ["invitees", eventId],
     queryFn: () => fetchInvitees(eventId),
-    refetchInterval: 30_000,
-    refetchIntervalInBackground: true,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 
   const { data: stats } = useQuery<Stats>({
     queryKey: ["stats", eventId],
     queryFn: () => fetchStats(eventId),
-    refetchInterval: 5000,
+    refetchInterval: 30_000,
   });
 
   const { data: duplicates = [] } = useQuery<DuplicateGroup[]>({
     queryKey: ["invitees", "duplicates", eventId],
     queryFn: () => fetchDuplicateInvitees(eventId),
-    refetchInterval: 10000,
+    refetchInterval: 60_000,
   });
 
   const { data: preRegs = [] } = useQuery<PreRegistration[]>({
     queryKey: ["preregistrations", eventId],
     queryFn: () => fetchPreRegistrations(eventId),
-    refetchInterval: 30000,
+    refetchInterval: 60_000,
   });
   const pendingCount = preRegs.filter(p => p.status === "PENDING").length;
 
@@ -583,6 +583,7 @@ const handleCheckIn = (person: Invitee) => {
                   type="text"
                   ref={firstNameInputRef}
                   value={formData.firstName}
+                  maxLength={100}
                   onChange={(e) => {
                     const value = e.target.value;
                     const capitalized = value
@@ -600,6 +601,7 @@ const handleCheckIn = (person: Invitee) => {
                 <input
                   type="text"
                   value={formData.lastName}
+                  maxLength={100}
                   onChange={(e) => {
                     const value = e.target.value;
                     const capitalized = value

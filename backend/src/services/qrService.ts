@@ -32,22 +32,23 @@ export async function ensureQrToken(inviteeId: string): Promise<string> {
 
   if (invitee.qrToken) return invitee.qrToken;
 
-  // Genera e salva un token nuovo (loop per gestire rarissime collisioni)
-  let token: string;
-  let attempts = 0;
-  while (true) {
-    token = generateQrToken();
-    const existing = await prisma.invitee.findUnique({ where: { qrToken: token } });
-    if (!existing) break;
-    if (++attempts > 5) throw new Error("Impossibile generare token QR univoco");
+  // Genera e salva un token nuovo.
+  // Usa try/catch sul DB write per gestire le rarissime collisioni senza TOCTOU.
+  for (let attempts = 0; attempts < 5; attempts++) {
+    const token = generateQrToken();
+    try {
+      await prisma.invitee.update({
+        where: { id: inviteeId },
+        data: { qrToken: token },
+      });
+      return token;
+    } catch (err: any) {
+      // P2002 = unique constraint violation: token già usato, riprova
+      if (err?.code === "P2002") continue;
+      throw err;
+    }
   }
-
-  await prisma.invitee.update({
-    where: { id: inviteeId },
-    data: { qrToken: token },
-  });
-
-  return token;
+  throw new Error("Impossibile generare token QR univoco dopo 5 tentativi");
 }
 
 /**

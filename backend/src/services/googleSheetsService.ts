@@ -53,6 +53,28 @@ function capitalizeWords(text: string): string {
   return text.toLowerCase().split(' ').map(w => w.length === 0 ? w : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
+/**
+ * Previene formula injection su Google Sheets.
+ * Valori che iniziano con = + - @ vengono prefissati con ' (apostrofo)
+ * così Sheets li tratta come testo puro invece di eseguirli come formula.
+ */
+function sanitizeSheetValue(value: string): string {
+  if (!value) return value;
+  return /^[=+\-@]/.test(value) ? `'${value}` : value;
+}
+
+/**
+ * Timeout wrapper: rigetta la promise se supera ms millisecondi.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label}: timeout dopo ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
 // ─── LETTURA LISTA PAGANTI ───────────────────────────────────────────────────
 
 export async function readPagantiSheet(spreadsheetId: string): Promise<Array<{ colA: string; colB?: string; colC?: string }>> {
@@ -62,7 +84,11 @@ export async function readPagantiSheet(spreadsheetId: string): Promise<Array<{ c
   const range = baseRange.replace(/:[A-Z]+$/, ':C');
   logger.info(`Lettura Google Sheet PAGANTI: ${spreadsheetId}, range: ${range}`);
   const sheets = getGoogleSheetsClient();
-  const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  const response = await withTimeout(
+    sheets.spreadsheets.values.get({ spreadsheetId, range }),
+    10_000,
+    'readPagantiSheet'
+  );
   const rows = response.data.values;
   if (!rows || rows.length === 0) {
     logger.warn('Google Sheet PAGANTI vuoto');
@@ -88,7 +114,11 @@ export async function readGreenSheet(spreadsheetId: string): Promise<Array<{ nam
   const greenRange = (process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A2:A').replace(/:[A-Z]+$/, ':B');
   logger.info(`Lettura Google Sheet GREEN: ${spreadsheetId}, range: ${greenRange}`);
   const sheets = getGoogleSheetsClient();
-  const response = await sheets.spreadsheets.values.get({ spreadsheetId, range: greenRange });
+  const response = await withTimeout(
+    sheets.spreadsheets.values.get({ spreadsheetId, range: greenRange }),
+    10_000,
+    'readGreenSheet'
+  );
   const rows = response.data.values;
   if (!rows || rows.length === 0) {
     logger.warn('Google Sheet GREEN vuoto');
@@ -157,26 +187,34 @@ export async function fetchAndParseGoogleSheets(spreadsheetId: string): Promise<
 // ─── SCRITTURA INVITATO ──────────────────────────────────────────────────────
 
 export async function writeToGoogleSheet(spreadsheetId: string, fullName: string, listType: 'PAGANTE' | 'GREEN', paymentType?: string, email?: string): Promise<void> {
-  const formattedName = capitalizeWords(fullName.trim());
-  const formattedPaymentType = paymentType ? paymentType.trim().toLowerCase() : '';
-  const formattedEmail = email ? email.trim().toLowerCase() : '';
+  const formattedName = sanitizeSheetValue(capitalizeWords(fullName.trim()));
+  const formattedPaymentType = sanitizeSheetValue(paymentType ? paymentType.trim().toLowerCase() : '');
+  const formattedEmail = sanitizeSheetValue(email ? email.trim().toLowerCase() : '');
   const sheets = getGoogleSheetsClient();
 
   if (listType === 'PAGANTE') {
     // Colonne: A=nome, B=pagamento, C=email
-    await sheets.spreadsheets.values.append({
-      spreadsheetId, range: 'Lista!A2:C', valueInputOption: 'RAW', insertDataOption: 'OVERWRITE',
-      requestBody: { values: [[formattedName, formattedPaymentType, formattedEmail]] },
-    });
+    await withTimeout(
+      sheets.spreadsheets.values.append({
+        spreadsheetId, range: 'Lista!A2:C', valueInputOption: 'RAW', insertDataOption: 'OVERWRITE',
+        requestBody: { values: [[formattedName, formattedPaymentType, formattedEmail]] },
+      }),
+      10_000,
+      'writeToGoogleSheet PAGANTI'
+    );
     logger.info(`Scritto su PAGANTI: ${formattedName} | ${formattedPaymentType || 'N/D'} | ${formattedEmail || 'no email'}`);
   } else {
     // Colonne: A=nome, B=email
     const greenRangeBase = process.env.GOOGLE_SHEET_GREEN_RANGE || 'GREEN!A2:A';
     const greenRange = greenRangeBase.replace(/:[A-Z]+$/, ':B');
-    await sheets.spreadsheets.values.append({
-      spreadsheetId, range: greenRange, valueInputOption: 'RAW', insertDataOption: 'OVERWRITE',
-      requestBody: { values: [[formattedName, formattedEmail]] },
-    });
+    await withTimeout(
+      sheets.spreadsheets.values.append({
+        spreadsheetId, range: greenRange, valueInputOption: 'RAW', insertDataOption: 'OVERWRITE',
+        requestBody: { values: [[formattedName, formattedEmail]] },
+      }),
+      10_000,
+      'writeToGoogleSheet GREEN'
+    );
     logger.info(`Scritto su GREEN: ${formattedName} | ${formattedEmail || 'no email'}`);
   }
 }

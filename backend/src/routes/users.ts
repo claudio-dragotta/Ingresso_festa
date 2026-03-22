@@ -10,11 +10,6 @@ const router = Router();
 // Solo admin può creare utenti
 router.post("/", authenticate, adminOnly, async (req, res, next) => {
   try {
-    const userRole = (req as any).user?.role;
-    if (userRole !== "ADMIN") {
-      return res.status(403).json({ message: "Solo admin può creare utenti" });
-    }
-
     const { username, password, role } = req.body;
     if (!username || !password) {
       return res.status(400).json({ message: "Username e password sono obbligatori" });
@@ -35,11 +30,6 @@ router.post("/", authenticate, adminOnly, async (req, res, next) => {
 // Solo admin può vedere la lista utenti
 router.get("/", authenticate, adminOnly, async (req, res, next) => {
   try {
-    const userRole = (req as any).user?.role;
-    if (userRole !== "ADMIN") {
-      return res.status(403).json({ message: "Solo admin può vedere gli utenti" });
-    }
-
     const users = await listUsers();
     return res.json(users);
   } catch (error) {
@@ -50,11 +40,6 @@ router.get("/", authenticate, adminOnly, async (req, res, next) => {
 // Solo admin può eliminare utenti
 router.delete("/:id", authenticate, adminOnly, async (req, res, next) => {
   try {
-    const userRole = (req as any).user?.role;
-    if (userRole !== "ADMIN") {
-      return res.status(403).json({ message: "Solo admin può eliminare utenti" });
-    }
-
     await deleteUser(req.params.id);
     return res.status(204).send();
   } catch (error) {
@@ -65,11 +50,6 @@ router.delete("/:id", authenticate, adminOnly, async (req, res, next) => {
 // Attiva/Disattiva utente
 router.patch("/:id", authenticate, adminOnly, async (req, res, next) => {
   try {
-    const userRole = (req as any).user?.role;
-    if (userRole !== "ADMIN") {
-      return res.status(403).json({ message: "Solo admin può aggiornare utenti" });
-    }
-
     const { active } = req.body as { active?: boolean };
     if (typeof active !== "boolean") {
       return res.status(400).json({ message: "Campo 'active' booleano richiesto" });
@@ -116,11 +96,6 @@ router.patch("/:id/reset-password", authenticate, adminOnly, async (req, res, ne
 // GET /users/:id/logs - Log di check-in per utente (solo admin)
 router.get("/:id/logs", authenticate, adminOnly, async (req, res, next) => {
   try {
-    const userRole = (req as any).user?.role;
-    if (userRole !== "ADMIN") {
-      return res.status(403).json({ message: "Solo admin può vedere i log utente" });
-    }
-
     const userId = req.params.id;
     const logs = await prisma.checkInLog.findMany({
       where: { userId },

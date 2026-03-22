@@ -13,9 +13,8 @@ const verifyPassword = async (plain: string, stored: string) => {
   if (isHashed(stored)) {
     return bcrypt.compare(plain, stored);
   }
-
-  // Fallback to plain comparison for development convenience.
-  return plain === stored;
+  // Password non hashata: confronto non consentito in produzione
+  return false;
 };
 
 export const login = async (username: string, password: string) => {

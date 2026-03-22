@@ -21,7 +21,7 @@ export const createApp = async () => {
     config.frontendOrigins.length > 0 &&
     !config.frontendOrigins.includes("*")
       ? config.frontendOrigins
-      : true;
+      : false; // Nessun origin accettato se FRONTEND_URL non è configurato
 
   app.use(
     cors({

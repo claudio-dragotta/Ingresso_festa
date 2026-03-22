@@ -1,5 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
+import rateLimit from "express-rate-limit";
 import {
   createInvitee,
   createInviteesBulk,
@@ -23,8 +24,19 @@ import { isValidQrToken, ensureQrToken, generateQrImageBuffer } from "../service
 import { sendQrEmail, sendQrEmailBulk } from "../services/emailService";
 import { prisma } from "../lib/prisma";
 
-const upload = multer();
+const upload = multer({ limits: { fileSize: 5 * 1024 * 1024 } }); // max 5 MB
 const router = Router();
+
+const MAX_NAME_LEN = 100;
+
+// Rate limit specifico per il check-in QR (10 tentativi/min per IP)
+const checkinRateLimit = rateLimit({
+  windowMs: 60_000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Troppi tentativi di check-in. Riprova tra un minuto." },
+});
 
 const isValidInvitee = (value: unknown): value is {
   firstName: string;
@@ -104,6 +116,9 @@ router.post("/", allowRoles(["ADMIN", "ORGANIZER"]), async (req: EventRequest, r
     if (!isValidInvitee(payload)) {
       return res.status(400).json({ message: "Nome, cognome e tipo lista sono obbligatori" });
     }
+    if (payload.firstName.trim().length > MAX_NAME_LEN || payload.lastName.trim().length > MAX_NAME_LEN) {
+      return res.status(400).json({ message: `Nome e cognome non possono superare ${MAX_NAME_LEN} caratteri` });
+    }
 
     const result = await createInvitee(payload, req.eventId!);
     return res.status(201).json(result);
@@ -157,7 +172,7 @@ router.post("/duplicates/keep-one", adminOnly, async (req: EventRequest, res, ne
 
 // POST /invitees/qr/checkin - Check-in via token QR (richiede autenticazione)
 // DEVE stare PRIMA di /:id/checkin altrimenti Express matcha "qr" come :id
-router.post("/qr/checkin", allowRoles(["ADMIN", "ORGANIZER", "ENTRANCE"]), async (req: EventRequest, res, next) => {
+router.post("/qr/checkin", checkinRateLimit, allowRoles(["ADMIN", "ORGANIZER", "ENTRANCE"]), async (req: EventRequest, res, next) => {
   try {
     const { token } = req.body as { token?: string };
 

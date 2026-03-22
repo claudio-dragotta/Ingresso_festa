@@ -81,25 +81,58 @@ export const createInvitee = async (input: InviteeInput, eventId: string) => {
 };
 
 export const createInviteesBulk = async (inputs: InviteeInput[], eventId: string) => {
-  const results = [];
-  for (const input of inputs) {
-    const allInvitees = await prisma.invitee.findMany({
-      where: { eventId },
-      select: { id: true, firstName: true, lastName: true },
-    });
-    const targetKey = normalizedKey(input.firstName, input.lastName);
-    const existing = allInvitees.find((inv) => normalizedKey(inv.firstName, inv.lastName) === targetKey);
+  if (inputs.length === 0) return [];
 
-    if (existing) {
-      logger.warn("Invitee already exists, skipping", { inviteeId: existing.id });
-      continue;
+  // 1. Carica tutti gli invitati esistenti in una sola query
+  const existing = await prisma.invitee.findMany({
+    where: { eventId },
+    select: { firstName: true, lastName: true },
+  });
+  const existingKeys = new Set(existing.map((inv) => normalizedKey(inv.firstName, inv.lastName)));
+
+  // 2. Filtra i duplicati
+  const toCreate = inputs.filter((input) => {
+    const key = normalizedKey(input.firstName, input.lastName);
+    if (existingKeys.has(key)) {
+      logger.warn("Invitee already exists, skipping", { key });
+      return false;
     }
+    existingKeys.add(key); // previeni duplicati tra i nuovi input stessi
+    return true;
+  });
 
-    const created = await createInvitee(input, eventId);
-    results.push(created);
-  }
+  if (toCreate.length === 0) return [];
 
-  return results;
+  // 3. Crea tutti in una singola transazione atomica
+  const created = await prisma.$transaction(
+    toCreate.map((input) =>
+      prisma.invitee.create({
+        data: {
+          firstName: normalize(input.firstName),
+          lastName: normalize(input.lastName),
+          listType: input.listType,
+          paymentType: input.listType === "PAGANTE" ? input.paymentType?.trim().toLowerCase() ?? null : null,
+          email: input.email?.trim().toLowerCase() || null,
+          hasEntered: false,
+          eventId,
+        },
+      })
+    )
+  );
+
+  // 4. Sincronizza con Google Sheets (fire-and-forget, non blocca la risposta)
+  prisma.event.findUnique({ where: { id: eventId }, select: { googleSheetId: true } })
+    .then((ev) => {
+      if (!ev?.googleSheetId) return;
+      for (const inv of created) {
+        const fullName = `${inv.lastName} ${inv.firstName}`;
+        writeToGoogleSheet(ev.googleSheetId!, fullName, inv.listType, inv.paymentType ?? undefined, inv.email ?? undefined)
+          .catch((err: any) => logger.warn(`Sheets sync fallita per "${fullName}": ${err.message}`));
+      }
+    })
+    .catch((err: any) => logger.warn("Errore recupero evento per Sheets sync:", err.message));
+
+  return created;
 };
 
 export const listInvitees = async (eventId: string) => {
