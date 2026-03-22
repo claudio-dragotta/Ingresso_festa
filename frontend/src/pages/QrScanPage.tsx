@@ -6,6 +6,44 @@ import { qrCheckin } from "../api/invitees";
 import type { Invitee } from "../api/invitees";
 import "./QrScanPage.css";
 
+// Genera un beep con Web Audio API senza caricare file audio
+function playBeep(type: "success" | "duplicate" | "error") {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === "success") {
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    } else if (type === "duplicate") {
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.setValueAtTime(330, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    } else {
+      // error
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+    }
+
+    osc.onended = () => ctx.close();
+  } catch {
+    // Web Audio non disponibile: silenzio
+  }
+}
+
 type ScanResult =
   | { type: "success"; invitee: Invitee }
   | { type: "duplicate"; invitee?: Invitee; message: string }
@@ -25,10 +63,12 @@ export default function QrScanPage() {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [manualToken, setManualToken] = useState("");
 
   const checkinMutation = useMutation({
     mutationFn: (token: string) => qrCheckin(eventId, token),
     onSuccess: (invitee) => {
+      playBeep("success");
       setScanResult({ type: "success", invitee });
       cooldownRef.current = true;
       setTimeout(() => {
@@ -42,8 +82,10 @@ export default function QrScanPage() {
       const message = err?.response?.data?.message ?? "Errore durante il check-in";
       const invitee = err?.response?.data?.invitee;
       if (status === 409) {
+        playBeep("duplicate");
         setScanResult({ type: "duplicate", invitee, message });
       } else {
+        playBeep("error");
         setScanResult({ type: "error", message });
       }
       cooldownRef.current = true;
@@ -264,6 +306,33 @@ export default function QrScanPage() {
             Ferma Camera
           </button>
         )}
+      </div>
+
+      <div className="qrscan-manual">
+        <p className="qrscan-manual-label">Inserimento manuale token (se fotocamera non disponibile)</p>
+        <div className="qrscan-manual-row">
+          <input
+            className="qrscan-manual-input"
+            type="text"
+            placeholder="Incolla qui il token QR (64 caratteri hex)"
+            value={manualToken}
+            onChange={(e) => setManualToken(e.target.value.trim())}
+            maxLength={64}
+          />
+          <button
+            className="qrscan-btn manual"
+            disabled={!/^[a-f0-9]{64}$/.test(manualToken) || checkinMutation.isPending}
+            onClick={() => {
+              if (/^[a-f0-9]{64}$/.test(manualToken)) {
+                lastScannedRef.current = manualToken;
+                checkinMutation.mutate(manualToken);
+                setManualToken("");
+              }
+            }}
+          >
+            Check-in
+          </button>
+        </div>
       </div>
 
       <div className="qrscan-info">

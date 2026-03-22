@@ -23,16 +23,17 @@ import { EventRequest } from "../middleware/eventAccess";
 import { isValidQrToken, ensureQrToken, generateQrImageBuffer } from "../services/qrService";
 import { sendQrEmail, sendQrEmailBulk } from "../services/emailService";
 import { prisma } from "../lib/prisma";
+import { AppError } from "../utils/errors";
 
 const upload = multer({ limits: { fileSize: 5 * 1024 * 1024 } }); // max 5 MB
 const router = Router();
 
 const MAX_NAME_LEN = 100;
 
-// Rate limit specifico per il check-in QR (10 tentativi/min per IP)
+// Rate limit specifico per il check-in QR (60 tentativi/min per IP — ~1/s per operatore reale)
 const checkinRateLimit = rateLimit({
   windowMs: 60_000,
-  max: 10,
+  max: 60,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Troppi tentativi di check-in. Riprova tra un minuto." },
@@ -295,6 +296,23 @@ router.post("/send-qr-bulk", allowRoles(["ADMIN", "ORGANIZER"]), async (req: Eve
     const result = await sendQrEmailBulk(req.eventId!);
     return res.json(result);
   } catch (error) {
+    return next(error);
+  }
+});
+
+// PATCH /invitees/:id/revoke-qr - Invalida il token QR senza eliminare l'invitato (solo admin)
+router.patch("/:id/revoke-qr", adminOnly, async (req: EventRequest, res, next) => {
+  try {
+    const updated = await prisma.invitee.update({
+      where: { id: req.params.id },
+      data: { qrToken: null, qrSentAt: null },
+      select: { id: true, firstName: true, lastName: true, qrToken: true, qrSentAt: true },
+    });
+    return res.json({ message: "Token QR revocato", invitee: updated });
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return next(new AppError("Invitato non trovato", 404));
+    }
     return next(error);
   }
 });

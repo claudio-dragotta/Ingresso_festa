@@ -135,6 +135,21 @@ export const createInviteesBulk = async (inputs: InviteeInput[], eventId: string
   return created;
 };
 
+const INVITEE_PUBLIC_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  listType: true,
+  paymentType: true,
+  email: true,
+  hasEntered: true,
+  checkedInAt: true,
+  createdAt: true,
+  updatedAt: true,
+  eventId: true,
+  // qrToken deliberately excluded — exposing tokens allows badge forgery
+} as const;
+
 export const listInvitees = async (eventId: string) => {
   const invitees = await prisma.invitee.findMany({
     where: { eventId },
@@ -142,6 +157,7 @@ export const listInvitees = async (eventId: string) => {
       { lastName: "asc" },
       { firstName: "asc" },
     ],
+    select: INVITEE_PUBLIC_SELECT,
   });
   return invitees;
 };
@@ -153,6 +169,7 @@ export const searchInvitees = async (query: string, eventId: string) => {
       { lastName: "asc" },
       { firstName: "asc" },
     ],
+    select: INVITEE_PUBLIC_SELECT,
   });
 
   // Filtra i risultati in memoria per ricerca case-insensitive
@@ -240,15 +257,48 @@ export const markCheckIn = async (
     });
   }
 
-  // Toggle dello stato
+  // Toggle dello stato con aggiornamento atomico per prevenire race condition
+  // (due scansioni simultanee dello stesso QR non devono entrambe passare)
   const newState = !invitee.hasEntered;
-  const updated = await prisma.invitee.update({
-    where: { id: invitee.id },
-    data: {
-      hasEntered: newState,
-      checkedInAt: newState ? new Date() : null,
-    },
-  });
+
+  let updated: typeof invitee;
+
+  if (newState && !adminOverride) {
+    // Aggiornamento condizionale: solo se hasEntered è ancora false
+    const result = await prisma.invitee.updateMany({
+      where: { id: invitee.id, hasEntered: false },
+      data: { hasEntered: true, checkedInAt: new Date() },
+    });
+
+    if (result.count === 0) {
+      // Race condition: un altro processo ha già fatto il check-in
+      const currentState = await prisma.invitee.findUnique({ where: { id: invitee.id } });
+      await prisma.checkInLog.create({
+        data: {
+          invitee: { connect: { id: invitee.id } },
+          event: { connect: { id: resolvedEventId } },
+          outcome: "DUPLICATE",
+          message: "Già entrato (race condition rilevata)",
+          ...(performedByUserId ? { user: { connect: { id: performedByUserId } } } : {}),
+        },
+      });
+      throw new AppError("Persona già entrata", 409, {
+        checkedInAt: currentState?.checkedInAt,
+        invitee: currentState,
+      });
+    }
+
+    updated = (await prisma.invitee.findUnique({ where: { id: invitee.id } }))!;
+  } else {
+    // Admin override: aggiornamento diretto (toggle)
+    updated = await prisma.invitee.update({
+      where: { id: invitee.id },
+      data: {
+        hasEntered: newState,
+        checkedInAt: newState ? new Date() : null,
+      },
+    });
+  }
 
   await prisma.checkInLog.create({
     data: {

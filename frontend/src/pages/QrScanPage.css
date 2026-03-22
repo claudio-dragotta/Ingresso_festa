@@ -238,3 +238,65 @@
 }
 
 .qrscan-info p { margin: 0.1rem 0; }
+
+/* ── Manual input ─────────────────────────────────────── */
+.qrscan-manual {
+  width: 100%;
+  max-width: 460px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.qrscan-manual-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.qrscan-manual-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.qrscan-manual-input {
+  flex: 1;
+  padding: 0.55rem 0.8rem;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: monospace;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.qrscan-manual-input:focus {
+  border-color: var(--accent);
+}
+
+.qrscan-btn.manual {
+  padding: 0.55rem 1rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface));
+  color: var(--accent);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.qrscan-btn.manual:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
+}
+
+.qrscan-btn.manual:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

@@ -10,8 +10,6 @@ export interface Invitee {
   listType: ListType;
   paymentType?: string | null;
   email?: string | null;
-  qrToken?: string | null;
-  qrSentAt?: string | null;
   hasEntered: boolean;
   checkedInAt?: string | null;
   createdAt: string;
