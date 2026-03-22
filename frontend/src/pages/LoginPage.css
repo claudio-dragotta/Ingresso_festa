@@ -159,15 +159,14 @@
 .input-icon {
   position: absolute;
   left: 1rem;
-  top: 0;
-  bottom: 0;
-  margin: auto 0;
+  top: 50%;
+  transform: translateY(-50%);
   width: 18px;
   height: 18px;
   color: var(--muted);
   pointer-events: none;
   z-index: 2;
-  display: block;
+  flex-shrink: 0;
 }
 
 .input-wrapper input {
