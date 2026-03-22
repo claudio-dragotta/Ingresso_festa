@@ -2,6 +2,8 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useEvent } from "../context/EventContext";
 import { useState, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { changePassword } from "../api/auth";
 import "./AppLayout.css";
 import ThemeToggle from "./ThemeToggle";
 import ToastContainer from "./Toast";
@@ -15,6 +17,30 @@ const AppLayout = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [changePwdOpen, setChangePwdOpen] = useState(false);
+  const [changePwdForm, setChangePwdForm] = useState({ oldPassword: "", newPassword: "", confirm: "" });
+  const [changePwdError, setChangePwdError] = useState<string | null>(null);
+  const [changePwdSuccess, setChangePwdSuccess] = useState(false);
+
+  const changePwdMut = useMutation({
+    mutationFn: () => changePassword(changePwdForm.oldPassword, changePwdForm.newPassword),
+    onSuccess: () => {
+      setChangePwdForm({ oldPassword: "", newPassword: "", confirm: "" });
+      setChangePwdError(null);
+      setChangePwdSuccess(true);
+      setTimeout(() => { setChangePwdOpen(false); setChangePwdSuccess(false); }, 1800);
+    },
+    onError: (err: any) => {
+      setChangePwdError(err?.response?.data?.message ?? "Errore durante il cambio password");
+    },
+  });
+
+  const openChangePwd = () => {
+    setChangePwdForm({ oldPassword: "", newPassword: "", confirm: "" });
+    setChangePwdError(null);
+    setChangePwdSuccess(false);
+    setChangePwdOpen(true);
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -142,6 +168,13 @@ const AppLayout = () => {
                 <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
               </svg>
               Cambia
+            </button>
+            <button type="button" onClick={openChangePwd} className="nav-link change-event-button" title="Cambia password">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0110 0v4"/>
+              </svg>
+              Password
             </button>
             <button type="button" onClick={handleLogout} className="logout-button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -279,6 +312,13 @@ const AppLayout = () => {
               </svg>
               <span>Cambia festa</span>
             </button>
+            <button type="button" onClick={() => { openChangePwd(); closeMobileMenu(); }} className="nav-link change-event-button mobile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0110 0v4"/>
+              </svg>
+              <span>Cambia password</span>
+            </button>
             <button type="button" onClick={() => { handleLogout(); closeMobileMenu(); }} className="logout-button mobile">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -294,6 +334,42 @@ const AppLayout = () => {
         <Outlet />
       </main>
       <ToastContainer />
+
+      {changePwdOpen && (
+        <div className="change-pwd-overlay" onClick={() => setChangePwdOpen(false)}>
+          <div className="change-pwd-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="change-pwd-header">
+              <h3>Cambia password</h3>
+              <button className="close-btn" onClick={() => setChangePwdOpen(false)} aria-label="Chiudi">×</button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              setChangePwdError(null);
+              if (changePwdForm.newPassword.length < 6) { setChangePwdError("La nuova password deve essere di almeno 6 caratteri"); return; }
+              if (changePwdForm.newPassword !== changePwdForm.confirm) { setChangePwdError("Le password non coincidono"); return; }
+              changePwdMut.mutate();
+            }} className="change-pwd-form">
+              <div className="cpwd-field">
+                <label>Password attuale</label>
+                <input type="password" placeholder="Password corrente" value={changePwdForm.oldPassword} onChange={(e) => setChangePwdForm(f => ({ ...f, oldPassword: e.target.value }))} required autoFocus />
+              </div>
+              <div className="cpwd-field">
+                <label>Nuova password</label>
+                <input type="password" placeholder="Minimo 6 caratteri" value={changePwdForm.newPassword} onChange={(e) => setChangePwdForm(f => ({ ...f, newPassword: e.target.value }))} required />
+              </div>
+              <div className="cpwd-field">
+                <label>Conferma nuova password</label>
+                <input type="password" placeholder="Ripeti la nuova password" value={changePwdForm.confirm} onChange={(e) => setChangePwdForm(f => ({ ...f, confirm: e.target.value }))} required />
+              </div>
+              {changePwdError && <div className="cpwd-error">{changePwdError}</div>}
+              {changePwdSuccess && <div className="cpwd-success">Password aggiornata con successo</div>}
+              <button type="submit" className="cpwd-submit" disabled={changePwdMut.isPending}>
+                {changePwdMut.isPending ? "Salvataggio..." : "Salva nuova password"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createUser, listUsers, deleteUser, setUserActive } from "../services/authService";
+import { createUser, listUsers, deleteUser, setUserActive, resetUserPassword, setUserRole } from "../services/authService";
 import { prisma } from "../lib/prisma";
 import { authenticate } from "../middleware/auth";
 import { adminOnly } from "../middleware/adminOnly";
@@ -77,6 +77,37 @@ router.patch("/:id", authenticate, adminOnly, async (req, res, next) => {
 
     const user = await setUserActive(req.params.id, active);
     return res.json(user);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// PATCH /users/:id/role - Admin cambia il ruolo di un utente
+router.patch("/:id/role", authenticate, adminOnly, async (req, res, next) => {
+  try {
+    const requesterId = (req as any).user?.userId;
+    if (requesterId && requesterId === req.params.id) {
+      return res.status(403).json({ message: "Non puoi cambiare il tuo stesso ruolo" });
+    }
+    const { role } = req.body as { role?: UserRole };
+    const validRoles: UserRole[] = ["ADMIN", "ORGANIZER", "ENTRANCE", "SHUTTLE"];
+    if (!role || !validRoles.includes(role)) {
+      return res.status(400).json({ message: "Ruolo non valido" });
+    }
+    const user = await setUserRole(req.params.id, role);
+    return res.json(user);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// PATCH /users/:id/reset-password - Admin resetta la password di un utente
+router.patch("/:id/reset-password", authenticate, adminOnly, async (req, res, next) => {
+  try {
+    const { newPassword } = req.body as { newPassword?: string };
+    if (!newPassword) return res.status(400).json({ message: "newPassword richiesta" });
+    await resetUserPassword(req.params.id, newPassword);
+    return res.json({ message: "Password resettata con successo" });
   } catch (error) {
     return next(error);
   }

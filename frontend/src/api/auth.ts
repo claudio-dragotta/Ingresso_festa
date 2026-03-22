@@ -88,3 +88,19 @@ export const fetchUserEventAccesses = async (userId: string): Promise<UserEventA
   const response = await apiClient.get<UserEventAccess[]>(`/users/${userId}/event-accesses`);
   return response.data;
 };
+
+// PATCH /users/:id/role - Admin cambia il ruolo di un utente
+export const setUserRole = async (userId: string, role: UserRole): Promise<User> => {
+  const response = await apiClient.patch<User>(`/users/${userId}/role`, { role });
+  return response.data;
+};
+
+// PATCH /users/:id/reset-password - Admin resetta la password di un utente
+export const resetUserPassword = async (userId: string, newPassword: string): Promise<void> => {
+  await apiClient.patch(`/users/${userId}/reset-password`, { newPassword });
+};
+
+// POST /auth/change-password - Utente loggato cambia la propria password
+export const changePassword = async (oldPassword: string, newPassword: string): Promise<void> => {
+  await apiClient.post("/auth/change-password", { oldPassword, newPassword });
+};

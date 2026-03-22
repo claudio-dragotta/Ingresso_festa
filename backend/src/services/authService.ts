@@ -131,6 +131,35 @@ export const deleteUser = async (userId: string) => {
   });
 };
 
+export const setUserRole = async (userId: string, role: UserRole) => {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { role },
+    select: { id: true, username: true, role: true, active: true },
+  });
+  return user;
+};
+
+export const resetUserPassword = async (userId: string, newPassword: string) => {
+  if (!newPassword || newPassword.length < 6) {
+    throw new AppError("La password deve essere di almeno 6 caratteri", 400);
+  }
+  const hashed = await hashPassword(newPassword);
+  await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+};
+
+export const changeOwnPassword = async (userId: string, oldPassword: string, newPassword: string) => {
+  if (!newPassword || newPassword.length < 6) {
+    throw new AppError("La nuova password deve essere di almeno 6 caratteri", 400);
+  }
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new AppError("Utente non trovato", 404);
+  const valid = await verifyPassword(oldPassword, user.password);
+  if (!valid) throw new AppError("Password attuale non corretta", 401);
+  const hashed = await hashPassword(newPassword);
+  await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+};
+
 export const setUserActive = async (userId: string, active: boolean) => {
   const user = await prisma.user.update({
     where: { id: userId },

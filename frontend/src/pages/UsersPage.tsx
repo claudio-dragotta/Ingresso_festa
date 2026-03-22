@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createUser, deleteUser, fetchUsers, setUserActive, fetchUserLogs, fetchUserEventAccesses, type User, type UserRole, type UserLogsResponse } from "../api/auth";
+import { createUser, deleteUser, fetchUsers, setUserActive, fetchUserLogs, fetchUserEventAccesses, resetUserPassword, setUserRole, type User, type UserRole, type UserLogsResponse } from "../api/auth";
 import { listEvents } from "../api/events";
 import { assignUserToEvent, removeUserFromEvent } from "../api/events";
 import "./UsersPage.css";
@@ -19,11 +19,16 @@ const getCurrentUserId = (): string | null => {
   }
 };
 
+const currentUserId = getCurrentUserId();
+
 export default function UsersPage() {
   const qc = useQueryClient();
   const { data: users = [], isLoading } = useQuery<User[]>({ queryKey: ["users"], queryFn: fetchUsers });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [drawerTab, setDrawerTab] = useState<"logs" | "feste">("logs");
+  const [drawerTab, setDrawerTab] = useState<"logs" | "feste" | "password">("logs");
+  const [resetPwd, setResetPwd] = useState({ newPassword: "", confirm: "" });
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   const { data: selectedLogs } = useQuery<UserLogsResponse>({
     queryKey: ["user-logs", selectedUser?.id],
@@ -41,6 +46,19 @@ export default function UsersPage() {
     queryKey: ["user-event-accesses", selectedUser?.id],
     queryFn: () => fetchUserEventAccesses(selectedUser!.id),
     enabled: !!selectedUser && drawerTab === "feste",
+  });
+
+  const resetPwdMut = useMutation({
+    mutationFn: () => resetUserPassword(selectedUser!.id, resetPwd.newPassword),
+    onSuccess: () => {
+      setResetPwd({ newPassword: "", confirm: "" });
+      setResetError(null);
+      setResetSuccess(true);
+      setTimeout(() => setResetSuccess(false), 3000);
+    },
+    onError: (err: any) => {
+      setResetError(err?.response?.data?.message ?? "Errore durante il reset");
+    },
   });
 
   const assignMut = useMutation({
@@ -66,6 +84,11 @@ export default function UsersPage() {
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteUser(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+
+  const roleMut = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: UserRole }) => setUserRole(id, role),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
 
@@ -153,10 +176,24 @@ export default function UsersPage() {
           filtered.map((u) => (
             <div key={u.id} className="table-row" onClick={() => setSelectedUser(u)} role="button">
               <div className="username">{u.username}</div>
-              <div>
-                <span className={`role-badge ${u.role.toLowerCase()}`}>
-                  {u.role === "ADMIN" ? "Admin" : u.role === "ORGANIZER" ? "Organizzatore" : u.role === "SHUTTLE" ? "Navetta" : "Ingresso"}
-                </span>
+              <div onClick={(e) => e.stopPropagation()}>
+                {currentUserId === u.id ? (
+                  <span className={`role-badge ${u.role.toLowerCase()}`}>
+                    {u.role === "ADMIN" ? "Admin" : u.role === "ORGANIZER" ? "Organizzatore" : u.role === "SHUTTLE" ? "Navetta" : "Ingresso"}
+                  </span>
+                ) : (
+                  <select
+                    className="role-select"
+                    value={u.role}
+                    disabled={roleMut.isPending}
+                    onChange={(e) => roleMut.mutate({ id: u.id, role: e.target.value as UserRole })}
+                  >
+                    <option value="ADMIN">Admin</option>
+                    <option value="ORGANIZER">Organizzatore</option>
+                    <option value="ENTRANCE">Ingresso</option>
+                    <option value="SHUTTLE">Navetta</option>
+                  </select>
+                )}
               </div>
               <div>
                 <span className={`status-badge ${u.active ? "active" : "inactive"}`}>{u.active ? "Attivo" : "Disattivo"}</span>
@@ -195,7 +232,7 @@ export default function UsersPage() {
               </svg>
               <h3>{selectedUser.username}</h3>
             </div>
-            <button className="close-btn" onClick={() => { setSelectedUser(null); setDrawerTab("logs"); }} aria-label="Chiudi">×</button>
+            <button className="close-btn" onClick={() => { setSelectedUser(null); setDrawerTab("logs"); setResetPwd({ newPassword: "", confirm: "" }); setResetError(null); setResetSuccess(false); }} aria-label="Chiudi">×</button>
           </div>
 
           <div className="drawer-tabs">
@@ -203,6 +240,7 @@ export default function UsersPage() {
             {selectedUser.role !== "ADMIN" && (
               <button className={drawerTab === "feste" ? "tab active" : "tab"} onClick={() => setDrawerTab("feste")}>Accesso Feste</button>
             )}
+            <button className={drawerTab === "password" ? "tab active" : "tab"} onClick={() => { setDrawerTab("password"); setResetError(null); setResetSuccess(false); }}>Password</button>
           </div>
 
           {drawerTab === "logs" && (
@@ -241,6 +279,33 @@ export default function UsersPage() {
                 )}
               </div>
             </>
+          )}
+
+          {drawerTab === "password" && (
+            <div className="reset-password-form">
+              <p className="reset-password-hint">Imposta una nuova password per <strong>{selectedUser.username}</strong>. L'utente dovrà usarla al prossimo accesso.</p>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                setResetError(null);
+                if (resetPwd.newPassword.length < 6) { setResetError("La password deve essere di almeno 6 caratteri"); return; }
+                if (resetPwd.newPassword !== resetPwd.confirm) { setResetError("Le password non coincidono"); return; }
+                resetPwdMut.mutate();
+              }}>
+                <div className="form-field">
+                  <label>Nuova password</label>
+                  <input type="password" placeholder="Minimo 6 caratteri" value={resetPwd.newPassword} onChange={(e) => setResetPwd(p => ({ ...p, newPassword: e.target.value }))} required />
+                </div>
+                <div className="form-field">
+                  <label>Conferma password</label>
+                  <input type="password" placeholder="Ripeti la password" value={resetPwd.confirm} onChange={(e) => setResetPwd(p => ({ ...p, confirm: e.target.value }))} required />
+                </div>
+                {resetError && <div className="reset-error">{resetError}</div>}
+                {resetSuccess && <div className="reset-success">Password resettata con successo</div>}
+                <button type="submit" className="primary" disabled={resetPwdMut.isPending}>
+                  {resetPwdMut.isPending ? "Reset in corso..." : "Reset password"}
+                </button>
+              </form>
+            </div>
           )}
 
           {drawerTab === "feste" && (

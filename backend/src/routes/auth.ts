@@ -1,11 +1,27 @@
 import { Router } from "express";
-import { login, createUser, listUsers, deleteUser, setUserActive } from "../services/authService";
+import { login, createUser, listUsers, deleteUser, setUserActive, changeOwnPassword } from "../services/authService";
 import { prisma } from "../lib/prisma";
 import { authenticate } from "../middleware/auth";
 import { adminOnly } from "../middleware/adminOnly";
 import { UserRole } from "@prisma/client";
 
 const router = Router();
+
+// POST /auth/change-password - Utente loggato cambia la propria password
+router.post("/change-password", authenticate, async (req, res, next) => {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) return res.status(401).json({ message: "Non autenticato" });
+    const { oldPassword, newPassword } = req.body as { oldPassword?: string; newPassword?: string };
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ message: "oldPassword e newPassword sono obbligatorie" });
+    }
+    await changeOwnPassword(userId, oldPassword, newPassword);
+    return res.json({ message: "Password aggiornata con successo" });
+  } catch (error) {
+    return next(error);
+  }
+});
 
 router.post("/login", async (req, res, next) => {
   try {
