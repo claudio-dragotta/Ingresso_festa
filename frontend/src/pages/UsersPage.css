@@ -465,15 +465,20 @@
   display: flex;
   gap: 0.25rem;
   padding: 0.75rem 1.25rem 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .drawer-tabs {
+  border-bottom-color: rgba(0, 0, 0, 0.1);
 }
 
 .drawer-tabs .tab {
   padding: 0.5rem 1rem;
   border: none;
   background: none;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.45);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -483,13 +488,21 @@
   border-radius: 4px 4px 0 0;
 }
 
+[data-theme="light"] .drawer-tabs .tab {
+  color: rgba(0, 0, 0, 0.45);
+}
+
 .drawer-tabs .tab:hover {
-  color: var(--text);
+  color: #f1f5f9;
+}
+
+[data-theme="light"] .drawer-tabs .tab:hover {
+  color: #0f172a;
 }
 
 .drawer-tabs .tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: #6366f1;
+  border-bottom-color: #6366f1;
 }
 
 /* ===== EVENT ACCESS LIST ===== */
@@ -504,34 +517,47 @@
 
 .event-access-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+[data-theme="light"] .event-access-row {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
 .event-access-name {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.9375rem;
-  flex: 1;
-  min-width: 0;
+  color: #f1f5f9;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+[data-theme="light"] .event-access-name {
+  color: #0f172a;
 }
 
 .event-access-row select {
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
   font-size: 0.875rem;
   cursor: pointer;
-  min-width: 160px;
+}
+
+[data-theme="light"] .event-access-row select {
+  border-color: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.04);
+  color: #1e293b;
 }
 
 .event-access-row select:disabled {
