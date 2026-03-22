@@ -151,41 +151,36 @@
 }
 
 .input-wrapper {
-  position: relative;
   display: flex;
   align-items: center;
+  gap: 0.625rem;
+  padding: 0 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-wrapper:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 .input-icon {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
   width: 18px;
   height: 18px;
   color: var(--muted);
-  pointer-events: none;
-  z-index: 2;
   flex-shrink: 0;
 }
 
 .input-wrapper input {
-  width: 100%;
-  padding: 0.875rem 1rem 0.875rem 3.25rem;
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
+  flex: 1;
+  padding: 0.875rem 0;
+  border: none;
+  background: transparent;
   font-size: 0.9375rem;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-  background: var(--surface);
   color: var(--text);
-  position: relative;
-  z-index: 1;
-}
-
-.input-wrapper input:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 .input-wrapper input::placeholder {
