@@ -67,8 +67,12 @@ export default function RegisterPage() {
   if (loadingEvent) {
     return (
       <div className="reg-page">
+        <div className="reg-orb" />
         <div className="reg-card">
-          <div className="reg-loading">Caricamento...</div>
+          <div className="reg-loading">
+            <div className="reg-spinner" />
+            Caricamento...
+          </div>
         </div>
       </div>
     );
@@ -77,8 +81,11 @@ export default function RegisterPage() {
   if (eventError || !eventInfo) {
     return (
       <div className="reg-page">
+        <div className="reg-orb" />
         <div className="reg-card">
-          <div className="reg-error-box">Evento non trovato o link non valido.</div>
+          <div className="reg-form">
+            <div className="reg-error-box">Evento non trovato o link non valido.</div>
+          </div>
         </div>
       </div>
     );
@@ -87,12 +94,14 @@ export default function RegisterPage() {
   if (submitted) {
     return (
       <div className="reg-page">
+        <div className="reg-orb" />
         <div className="reg-card">
           <div className="reg-success">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round"/>
-              <polyline points="22 4 12 14.01 9 11.01" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <div className="reg-success-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
             <h2>Registrazione ricevuta!</h2>
             <p>
               Grazie <strong>{form.firstName}</strong>! La tua richiesta è stata inviata.
@@ -100,12 +109,14 @@ export default function RegisterPage() {
             </p>
           </div>
         </div>
+        <div className="reg-footer">Ingresso Festa &mdash; tutti i diritti riservati</div>
       </div>
     );
   }
 
   return (
     <div className="reg-page">
+      <div className="reg-orb" />
       <div className="reg-card">
         <div className="reg-header">
           <div className="reg-event-badge">
@@ -172,6 +183,7 @@ export default function RegisterPage() {
           </button>
         </form>
       </div>
+      <div className="reg-footer">Ingresso Festa &mdash; tutti i diritti riservati</div>
     </div>
   );
 }
